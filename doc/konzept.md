@@ -76,7 +76,7 @@ Abhängigkeitsregel: `gui → (core, device, plotd-Client)`, niemals umgekehrt. 
 - **Lizenz: GPLv3** (entschieden).
 - Python ≥ 3.12, **numpy**, **shapely** (Clipping), **svgelements** (SVG-Parsing), **pyserial** (headless statt QSerialPort), **pydantic** (Profil- und Konfigurations-Validierung), **pytest**.
 - GUI: **PySide6** (offizielles Qt-Binding).
-- **vpype als Bibliothek?** ⟨Q-05⟩ Tendenz ja. Entschieden wird nach einem Spike zu Beginn von AP1.
+- **vpype:** Wird **nicht** als Bibliothek eingebunden (zu schwergewichtig, kein nativer Library-Modus). Dient stattdessen als **Ideen- und Algorithmen-Ressource** für den schlanken, eigenen Geometriekern (`numpy`/`scipy`).
 - **MutohPlot** (MIT): Gerätewissen und Algorithmen (HP-GL-Parser, Hard-Clip-Berechnungen, Kalibrierung, Userspace-XON/XOFF) werden portiert (mit Erhalt des MIT-Lizenzhinweises), ohne externe Paketabhängigkeit. Details: [analyse-mutohplot.md](analyse-mutohplot.md).
 
 
@@ -173,14 +173,14 @@ Anforderung (Antwort Q-08): Die Anzeige wird eventuell zu einem einfachen Editor
 
 ### 3.6 Datenfluss: Modell ↔ Qt ↔ Linien-Ebene
 
-**Grundsatz:** `QGraphicsScene` ist eine **Ansicht**, nicht das Datenmodell. Die Linien-Ebene (ob vpype oder Eigenbau) ist eine **Einbahnstraße** vom Modell zum Plotter. Es gibt **keine Konvertierung pro Bedienschritt**.
+**Grundsatz:** `QGraphicsScene` ist eine **Ansicht**, nicht das Datenmodell. Die Linien-Ebene (schlanker Geometriekern in numpy) ist eine **Einbahnstraße** vom Modell zum Plotter. Es gibt **keine Konvertierung pro Bedienschritt**.
 
 ```mermaid
 flowchart LR
   SVG["SVG-Datei"] -->|"1x beim Import"| M["Quell-Modell (eigene Klassen)"]
   M -->|"1x je Objekt: QPainterPath mit echten Bézierkurven"| L["Layout-Ansicht (QGraphicsItem je Import)"]
   L -->|"Verschieben/Drehen: nur Transform-Matrix zurück ins Modell"| M
-  M -->|"Kompilieren (bei Änderung, Hintergrund-Thread)"| P["Polylinien je Stift (vpype oder numpy)"]
+  M -->|"Kompilieren (bei Änderung, Hintergrund-Thread)"| P["Polylinien je Stift (numpy)"]
   P -->|"merge, sort, simplify"| P
   P -->|"1x je Kompilat: QPainterPath je Stift"| V["Plot-Ansicht (Vorschau)"]
   P --> E["HPGL-Emitter"]
@@ -196,7 +196,7 @@ flowchart LR
 
 Folgerungen:
 - Die Layout-Ansicht arbeitet mit **Kurven**, nicht mit Polylinien. Qt zeichnet Béziers nativ, die Linien-Ebene ist dafür nicht nötig.
-- Die Konvertierung Polylinien → `QPainterPath` gibt es bei **jedem** Qt-freien Kern, auch beim Eigenbau. Sie ist also kein vpype-spezifischer Nachteil. Für sehr große Datenmengen (> 10⁶ Punkte) eignet sich ein eigenes Item mit `paint()` → `drawPolyline()` aus gecachten `QPolygonF` und LOD.
+- Die Konvertierung Polylinien → `QPainterPath` gibt es bei **jedem** Qt-freien Kern. Für sehr große Datenmengen (> 10⁶ Punkte) eignet sich ein eigenes Item mit `paint()` → `drawPolyline()` aus gecachten `QPolygonF` und LOD.
 - Das ursprüngliche Konzept mit `QPainterPath` als Source of Truth hätte zwar die Anzeige-Konvertierung gespart, dafür aber bei **jedem** Plot und jeder Optimierung `QPainterPath` → Punkte erzwungen. Außerdem wäre kein Headless-Betrieb möglich (Review B2).
 
 ---

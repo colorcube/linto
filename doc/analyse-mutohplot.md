@@ -59,17 +59,17 @@ Ein Python-Werkzeug (CLI + lokale Weboberfläche), das HP-GL und SVG für **gena
 
 | MutohPlot | Ziel in Plotter Studio | Anpassung |
 |---|---|---|
-| `hpgl/tokenizer.py`, `hpgl/parser.py`, `hpgl/stroke_font.py` | AP4 HPGL-Import | Ausgabe auf numpy/vpype-Polylinien umstellen |
+| `hpgl/tokenizer.py`, `hpgl/parser.py`, `hpgl/stroke_font.py` | AP4 HPGL-Import | Ausgabe auf numpy-Polylinien umstellen |
 | `hard_clip.py`, `transform/hard_clip.py` (Fenstertabelle, Mittelpunktkorrektur) | AP2 Geräteprofil/Abbildung | in Profil-YAML überführen |
 | `calibration.py`, `calibration_profiles.py` (4-Rand-Kalibrierung, Zeichnung) | AP2 Kalibrierplots | Ablauf übernehmen |
 | `serial_io.py` (Userspace-XON/XOFF, `OF`/`OH`-Abfrage) | AP3 Transport | als Strategie `xonxoff_userspace` neben `rtscts` |
-| `optimize/paths.py` (Dedupe richtungsunabhängig) | AP4 Pipeline | falls vpype das nicht abdeckt |
+| `optimize/paths.py` (Dedupe richtungsunabhängig) | AP4 Pipeline | Duplikate erkennen und entfernen |
 | Stifttypen/-breiten aus `web_profiles.py`, `config/Standard.toml` | Werkzeugbibliothek | Felder übernehmen |
 | Tests (`test_parser`, `test_hard_clip*`, `test_calibration*`) | Testfälle | als Referenzfälle |
 
 3. **Nicht übernehmen:** SVG-Reader (lieber `svgelements`: CSS, `use`, vollständiger), Weboberfläche, Datenmodell, CLI-Struktur.
-4. **Optional:** Kontakt zu Oliver F. aufnehmen, also Erfahrungen austauschen, Fehler melden (z. B. zur Einheit) und eventuell den Geräteteil später als gemeinsame Bibliothek pflegen.
+4. **Optional:** Kontakt zu Oliver F. aufnehmen, wenn sinnvoll / Bugs gefunden werden, um Erfahrungen auszutauschen.
 
-## 5. Auswirkung auf vpype (Q-05)
+## 5. Auswirkung auf Geometrie & vpype (D-15)
 
-MutohPlot zeigt, dass ein Eigenbau der Linien-Ebene mit reinen Python-Listen funktioniert, aber nicht skaliert. Die Empfehlung bleibt: **numpy-basierte Linien-Ebene, bevorzugt vpype hinter `core.lines`**. Die Entscheidung fällt zu Beginn von AP1 nach einem kurzen Spike: vpype installieren, MutohPlot-Beispiele durch `read → linemerge → linesort → linesimplify` schicken und Ergebnis sowie Laufzeit mit MutohPlot vergleichen.
+MutohPlot zeigt, dass ein Eigenbau der Linien-Ebene mit reinen Python-Listen funktioniert, aber nicht skaliert. Eine reine Python-Liste ist zu langsam, aber ein schweres Framework wie `vpype` bringt zu viele unerwünschte CLI-Abhängigkeiten mit. Die Entscheidung (D-15) lautet daher: **Schlanker numpy/scipy-Kern.** `vpype` dient als wertvolle **Ideen- und Algorithmen-Ressource** (z. B. Referenz für Heuristiken beim Linemerge und 2-Opt), wird aber nicht als Abhängigkeit installiert.

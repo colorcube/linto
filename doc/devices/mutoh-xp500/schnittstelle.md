@@ -94,6 +94,6 @@ Beispiel: Eine Kurve aus 0,5-mm-Segmenten mit absoluten Ketten ergibt ≈ 150 ×
 Konsequenzen für den Emitter (→ [konzept.md](../../konzept.md) §5/§7):
 1. Koordinatenketten statt einzelner `PA`-Befehle (Standard).
 2. Option **relative Koordinaten** (`PR`) mit periodischem absolutem Wiederaufsetzen (gegen Rundungsdrift: Deltas aus gerundeten Absolutwerten bilden, dann driftet nichts).
-3. Linienvereinfachung mit Toleranz < halbe Strichbreite (vpype `linesimplify`).
+3. Linienvereinfachung mit Toleranz < halbe Strichbreite (Douglas-Peucker-Algorithmus).
 4. Bögen/Kreise optional als `AA`/`CI` ausgeben, wenn die Quelle echte Kreise enthält (Profiloption, zunächst aus).
 5. Unnötige Ziffern vermeiden: ganzzahlige Units, keine Leerzeichen, kein `;` innerhalb von Ketten.

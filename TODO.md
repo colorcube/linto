@@ -22,9 +22,9 @@ Details und Ergebnistabelle: [doc/devices/mutoh-xp500/testplan.md](doc/devices/m
 
 ## Entscheidungen
 
-- [ ] Q-17 MutohPlot: Option C bestätigen? Kontakt zu Oliver F.?
-- [ ] Q-05 vpype als Bibliothek → Spike zu Beginn von AP1
-- [ ] User Stories überarbeiten (`doc/user-stories.md`)
+- [x] Q-17 MutohPlot: Option C bestätigt, eigenständiges Projekt, Übernahme sinnvoller Module mit MIT-Hinweis (D-14)
+- [x] Q-05 vpype: nicht als Abhängigkeit, dient als Ideen- und Algorithmen-Ressource (D-15)
+- [x] User Stories überarbeitet (`doc/user-stories.md`)
 
 ## Später / Ideen
 

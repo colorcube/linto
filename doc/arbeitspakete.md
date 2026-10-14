@@ -55,12 +55,12 @@ Noch offen. Zuerst Panel und Handbuch, dann mit Skript `tools/xp500_probe.py` (p
 | AP2 | `hard_clip.py`, `transform/hard_clip.py`, `calibration*.py` | Fenstertabelle, Mittelpunktkorrektur, Kalibrierzeichnung und -profil |
 | AP3 | `serial_io.py` | Userspace-XON/XOFF, `OF`/`OH`-Abfrage |
 | AP4 | `hpgl/tokenizer.py`, `hpgl/parser.py`, `hpgl/stroke_font.py` | HP-GL-Import |
-| AP4 | `optimize/paths.py` (Dedupe) | falls vpype das nicht abdeckt |
+| AP4 | `optimize/paths.py` (Dedupe) | Duplikate erkennen und entfernen |
 | alle | passende Tests | Referenzfälle |
 
 ## AP1 – Core: Polylinien & Geometrie (M)
-- **Spike zu Beginn (Entscheidung Q-05):** vpype installieren, MutohPlot-Beispiele (`examples/*.svg`, `*.hpgl`) durch `read → linemerge → linesort → linesimplify` schicken. Leerweg, Punktzahl und Laufzeit mit MutohPlots Optimierung vergleichen und Abhängigkeiten prüfen. Danach fällt die Entscheidung vpype oder eigener numpy-Kern.
-- Polylinien-Datentyp (numpy) bzw. vpype-Adapter, Stift-Zuordnung.
+- **Schlanker numpy/scipy-Kern (Entscheidung D-15):** Eigener Polylinien-Datentyp (`ndarray`). Algorithmen (Bézier-Diskretisierung, Endpunkt-Merge, KD-Tree 2-Opt) orientieren sich an den Konzepten von vpype/MutohPlot als Ideen- und Algorithmen-Ressource, jedoch ohne externe Monster-Abhängigkeiten.
+- Polylinien-Datentyp (numpy), Stift-Zuordnung.
 - Adaptive Bézier-/Bogen-Diskretisierung mit Sehnentoleranz.
 - Affine Transformationen, Bounding Boxes, Statistik (Längen, Leerweg).
 - Unit-Tests (pytest + hypothesis).

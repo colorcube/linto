@@ -67,7 +67,7 @@ Der Kontext `g` stellt bereit:
 Raster aus *n × m* Zellen, jede Zelle zeigt denselben Generator mit Seed `s+i` oder einer Parameter-Interpolation (z. B. `amplitude` von 0 → 50 über die Spalten). Taugt als Kontaktbogen zum Auswählen oder als eigenständiges Werk.
 
 ### vsketch-Kompatibilität (optional)
-[vsketch](https://github.com/abey79/vsketch) ist das etablierte Python-Framework für Plotter-Kunst und baut auf vpype auf. Wenn Plotter Studio vpype als Polylinien-Ebene nutzt (⟨Q-05⟩), kann ein Adapter vsketch-Sketches direkt als Generator-Objekt laden: Parameter aus `vsk.Param` übernehmen, `draw(vsk)` ausführen, das vpype-Document übernehmen. So wären vorhandene vsketch-Arbeiten und Beispiele sofort nutzbar.
+[vsketch](https://github.com/abey79/vsketch) ist das etablierte Python-Framework für Plotter-Kunst und baut auf vpype auf. Da Plotter Studio SVG als Dokumenten- und Importformat nutzt, können vsketch-Sketches einfach als SVG exportiert und importiert werden. Für eine spätere engere Integration könnte ein Generator-Plugin das von vsketch erzeugte SVG oder dessen Vektorpfade direkt einlesen.
 
 ## Stufe 3: Modifikatoren (Stapel pro Objekt)
 
