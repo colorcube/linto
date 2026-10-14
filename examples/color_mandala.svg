@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="180mm" height="180mm" viewBox="0 0 180 180">
+  <g id="mandala" fill="none" stroke-width="0.35">
+    <!-- Pen 1 / Black ring -->
+    <circle cx="90" cy="90" r="85" stroke="#1a1a1a"/>
+    <circle cx="90" cy="90" r="80" stroke="#1a1a1a"/>
+    <!-- Pen 2 / Red petal loops -->
+    <path stroke="#d32f2f" d="M 90,10 C 130,50 130,130 90,170 C 50,130 50,50 90,10 Z"/>
+    <path stroke="#d32f2f" d="M 10,90 C 50,130 130,130 170,90 C 130,50 50,50 10,90 Z"/>
+    <!-- Pen 3 / Blue diagonal petals -->
+    <path stroke="#1976d2" d="M 33.4,33.4 C 80,40 140,100 146.6,146.6 C 100,140 40,80 33.4,33.4 Z"/>
+    <path stroke="#1976d2" d="M 146.6,33.4 C 140,80 80,140 33.4,146.6 C 40,100 100,40 146.6,33.4 Z"/>
+    <!-- Pen 4 / Green center rosette -->
+    <circle cx="90" cy="90" r="30" stroke="#388e3c"/>
+    <circle cx="90" cy="90" r="15" stroke="#388e3c"/>
+    <circle cx="90" cy="90" r="5" stroke="#388e3c"/>
+  </g>
+</svg>
