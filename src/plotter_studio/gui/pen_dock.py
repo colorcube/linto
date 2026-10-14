@@ -1,15 +1,61 @@
-"""Pen management dock widget with WYSIWYG colors, stroke widths and dynamic remapping."""
+"""Pen management dock widget with WYSIWYG colors, stroke widths, presets and dynamic remapping."""
 
 from __future__ import annotations
-from typing import Optional
+import os
+import copy
+from typing import Optional, List, Dict, Any
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QColor
+from PySide6.QtGui import QColor, QUndoStack
 from PySide6.QtWidgets import (
     QDockWidget, QWidget, QVBoxLayout, QHBoxLayout,
     QTableWidget, QTableWidgetItem, QPushButton, QComboBox,
-    QDoubleSpinBox, QColorDialog, QLabel, QGroupBox, QHeaderView
+    QDoubleSpinBox, QColorDialog, QLabel, QGroupBox, QHeaderView,
+    QDialog, QRadioButton, QButtonGroup, QDialogButtonBox,
+    QInputDialog, QMessageBox, QFileDialog
 )
 from ..core.document import Document, LogicalPen
+from ..core.pen_presets import (
+    PenPreset, BUILTIN_PRESETS, get_builtin_presets,
+    save_preset_json, load_preset_json, remap_document_to_preset
+)
+from .commands import ApplyPresetCommand, PenRemapCommand
+
+
+class PenPresetDialog(QDialog):
+    """Dialog prompting the user how existing drawing paths should be mapped to the new preset."""
+    def __init__(self, preset_name: str, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Stift-Preset anwenden")
+        layout = QVBoxLayout(self)
+        layout.setSpacing(12)
+
+        lbl = QLabel(f"<b>Preset anwenden:</b> {preset_name}<br><br>Wie sollen vorhandene Objekte angepasst werden?")
+        layout.addWidget(lbl)
+
+        self.rb_slot = QRadioButton("Stifteigenschaften übernehmen (Slot 1..8 beibehalten)")
+        self.rb_slot.setToolTip("Stift 1 bleibt Stift 1; übernimmt die neue Farbe, Minenbreite und Geschwindigkeit des Presets.")
+        self.rb_slot.setChecked(True)
+
+        self.rb_delta_e = QRadioButton("Farben automatisch neu zuweisen (Delta E)")
+        self.rb_delta_e.setToolTip("Berechnet für alle Pfade den farblich ähnlichsten aktiven Stift im neuen Set.")
+
+        self.btn_group = QButtonGroup(self)
+        self.btn_group.addButton(self.rb_slot)
+        self.btn_group.addButton(self.rb_delta_e)
+
+        layout.addWidget(self.rb_slot)
+        layout.addWidget(self.rb_delta_e)
+
+        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, self)
+        button_box.button(QDialogButtonBox.Ok).setText("Preset anwenden")
+        button_box.button(QDialogButtonBox.Cancel).setText("Abbrechen")
+        button_box.accepted.connect(self.accept)
+        button_box.rejected.connect(self.reject)
+        layout.addWidget(button_box)
+
+    @property
+    def selected_strategy(self) -> str:
+        return "delta_e" if self.rb_delta_e.isChecked() else "slot"
 
 
 class PenDockWidget(QDockWidget):
@@ -18,6 +64,7 @@ class PenDockWidget(QDockWidget):
     - Display color picker
     - Physical stroke width in mm
     - Dynamic remapping (merging pens / monochrome)
+    - Stift Presets (Fineliner, Posca, Isograph, Ballpoint, Custom)
     - Quick assignment to selected canvas objects
     """
     pen_changed = Signal()
@@ -26,6 +73,8 @@ class PenDockWidget(QDockWidget):
     def __init__(self, doc: Document, parent=None):
         super().__init__("Stifte & Werkzeuge", parent)
         self.doc = doc
+        self.undo_stack: Optional[QUndoStack] = None
+        self.user_presets: List[PenPreset] = []
 
         self.container = QWidget(self)
         self.setWidget(self.container)
@@ -33,7 +82,32 @@ class PenDockWidget(QDockWidget):
         self.layout.setContentsMargins(8, 8, 8, 8)
         self.layout.setSpacing(8)
 
-        # Quick Actions
+        # --- Section 1: Presets ---
+        preset_group = QGroupBox("Stift-Presets (Sets)")
+        p_layout = QVBoxLayout(preset_group)
+
+        row_p = QHBoxLayout()
+        self.combo_presets = QComboBox()
+        row_p.addWidget(self.combo_presets, stretch=1)
+
+        self.btn_apply_preset = QPushButton("Anwenden")
+        self.btn_apply_preset.clicked.connect(self._on_apply_preset_clicked)
+        row_p.addWidget(self.btn_apply_preset)
+
+        p_layout.addLayout(row_p)
+
+        row_p2 = QHBoxLayout()
+        self.btn_save_preset = QPushButton("Als Preset speichern...")
+        self.btn_save_preset.clicked.connect(self._on_save_preset_clicked)
+        self.btn_load_preset = QPushButton("Aus Datei laden...")
+        self.btn_load_preset.clicked.connect(self._on_load_preset_clicked)
+        row_p2.addWidget(self.btn_save_preset)
+        row_p2.addWidget(self.btn_load_preset)
+        p_layout.addLayout(row_p2)
+
+        self.layout.addWidget(preset_group)
+
+        # --- Section 2: Quick Actions ---
         qa_group = QGroupBox("Schnell-Aktionen")
         qa_layout = QHBoxLayout(qa_group)
         self.btn_monochrome = QPushButton("Alle auf Stift 1 (Monochrom)")
@@ -44,9 +118,9 @@ class PenDockWidget(QDockWidget):
         qa_layout.addWidget(self.btn_reset_remap)
         self.layout.addWidget(qa_group)
 
-        # Table of pens
+        # --- Section 3: Table of Pens ---
         self.table = QTableWidget(len(self.doc.pens), 5)
-        self.table.setHorizontalHeaderLabels(["Stift", "Farbe", "Breite (mm)", "Zuweisung", "Plotten"])
+        self.table.setHorizontalHeaderLabels(["Stift", "Farbe", "Breite", "Zuweisung", "Aktiv"])
         self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
         self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
         self.table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
@@ -57,7 +131,7 @@ class PenDockWidget(QDockWidget):
 
         self.layout.addWidget(self.table)
 
-        # Quick assignment buttons for selected items
+        # --- Section 4: Quick assignment buttons for selected items ---
         assign_group = QGroupBox("Ausgewähltes Objekt zuweisen an:")
         assign_layout = QHBoxLayout(assign_group)
         assign_layout.setSpacing(4)
@@ -69,7 +143,39 @@ class PenDockWidget(QDockWidget):
             assign_layout.addWidget(btn)
         self.layout.addWidget(assign_group)
 
+        self._populate_presets()
         self.refresh_table()
+
+    def set_undo_stack(self, stack: QUndoStack):
+        self.undo_stack = stack
+
+    def _get_user_presets_dir(self) -> str:
+        d = os.environ.get("PLOTTER_STUDIO_CONFIG_DIR")
+        if not d:
+            d = os.path.expanduser("~/.config/plotter-studio/pens")
+        try:
+            os.makedirs(d, exist_ok=True)
+        except OSError:
+            pass
+        return d
+
+    def _populate_presets(self):
+        self.combo_presets.clear()
+        # Built-in presets
+        for p in get_builtin_presets():
+            self.combo_presets.addItem(f"★ {p.name}", p)
+
+        # Custom presets from config dir
+        pdir = self._get_user_presets_dir()
+        if os.path.exists(pdir):
+            for fname in sorted(os.listdir(pdir)):
+                if fname.endswith(".json"):
+                    fpath = os.path.join(pdir, fname)
+                    try:
+                        preset = load_preset_json(fpath)
+                        self.combo_presets.addItem(f"📁 {preset.name}", preset)
+                    except Exception:
+                        pass
 
     def refresh_table(self):
         self.table.blockSignals(True)
@@ -103,7 +209,6 @@ class PenDockWidget(QDockWidget):
             for target_id in range(1, 9):
                 if target_id != pen.pen_id:
                     combo_remap.addItem(f"-> auf SP{target_id} umleiten", target_id)
-            # Set current index
             if pen.mapped_to is not None:
                 idx = combo_remap.findData(pen.mapped_to)
                 if idx >= 0:
@@ -142,12 +247,104 @@ class PenDockWidget(QDockWidget):
                 self.doc.pens[row].enabled = (item.checkState() == Qt.Checked)
                 self.pen_changed.emit()
 
-    def _on_monochrome_clicked(self):
-        self.doc.remap_all_to_pen(1)
+    def _on_apply_preset_clicked(self):
+        preset: Optional[PenPreset] = self.combo_presets.currentData()
+        if not preset:
+            return
+
+        strategy = "slot"
+        if len(self.doc.items) > 0:
+            dlg = PenPresetDialog(preset.name, self)
+            if dlg.exec() != QDialog.Accepted:
+                return
+            strategy = dlg.selected_strategy
+
+        old_pens = copy.deepcopy(self.doc.pens)
+        old_assignments = [(p, p.pen_id) for it in self.doc.items for p in it.paths]
+
+        remap_document_to_preset(self.doc, preset, strategy=strategy)
+
+        if self.undo_stack:
+            cmd = ApplyPresetCommand(
+                self.doc,
+                old_pens,
+                self.doc.pens,
+                old_assignments,
+                self._on_preset_cmd_updated,
+                text=f"Preset '{preset.name}' anwenden",
+            )
+            # Push without double execution since remap already executed
+            self.undo_stack.push(cmd)
+        else:
+            self._on_preset_cmd_updated()
+
+    def _on_preset_cmd_updated(self):
         self.refresh_table()
         self.pen_changed.emit()
 
+    def _on_save_preset_clicked(self):
+        name, ok = QInputDialog.getText(self, "Stift-Preset speichern", "Name des Presets:")
+        if not ok or not name.strip():
+            return
+        clean_name = name.strip()
+        safe_fname = "".join(c for c in clean_name if c.isalnum() or c in " -_").strip()
+        fpath = os.path.join(self._get_user_presets_dir(), f"{safe_fname}.json")
+
+        preset = PenPreset(
+            name=clean_name,
+            description="Benutzerdefiniertes Stift-Set",
+            pens=copy.deepcopy(self.doc.pens),
+        )
+        try:
+            save_preset_json(preset, fpath)
+            self._populate_presets()
+            idx = self.combo_presets.findText(f"📁 {clean_name}")
+            if idx >= 0:
+                self.combo_presets.setCurrentIndex(idx)
+            QMessageBox.information(self, "Preset gespeichert", f"Preset '{clean_name}' wurde gespeichert.")
+        except Exception as e:
+            QMessageBox.critical(self, "Fehler beim Speichern", f"Konnte Preset nicht speichern:\n{e}")
+
+    def _on_load_preset_clicked(self):
+        fpath, _ = QFileDialog.getOpenFileName(
+            self, "Stift-Preset aus JSON laden", "", "JSON Dateien (*.json);;Alle Dateien (*)"
+        )
+        if fpath:
+            try:
+                preset = load_preset_json(fpath)
+                # Ask strategy and apply
+                dlg = PenPresetDialog(preset.name, self)
+                if dlg.exec() == QDialog.Accepted:
+                    old_pens = copy.deepcopy(self.doc.pens)
+                    old_assignments = [(p, p.pen_id) for it in self.doc.items for p in it.paths]
+                    remap_document_to_preset(self.doc, preset, strategy=dlg.selected_strategy)
+                    if self.undo_stack:
+                        cmd = ApplyPresetCommand(
+                            self.doc, old_pens, self.doc.pens, old_assignments, self._on_preset_cmd_updated,
+                            text=f"Preset '{preset.name}' anwenden"
+                        )
+                        self.undo_stack.push(cmd)
+                    else:
+                        self._on_preset_cmd_updated()
+            except Exception as e:
+                QMessageBox.critical(self, "Fehler beim Laden", f"Konnte Preset-Datei nicht laden:\n{e}")
+
+    def _on_monochrome_clicked(self):
+        old_mappings = [(p.pen_id, p.mapped_to) for p in self.doc.pens]
+        self.doc.remap_all_to_pen(1)
+        new_mappings = [(p.pen_id, p.mapped_to) for p in self.doc.pens]
+        if self.undo_stack:
+            cmd = PenRemapCommand(self.doc, old_mappings, new_mappings, self._on_preset_cmd_updated, text="Alle auf Stift 1 (Monochrom)")
+            self.undo_stack.push(cmd)
+        else:
+            self._on_preset_cmd_updated()
+
     def _on_reset_remap_clicked(self):
+        old_mappings = [(p.pen_id, p.mapped_to) for p in self.doc.pens]
         self.doc.reset_remapping()
-        self.refresh_table()
-        self.pen_changed.emit()
+        new_mappings = [(p.pen_id, p.mapped_to) for p in self.doc.pens]
+        if self.undo_stack:
+            cmd = PenRemapCommand(self.doc, old_mappings, new_mappings, self._on_preset_cmd_updated, text="1:1 Zuweisung wiederherstellen")
+            self.undo_stack.push(cmd)
+        else:
+            self._on_preset_cmd_updated()

@@ -55,9 +55,17 @@ def rgb_to_lab(rgb: Tuple[int, int, int]) -> Tuple[float, float, float]:
     return xyz_to_lab(rgb_to_xyz(rgb))
 
 
+def rgb_hex_to_lab(hex_str: str) -> Tuple[float, float, float]:
+    """Direct conversion from hex string to CIE L*a*b*."""
+    return rgb_to_lab(hex_to_rgb(hex_str))
+
+
 def delta_e(lab1: Tuple[float, float, float], lab2: Tuple[float, float, float]) -> float:
     """CIE76 Euclidean distance in Lab color space (perceptual difference)."""
     return math.hypot(lab1[0] - lab2[0], lab1[1] - lab2[1], lab1[2] - lab2[2])
+
+
+color_delta_e = delta_e
 
 
 def cluster_colors_to_pens(

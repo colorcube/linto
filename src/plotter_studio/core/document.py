@@ -17,6 +17,30 @@ PAPER_PRESETS: Dict[str, Tuple[float, float]] = {
     "Letter": (215.9, 279.4),
 }
 
+DEVICE_PROFILES: Dict[str, Dict[str, Any]] = {
+    "mutoh_xp500": {
+        "name": "Mutoh XP-500 (Rollenplotter)",
+        "type": "roller",
+        "feed_margin_mm": 25.0,
+        "trailing_margin_mm": 5.0,
+        "side_margin_mm": 5.0,
+    },
+    "flatbed_sym": {
+        "name": "Flachbettplotter (Symmetrisch 5 mm)",
+        "type": "flatbed",
+        "margin_mm": 5.0,
+    },
+    "flatbed_borderless": {
+        "name": "Flachbettplotter (Randlos 0 mm)",
+        "type": "flatbed",
+        "margin_mm": 0.0,
+    },
+    "custom": {
+        "name": "Benutzerdefiniert (Custom)",
+        "type": "custom",
+    },
+}
+
 DEFAULT_EXP_MARGINS = {
     "left": 5.0,
     "right": 5.0,
@@ -27,11 +51,13 @@ DEFAULT_EXP_MARGINS = {
 
 @dataclass
 class Page:
-    """Paper dimensions and margins in millimeters."""
+    """Paper dimensions, device profile and margins in millimeters."""
     preset: str = "A3"
     width_mm: float = 297.0
     height_mm: float = 420.0
     orientation: str = "landscape"  # "landscape" or "portrait"
+    device_profile: str = "mutoh_xp500"
+    feed_edge: str = "top"  # "top", "bottom", "left", "right"
     margin_left_mm: float = 5.0
     margin_right_mm: float = 5.0
     margin_top_mm: float = 25.0
@@ -39,6 +65,37 @@ class Page:
 
     def __post_init__(self):
         self.apply_preset(self.preset, self.orientation)
+
+    def apply_device_profile(self, profile_key: str, feed_edge: Optional[str] = None):
+        """Configure margins according to plotter hardware characteristics."""
+        self.device_profile = profile_key
+        if feed_edge is not None:
+            self.feed_edge = feed_edge
+
+        if profile_key == "mutoh_xp500":
+            # 25mm on leading feed edge, 5mm on all other edges
+            self.margin_left_mm = 5.0
+            self.margin_right_mm = 5.0
+            self.margin_top_mm = 5.0
+            self.margin_bottom_mm = 5.0
+            if self.feed_edge == "top":
+                self.margin_top_mm = 25.0
+            elif self.feed_edge == "bottom":
+                self.margin_bottom_mm = 25.0
+            elif self.feed_edge == "left":
+                self.margin_left_mm = 25.0
+            elif self.feed_edge == "right":
+                self.margin_right_mm = 25.0
+        elif profile_key == "flatbed_sym":
+            self.margin_left_mm = 5.0
+            self.margin_right_mm = 5.0
+            self.margin_top_mm = 5.0
+            self.margin_bottom_mm = 5.0
+        elif profile_key == "flatbed_borderless":
+            self.margin_left_mm = 0.0
+            self.margin_right_mm = 0.0
+            self.margin_top_mm = 0.0
+            self.margin_bottom_mm = 0.0
 
     def apply_preset(self, preset: str, orientation: Optional[str] = None):
         if orientation is not None:
@@ -52,6 +109,8 @@ class Page:
             else:
                 self.width_mm = min(w, h)
                 self.height_mm = max(w, h)
+        if self.device_profile != "custom":
+            self.apply_device_profile(self.device_profile, self.feed_edge)
 
     def set_custom_size(self, width_mm: float, height_mm: float):
         self.preset = "Custom"

@@ -1,29 +1,38 @@
-"""Main application window for Plotter Studio."""
+"""Main Application Window for Plotter Studio."""
 
 from __future__ import annotations
 import os
+import copy
 from typing import Optional
 from PySide6.QtCore import Qt, QPointF
-from PySide6.QtGui import QAction, QIcon, QKeySequence
+from PySide6.QtGui import QAction, QKeySequence, QIcon, QUndoStack
 from PySide6.QtWidgets import (
-    QMainWindow, QWidget, QGridLayout, QFileDialog,
-    QMessageBox, QLabel, QToolBar, QStatusBar
+    QMainWindow, QWidget, QGridLayout, QToolBar,
+    QStatusBar, QLabel, QFileDialog, QMessageBox
 )
-from ..core.document import Document
+from ..core.document import Document, ImportItem
+from ..core.geometry import AffineTransform
 from ..core.svg_import import load_svg
 from ..core.svg_export import export_document_to_svg
 from .canvas import PlotterCanvas
 from .rulers import RulerWidget, RULER_BREADTH
 from .pen_dock import PenDockWidget
 from .layout_dock import LayoutDockWidget
+from .commands import (
+    TransformItemCommand, AssignPenCommand,
+    AddItemCommand, DeleteItemsCommand
+)
 
 
 class MainWindow(QMainWindow):
-    """Plotter Studio main window."""
-
+    """
+    Main Window integrating Canvas, Rulers, Pen Dock and Layout Dock.
+    """
     def __init__(self, doc: Optional[Document] = None, parent=None):
         super().__init__(parent)
         self.doc = doc or Document()
+        self.undo_stack = QUndoStack(self)
+
         self.setWindowTitle("Plotter Studio")
         self.resize(1280, 850)
 
@@ -68,9 +77,11 @@ class MainWindow(QMainWindow):
 
     def _setup_docks(self):
         self.pen_dock = PenDockWidget(self.doc, self)
+        self.pen_dock.set_undo_stack(self.undo_stack)
         self.addDockWidget(Qt.RightDockWidgetArea, self.pen_dock)
 
         self.layout_dock = LayoutDockWidget(self.doc, self)
+        self.layout_dock.set_undo_stack(self.undo_stack)
         self.addDockWidget(Qt.RightDockWidgetArea, self.layout_dock)
 
     def _setup_actions_and_menus(self):
@@ -105,6 +116,16 @@ class MainWindow(QMainWindow):
 
         # --- Edit Menu ---
         menu_edit = menu_bar.addMenu("&Bearbeiten")
+
+        self.act_undo = self.undo_stack.createUndoAction(self, "&Rückgängig")
+        self.act_undo.setShortcut(QKeySequence.Undo)
+        menu_edit.addAction(self.act_undo)
+
+        self.act_redo = self.undo_stack.createRedoAction(self, "&Wiederholen")
+        self.act_redo.setShortcut(QKeySequence.Redo)
+        menu_edit.addAction(self.act_redo)
+
+        menu_edit.addSeparator()
 
         self.act_delete = QAction("&Löschen", self)
         self.act_delete.setShortcut(QKeySequence.Delete)
@@ -147,6 +168,11 @@ class MainWindow(QMainWindow):
         toolbar.addAction(self.act_import_svg)
         toolbar.addAction(self.act_save_as)
         toolbar.addSeparator()
+
+        toolbar.addAction(self.act_undo)
+        toolbar.addAction(self.act_redo)
+        toolbar.addSeparator()
+
         toolbar.addAction(self.act_zoom_fit)
         toolbar.addSeparator()
 
@@ -177,9 +203,10 @@ class MainWindow(QMainWindow):
         self.canvas.zoom_changed.connect(self._on_zoom_changed)
         self.canvas.file_dropped.connect(self.import_svg_file)
         self.canvas.selection_changed_signal.connect(self._on_selection_changed)
+        self.canvas.item_drag_finished.connect(self._on_item_drag_finished)
 
         # Pen dock
-        self.pen_dock.pen_changed.connect(self.canvas.viewport().update)
+        self.pen_dock.pen_changed.connect(self._on_pens_changed)
         self.pen_dock.assign_selection_to_pen.connect(self.assign_selection_to_pen)
 
         # Layout dock
@@ -200,11 +227,21 @@ class MainWindow(QMainWindow):
         self.canvas.update_scene_rect()
         self.canvas.zoom_to_fit()
 
+    def _on_pens_changed(self):
+        self.canvas.viewport().update()
+        self._on_selection_changed()
+
     def _on_item_transformed(self):
         for g_item in self.canvas._item_map.values():
             g_item.sync_from_transform()
         self.canvas.viewport().update()
         self._on_selection_changed()
+
+    def _on_item_drag_finished(self, item: ImportItem, old_t: AffineTransform, new_t: AffineTransform):
+        cmd = TransformItemCommand(
+            item, old_t, new_t, self._on_item_transformed, text=f"{item.name} verschieben"
+        )
+        self.undo_stack.push(cmd)
 
     def _on_selection_changed(self):
         selected = self.canvas.get_selected_import_items()
@@ -226,6 +263,7 @@ class MainWindow(QMainWindow):
 
     def new_document(self):
         self.doc.items.clear()
+        self.undo_stack.clear()
         self.canvas.rebuild_items()
         self.pen_dock.refresh_table()
         self.layout_dock.set_active_item(None)
@@ -252,11 +290,10 @@ class MainWindow(QMainWindow):
                 item.transform.tx = tx
                 item.transform.ty = ty
 
-            self.doc.items.append(item)
-            self.canvas.rebuild_items()
-            # Select newly imported item
-            if item.item_id in self.canvas._item_map:
-                self.canvas._item_map[item.item_id].setSelected(True)
+            cmd = AddItemCommand(
+                self.doc, item, self._on_item_structure_changed, text=f"Import {os.path.basename(fpath)}"
+            )
+            self.undo_stack.push(cmd)
             self.lbl_info.setText(f"Importiert: {os.path.basename(fpath)}")
         except Exception as e:
             QMessageBox.critical(self, "Fehler beim Import", f"Konnte Datei nicht importieren:\n{e}")
@@ -274,18 +311,27 @@ class MainWindow(QMainWindow):
 
     def delete_selected_items(self):
         selected = self.canvas.get_selected_import_items()
-        for item in selected:
-            self.doc.remove_item(item.item_id)
+        if not selected:
+            return
+        cmd = DeleteItemsCommand(
+            self.doc, selected, self._on_item_structure_changed, text="Auswahl löschen"
+        )
+        self.undo_stack.push(cmd)
+
+    def _on_item_structure_changed(self):
         self.canvas.rebuild_items()
+        if self.doc.items and self.doc.items[-1].item_id in self.canvas._item_map:
+            self.canvas._item_map[self.doc.items[-1].item_id].setSelected(True)
         self._on_selection_changed()
 
     def assign_selection_to_pen(self, pen_id: int):
         selected = self.canvas.get_selected_import_items()
         if not selected:
             return
-        for item in selected:
-            item.set_pen_for_all(pen_id)
-        self.canvas.viewport().update()
+        cmd = AssignPenCommand(
+            selected, pen_id, self._on_pens_changed, text=f"Auswahl Stift {pen_id} zuweisen"
+        )
+        self.undo_stack.push(cmd)
         self.lbl_info.setText(f"Objekt(e) Stift {pen_id} zugewiesen")
 
     def show_about(self):

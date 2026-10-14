@@ -1,6 +1,7 @@
 """Canvas viewport and scene with paper representation and out-of-bounds warning."""
 
 from __future__ import annotations
+import copy
 from typing import Optional, List, Dict
 from PySide6.QtCore import Qt, QRectF, QPointF, Signal
 from PySide6.QtGui import (
@@ -21,6 +22,7 @@ class PlotterCanvas(QGraphicsView):
     zoom_changed = Signal(float)
     file_dropped = Signal(str)
     selection_changed_signal = Signal()
+    item_drag_finished = Signal(object, object, object)  # (item, old_transform, new_transform)
 
     def __init__(self, doc: Document, parent=None):
         super().__init__(parent)
@@ -155,6 +157,19 @@ class PlotterCanvas(QGraphicsView):
             self.setCursor(Qt.ClosedHandCursor)
             event.accept()
             return
+        elif event.button() == Qt.LeftButton:
+            sp = self.mapToScene(event.pos())
+            item_at = self.scene().itemAt(sp, QTransform())
+            cur = item_at
+            while cur and not isinstance(cur, GraphicsImportItem):
+                cur = cur.parentItem()
+            if isinstance(cur, GraphicsImportItem):
+                self._drag_item = cur.item
+                self._drag_old_transform = copy.deepcopy(cur.item.transform)
+            else:
+                self._drag_item = None
+                self._drag_old_transform = None
+
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event: QMouseEvent):
@@ -180,6 +195,14 @@ class PlotterCanvas(QGraphicsView):
             event.accept()
             return
         super().mouseReleaseEvent(event)
+        if hasattr(self, "_drag_item") and self._drag_item is not None and self._drag_old_transform is not None:
+            if (self._drag_item.transform.tx != self._drag_old_transform.tx or
+                self._drag_item.transform.ty != self._drag_old_transform.ty):
+                self.item_drag_finished.emit(
+                    self._drag_item, self._drag_old_transform, copy.deepcopy(self._drag_item.transform)
+                )
+            self._drag_item = None
+            self._drag_old_transform = None
         self.selection_changed_signal.emit()
 
     def zoom_to_fit(self):
