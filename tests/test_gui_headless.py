@@ -239,5 +239,90 @@ def test_menu_exit_clean_shutdown(qapp, tmp_path):
     assert not win.isVisible()
 
 
+def test_rotation_ui_and_undo(qapp, tmp_path):
+    import math
+    import numpy as np
+    from plotter_studio.pipeline.compiler import compile_document_to_plot_job
+
+    doc = Document()
+    win = MainWindow(doc)
+    win.show()
+
+    # Create a non-square rectangle (60mm x 30mm)
+    svg_content = """<svg width="60mm" height="30mm" viewBox="0 0 60 30" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0" y="0" width="60" height="30" stroke="#000" fill="none"/>
+    </svg>"""
+    test_svg_path = str(tmp_path / "rect.svg")
+    with open(test_svg_path, "w", encoding="utf-8") as f:
+        f.write(svg_content)
+
+    win.import_svg_file(test_svg_path)
+    assert len(doc.items) == 1
+    item = doc.items[0]
+    g_item = win.canvas._item_map[item.item_id]
+    g_item.setSelected(True)
+    win._on_selection_changed()
+
+    b0 = item.current_bounds
+    assert b0 is not None
+    assert math.isclose(b0.width, 60.0, abs_tol=0.5)
+    assert math.isclose(b0.height, 30.0, abs_tol=0.5)
+    orig_center_x, orig_center_y = b0.center.x, b0.center.y
+
+    # Verify dock rotation controls exist and are enabled
+    assert win.transform_dock.rot_group.isEnabled()
+    assert win.transform_dock.btn_rotate_cw is not None
+    assert win.transform_dock.btn_rotate_ccw is not None
+
+    # Rotate +90° clockwise via dock button
+    win.transform_dock.btn_rotate_cw.click()
+
+    b1 = item.current_bounds
+    assert b1 is not None
+    # Width and height should be swapped
+    assert math.isclose(b1.width, 30.0, abs_tol=0.5)
+    assert math.isclose(b1.height, 60.0, abs_tol=0.5)
+    # Center should remain invariant
+    assert math.isclose(b1.center.x, orig_center_x, abs_tol=1e-4)
+    assert math.isclose(b1.center.y, orig_center_y, abs_tol=1e-4)
+
+    # Dock fields should display updated dimensions and 100% scale
+    assert math.isclose(win.transform_dock.spin_obj_w.value(), 30.0, abs_tol=0.5)
+    assert math.isclose(win.transform_dock.spin_obj_h.value(), 60.0, abs_tol=0.5)
+    assert math.isclose(win.transform_dock.spin_obj_scale.value(), 100.0, abs_tol=0.1)
+
+    # Test Undo
+    win.act_undo.trigger()
+    b_undo = item.current_bounds
+    assert math.isclose(b_undo.width, 60.0, abs_tol=0.5)
+    assert math.isclose(b_undo.height, 30.0, abs_tol=0.5)
+
+    # Test Redo
+    win.act_redo.trigger()
+    b_redo = item.current_bounds
+    assert math.isclose(b_redo.width, 30.0, abs_tol=0.5)
+    assert math.isclose(b_redo.height, 60.0, abs_tol=0.5)
+
+    # Rotate -90° counter-clockwise via menu action
+    win.act_rotate_ccw.trigger()
+    b2 = item.current_bounds
+    assert math.isclose(b2.width, 60.0, abs_tol=0.5)
+    assert math.isclose(b2.height, 30.0, abs_tol=0.5)
+
+    # Test pipeline compiler with rotated item
+    win.transform_dock.btn_rotate_cw.click()
+    job = compile_document_to_plot_job(doc)
+    assert len(job.layers) > 0
+    layer = next(iter(job.layers.values()))
+    # All points in compiled layer must fall within b1
+    pts = np.vstack(layer.lines)
+    assert np.min(pts[:, 0]) >= b1.min_x - 0.1
+    assert np.max(pts[:, 0]) <= b1.max_x + 0.1
+    assert np.min(pts[:, 1]) >= b1.min_y - 0.1
+    assert np.max(pts[:, 1]) <= b1.max_y + 0.1
+
+    win.close()
+
+
 
 

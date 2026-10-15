@@ -39,3 +39,42 @@ def test_affine_transform():
     t_coords = combined.transform_coords(coords)
     assert np.allclose(t_coords[0], [10.0, 20.0])
     assert np.allclose(t_coords[1], [20.0, 35.0])
+
+
+def test_rotation_affine_transform():
+    # Rotate around origin
+    r90 = AffineTransform.rotation(90.0, 0.0, 0.0)
+    assert r90.a == 0.0
+    assert r90.b == 1.0
+    assert r90.c == -1.0
+    assert r90.d == 0.0
+
+    p = Point(10.0, 0.0)
+    p_rot = r90.transform_point(p)
+    assert math.isclose(p_rot.x, 0.0, abs_tol=1e-9)
+    assert math.isclose(p_rot.y, 10.0, abs_tol=1e-9)
+
+    r_ccw = AffineTransform.rotation(-90.0, 0.0, 0.0)
+    p_ccw = r_ccw.transform_point(p)
+    assert math.isclose(p_ccw.x, 0.0, abs_tol=1e-9)
+    assert math.isclose(p_ccw.y, -10.0, abs_tol=1e-9)
+
+    # Rotate around custom center: center must remain fixed
+    cx, cy = 50.0, 75.0
+    r_center = AffineTransform.rotation(90.0, cx, cy)
+    p_center = r_center.transform_point(Point(cx, cy))
+    assert math.isclose(p_center.x, cx, abs_tol=1e-9)
+    assert math.isclose(p_center.y, cy, abs_tol=1e-9)
+
+    # 4 consecutive 90 degree rotations must return exactly to identity
+    t = AffineTransform.identity()
+    for _ in range(4):
+        rot = AffineTransform.rotation(90.0, cx, cy)
+        t = rot.multiply(t)
+
+    assert math.isclose(t.a, 1.0, abs_tol=1e-9)
+    assert math.isclose(t.b, 0.0, abs_tol=1e-9)
+    assert math.isclose(t.c, 0.0, abs_tol=1e-9)
+    assert math.isclose(t.d, 1.0, abs_tol=1e-9)
+    assert math.isclose(t.tx, 0.0, abs_tol=1e-9)
+    assert math.isclose(t.ty, 0.0, abs_tol=1e-9)

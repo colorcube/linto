@@ -106,11 +106,34 @@ class AffineTransform:
         rad = math.radians(angle_degrees)
         cos_a = math.cos(rad)
         sin_a = math.sin(rad)
+        # Snap exact orthogonal angles
+        if abs(cos_a) < 1e-12:
+            cos_a = 0.0
+        elif abs(cos_a - 1.0) < 1e-12:
+            cos_a = 1.0
+        elif abs(cos_a + 1.0) < 1e-12:
+            cos_a = -1.0
+
+        if abs(sin_a) < 1e-12:
+            sin_a = 0.0
+        elif abs(sin_a - 1.0) < 1e-12:
+            sin_a = 1.0
+        elif abs(sin_a + 1.0) < 1e-12:
+            sin_a = -1.0
+
         # T(cx, cy) * R * T(-cx, -cy)
         t1 = cls.translation(-cx, -cy)
         r = cls(cos_a, sin_a, -sin_a, cos_a, 0.0, 0.0)
         t2 = cls.translation(cx, cy)
-        return t2.multiply(r.multiply(t1))
+        res = t2.multiply(r.multiply(t1))
+        # Clean small float precision drifts
+        res.a = round(res.a, 10)
+        res.b = round(res.b, 10)
+        res.c = round(res.c, 10)
+        res.d = round(res.d, 10)
+        res.tx = round(res.tx, 10)
+        res.ty = round(res.ty, 10)
+        return res
 
     def multiply(self, other: AffineTransform) -> AffineTransform:
         """Matrix product self * other (applies other first, then self)."""

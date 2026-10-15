@@ -300,8 +300,9 @@ class PlotterCanvas(QGraphicsView):
         if hasattr(self, "_drag_item") and self._drag_item is not None and self._drag_old_transform is not None:
             old_t = self._drag_old_transform
             cur_t = self._drag_item.transform
-            if (old_t.tx != cur_t.tx or old_t.ty != cur_t.ty or
-                abs(old_t.a - cur_t.a) > 1e-5 or abs(old_t.d - cur_t.d) > 1e-5):
+            if (abs(old_t.tx - cur_t.tx) > 1e-4 or abs(old_t.ty - cur_t.ty) > 1e-4 or
+                abs(old_t.a - cur_t.a) > 1e-5 or abs(old_t.b - cur_t.b) > 1e-5 or
+                abs(old_t.c - cur_t.c) > 1e-5 or abs(old_t.d - cur_t.d) > 1e-5):
                 self.item_drag_finished.emit(
                     self._drag_item, self._drag_old_transform, copy.deepcopy(self._drag_item.transform)
                 )

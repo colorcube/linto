@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 import copy
+import math
 from typing import Optional
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QUndoStack
@@ -121,7 +122,26 @@ class TransformDockWidget(QDockWidget):
 
         self.main_layout.addWidget(self.scale_group)
 
-        # --- Section 2: Alignment & Placement (Objekt-Platzierung) ---
+        # --- Section 2: Rotation (Drehung) ---
+        self.rot_group = QGroupBox("Drehung")
+        r_layout = QVBoxLayout(self.rot_group)
+        rot_btn_row = QHBoxLayout()
+
+        self.btn_rotate_ccw = QPushButton("⟲  -90°")
+        self.btn_rotate_ccw.setToolTip("Objekt 90° gegen den Uhrzeigersinn drehen (Strg+Umschalt+R)")
+        self.btn_rotate_ccw.clicked.connect(lambda: self.rotate_selected(-90.0))
+
+        self.btn_rotate_cw = QPushButton("⟳  +90°")
+        self.btn_rotate_cw.setToolTip("Objekt 90° im Uhrzeigersinn drehen (Strg+R)")
+        self.btn_rotate_cw.clicked.connect(lambda: self.rotate_selected(90.0))
+
+        rot_btn_row.addWidget(self.btn_rotate_ccw)
+        rot_btn_row.addWidget(self.btn_rotate_cw)
+        r_layout.addLayout(rot_btn_row)
+
+        self.main_layout.addWidget(self.rot_group)
+
+        # --- Section 3: Alignment & Placement (Objekt-Platzierung) ---
         self.align_group = QGroupBox("Objekt-Platzierung")
         a_layout = QVBoxLayout(self.align_group)
 
@@ -202,6 +222,7 @@ class TransformDockWidget(QDockWidget):
 
     def _set_item_controls_enabled(self, enabled: bool):
         self.scale_group.setEnabled(enabled)
+        self.rot_group.setEnabled(enabled)
         self.align_group.setEnabled(enabled)
 
     def set_active_item(self, item: Optional[ImportItem]):
@@ -222,29 +243,28 @@ class TransformDockWidget(QDockWidget):
 
         self._updating_fields = True
         try:
-            ob = self.active_item.original_bounds
-            sx = abs(self.active_item.transform.a)
-            sy = abs(self.active_item.transform.d)
-            current_w = ob.width * sx
-            current_h = ob.height * sy
+            cb = self.active_item.current_bounds
+            if not cb:
+                return
+
+            sx = math.hypot(self.active_item.transform.a, self.active_item.transform.b)
+            sy = math.hypot(self.active_item.transform.c, self.active_item.transform.d)
             scale_pct = sx * 100.0
 
-            self.spin_obj_w.setValue(current_w)
-            self.spin_obj_h.setValue(current_h)
+            self.spin_obj_w.setValue(cb.width)
+            self.spin_obj_h.setValue(cb.height)
             self.spin_obj_scale.setValue(scale_pct)
 
-            cb = self.active_item.current_bounds
             tb = self._get_target_box()
-            if cb:
-                self.spin_pos_x.setValue(cb.min_x - tb.min_x)
-                self.spin_pos_y.setValue(cb.min_y - tb.min_y)
+            self.spin_pos_x.setValue(cb.min_x - tb.min_x)
+            self.spin_pos_y.setValue(cb.min_y - tb.min_y)
 
-                slack_w = tb.width - cb.width
-                slack_h = tb.height - cb.height
-                pct_x = ((cb.min_x - tb.min_x) / slack_w * 100.0) if abs(slack_w) > 1e-4 else 50.0
-                pct_y = ((cb.min_y - tb.min_y) / slack_h * 100.0) if abs(slack_h) > 1e-4 else 50.0
-                self.spin_pos_pct_x.setValue(max(0.0, min(100.0, pct_x)))
-                self.spin_pos_pct_y.setValue(max(0.0, min(100.0, pct_y)))
+            slack_w = tb.width - cb.width
+            slack_h = tb.height - cb.height
+            pct_x = ((cb.min_x - tb.min_x) / slack_w * 100.0) if abs(slack_w) > 1e-4 else 50.0
+            pct_y = ((cb.min_y - tb.min_y) / slack_h * 100.0) if abs(slack_h) > 1e-4 else 50.0
+            self.spin_pos_pct_x.setValue(max(0.0, min(100.0, pct_x)))
+            self.spin_pos_pct_y.setValue(max(0.0, min(100.0, pct_y)))
         finally:
             self._updating_fields = False
 
@@ -270,64 +290,83 @@ class TransformDockWidget(QDockWidget):
         self.refresh_item_fields()
         self.item_transformed.emit()
 
-    def _apply_scale(self, new_scale_x: float, new_scale_y: float):
+    def rotate_selected(self, angle_degrees: float):
+        """Rotate active item around its current visual center."""
         if not self.active_item or not self.active_item.original_bounds:
             return
-        ob = self.active_item.original_bounds
         cb = self.active_item.current_bounds
         if cb is None:
             return
 
         cx, cy = cb.center.x, cb.center.y
-        loc_cx, loc_cy = ob.center.x, ob.center.y
-
         old_t = copy.deepcopy(self.active_item.transform)
-        new_t = copy.deepcopy(old_t)
-        new_t.a = new_scale_x
-        new_t.d = new_scale_y
-        new_t.tx = cx - new_scale_x * loc_cx
-        new_t.ty = cy - new_scale_y * loc_cy
+        rot_t = AffineTransform.rotation(angle_degrees, cx, cy)
+        new_t = rot_t.multiply(old_t)
 
+        dir_str = "im Uhrzeigersinn" if angle_degrees > 0 else "gegen den Uhrzeigersinn"
+        self._apply_item_transform(old_t, new_t, f"Objekt drehen ({int(abs(angle_degrees))}° {dir_str})")
+
+    def _apply_scene_scale(self, factor_x: float, factor_y: float):
+        """Scale active item around its center in scene coordinates, preserving rotation."""
+        if not self.active_item or not self.active_item.original_bounds:
+            return
+        cb = self.active_item.current_bounds
+        if cb is None:
+            return
+
+        cx, cy = cb.center.x, cb.center.y
+        old_t = copy.deepcopy(self.active_item.transform)
+
+        t1 = AffineTransform.translation(-cx, -cy)
+        s = AffineTransform(factor_x, 0.0, 0.0, factor_y, 0.0, 0.0)
+        t2 = AffineTransform.translation(cx, cy)
+        s_scene = t2.multiply(s.multiply(t1))
+
+        new_t = s_scene.multiply(old_t)
         self._apply_item_transform(old_t, new_t, "Objekt skalieren")
 
     def _on_obj_w_changed(self, new_w: float):
         if self._updating_fields or not self.active_item or not self.active_item.original_bounds:
             return
-        ob = self.active_item.original_bounds
-        if ob.width <= 0:
+        cb = self.active_item.current_bounds
+        if cb is None or cb.width <= 0:
             return
-        scale_x = new_w / ob.width
-        scale_y = scale_x if self.chk_keep_aspect.isChecked() else self.active_item.transform.d
-        self._apply_scale(scale_x, scale_y)
+        factor_x = new_w / cb.width
+        factor_y = factor_x if self.chk_keep_aspect.isChecked() else 1.0
+        self._apply_scene_scale(factor_x, factor_y)
 
     def _on_obj_h_changed(self, new_h: float):
         if self._updating_fields or not self.active_item or not self.active_item.original_bounds:
             return
-        ob = self.active_item.original_bounds
-        if ob.height <= 0:
+        cb = self.active_item.current_bounds
+        if cb is None or cb.height <= 0:
             return
-        scale_y = new_h / ob.height
-        scale_x = scale_y if self.chk_keep_aspect.isChecked() else self.active_item.transform.a
-        self._apply_scale(scale_x, scale_y)
+        factor_y = new_h / cb.height
+        factor_x = factor_y if self.chk_keep_aspect.isChecked() else 1.0
+        self._apply_scene_scale(factor_x, factor_y)
 
     def _on_scale_spin_changed(self, pct: float):
         if self._updating_fields or not self.active_item or not self.active_item.original_bounds:
             return
-        scale = max(0.01, pct / 100.0)
-        self._apply_scale(scale, scale)
+        target_scale = max(0.01, pct / 100.0)
+        cur_scale = math.hypot(self.active_item.transform.a, self.active_item.transform.b)
+        if cur_scale <= 1e-6:
+            return
+        factor = target_scale / cur_scale
+        self._apply_scene_scale(factor, factor)
 
     def scale_relative(self, factor: float):
-        if not self.active_item or not self.active_item.original_bounds:
-            return
-        new_sx = self.active_item.transform.a * factor
-        new_sy = self.active_item.transform.d * factor
-        self._apply_scale(new_sx, new_sy)
+        self._apply_scene_scale(factor, factor)
 
     def reset_to_original_size(self):
-        """Reset scale to 1.0 (true 1:1 original mm size from source file)."""
+        """Reset scale to 1.0 (true 1:1 original mm size from source file), preserving rotation."""
         if not self.active_item:
             return
-        self._apply_scale(1.0, 1.0)
+        cur_scale = math.hypot(self.active_item.transform.a, self.active_item.transform.b)
+        if cur_scale <= 1e-6:
+            return
+        factor = 1.0 / cur_scale
+        self._apply_scene_scale(factor, factor)
 
     def fit_to_page(self, margin_mm: Optional[float] = None):
         if not self.active_item or not self.active_item.original_bounds:
@@ -336,22 +375,23 @@ class TransformDockWidget(QDockWidget):
             margin_mm = self.spin_fit_margin.value()
 
         tb = self._get_target_box()
-        ob = self.active_item.original_bounds
-        avail_w = max(10.0, tb.width - 2 * margin_mm)
-        avail_h = max(10.0, tb.height - 2 * margin_mm)
-        if ob.width <= 0 or ob.height <= 0:
+        cb = self.active_item.current_bounds
+        if cb is None or cb.width <= 0 or cb.height <= 0:
             return
 
-        scale = min(avail_w / ob.width, avail_h / ob.height)
-        loc_cx, loc_cy = ob.center.x, ob.center.y
+        avail_w = max(10.0, tb.width - 2 * margin_mm)
+        avail_h = max(10.0, tb.height - 2 * margin_mm)
 
+        scale_factor = min(avail_w / cb.width, avail_h / cb.height)
+        cx, cy = cb.center.x, cb.center.y
         old_t = copy.deepcopy(self.active_item.transform)
-        new_t = copy.deepcopy(old_t)
-        new_t.a = scale
-        new_t.d = scale
-        new_t.tx = tb.center.x - scale * loc_cx
-        new_t.ty = tb.center.y - scale * loc_cy
 
+        t1 = AffineTransform.translation(-cx, -cy)
+        s = AffineTransform(scale_factor, 0.0, 0.0, scale_factor, 0.0, 0.0)
+        t2 = AffineTransform.translation(tb.center.x, tb.center.y)
+        fit_t = t2.multiply(s.multiply(t1))
+
+        new_t = fit_t.multiply(old_t)
         self._apply_item_transform(old_t, new_t, "Auf Blatt einpassen")
 
     # --- Position and Alignment ---
@@ -359,17 +399,19 @@ class TransformDockWidget(QDockWidget):
         if self._updating_fields or not self.active_item or not self.active_item.original_bounds:
             return
         tb = self._get_target_box()
-        ob = self.active_item.original_bounds
-        sx = self.active_item.transform.a
-        sy = self.active_item.transform.d
+        cb = self.active_item.current_bounds
+        if cb is None:
+            return
 
         target_left = tb.min_x + self.spin_pos_x.value()
         target_top = tb.min_y + self.spin_pos_y.value()
+        dx = target_left - cb.min_x
+        dy = target_top - cb.min_y
 
         old_t = copy.deepcopy(self.active_item.transform)
         new_t = copy.deepcopy(old_t)
-        new_t.tx = target_left - sx * ob.min_x
-        new_t.ty = target_top - sy * ob.min_y
+        new_t.tx += dx
+        new_t.ty += dy
 
         self._apply_item_transform(old_t, new_t, "Position ändern (mm)")
 
@@ -377,25 +419,25 @@ class TransformDockWidget(QDockWidget):
         if self._updating_fields or not self.active_item or not self.active_item.original_bounds:
             return
         tb = self._get_target_box()
-        ob = self.active_item.original_bounds
-        sx = self.active_item.transform.a
-        sy = self.active_item.transform.d
+        cb = self.active_item.current_bounds
+        if cb is None:
+            return
 
-        item_w = ob.width * sx
-        item_h = ob.height * sy
-        slack_w = tb.width - item_w
-        slack_h = tb.height - item_h
+        slack_w = tb.width - cb.width
+        slack_h = tb.height - cb.height
 
         pct_x = self.spin_pos_pct_x.value() / 100.0
         pct_y = self.spin_pos_pct_y.value() / 100.0
 
         target_left = tb.min_x + pct_x * slack_w
         target_top = tb.min_y + pct_y * slack_h
+        dx = target_left - cb.min_x
+        dy = target_top - cb.min_y
 
         old_t = copy.deepcopy(self.active_item.transform)
         new_t = copy.deepcopy(old_t)
-        new_t.tx = target_left - sx * ob.min_x
-        new_t.ty = target_top - sy * ob.min_y
+        new_t.tx += dx
+        new_t.ty += dy
 
         self._apply_item_transform(old_t, new_t, "Position ändern (%)")
 
@@ -403,29 +445,39 @@ class TransformDockWidget(QDockWidget):
         if not self.active_item or not self.active_item.original_bounds:
             return
         tb = self._get_target_box()
-        ob = self.active_item.original_bounds
+        cb = self.active_item.current_bounds
+        if cb is None:
+            return
+        dx = tb.center.x - cb.center.x
         old_t = copy.deepcopy(self.active_item.transform)
         new_t = copy.deepcopy(old_t)
-        new_t.tx = tb.center.x - old_t.a * ob.center.x
+        new_t.tx += dx
         self._apply_item_transform(old_t, new_t, "Horizontal zentrieren")
 
     def align_center_v(self):
         if not self.active_item or not self.active_item.original_bounds:
             return
         tb = self._get_target_box()
-        ob = self.active_item.original_bounds
+        cb = self.active_item.current_bounds
+        if cb is None:
+            return
+        dy = tb.center.y - cb.center.y
         old_t = copy.deepcopy(self.active_item.transform)
         new_t = copy.deepcopy(old_t)
-        new_t.ty = tb.center.y - old_t.d * ob.center.y
+        new_t.ty += dy
         self._apply_item_transform(old_t, new_t, "Vertikal zentrieren")
 
     def align_center_both(self):
         if not self.active_item or not self.active_item.original_bounds:
             return
         tb = self._get_target_box()
-        ob = self.active_item.original_bounds
+        cb = self.active_item.current_bounds
+        if cb is None:
+            return
+        dx = tb.center.x - cb.center.x
+        dy = tb.center.y - cb.center.y
         old_t = copy.deepcopy(self.active_item.transform)
         new_t = copy.deepcopy(old_t)
-        new_t.tx = tb.center.x - old_t.a * ob.center.x
-        new_t.ty = tb.center.y - old_t.d * ob.center.y
+        new_t.tx += dx
+        new_t.ty += dy
         self._apply_item_transform(old_t, new_t, "Mittig zentrieren")

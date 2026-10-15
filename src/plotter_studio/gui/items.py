@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 import copy
+import math
 from typing import Optional, TYPE_CHECKING
 from PySide6.QtCore import Qt, QRectF, QPointF
 from PySide6.QtGui import QPainter, QPen, QColor, QBrush, QPolygonF, QTransform
 from PySide6.QtWidgets import QGraphicsItem, QGraphicsSceneMouseEvent, QGraphicsSceneHoverEvent
+from ..core.geometry import Point
 
 if TYPE_CHECKING:
     from ..core.document import Document, ImportItem
@@ -39,8 +41,10 @@ class GraphicsImportItem(QGraphicsItem):
         if self.item.original_bounds is None:
             return QRectF()
         b = self.item.original_bounds
-        scale_x = abs(self.item.transform.a) if abs(self.item.transform.a) > 1e-6 else 1.0
-        scale_y = abs(self.item.transform.d) if abs(self.item.transform.d) > 1e-6 else 1.0
+        scale_x = math.hypot(self.item.transform.a, self.item.transform.b)
+        scale_y = math.hypot(self.item.transform.c, self.item.transform.d)
+        scale_x = scale_x if scale_x > 1e-6 else 1.0
+        scale_y = scale_y if scale_y > 1e-6 else 1.0
         # 3.0 mm scene padding for stroke thickness and selection handles
         pad_x = 3.0 / scale_x
         pad_y = 3.0 / scale_y
@@ -51,7 +55,7 @@ class GraphicsImportItem(QGraphicsItem):
         if not self.isSelected() or self.item.original_bounds is None:
             return None
         b = self.item.original_bounds
-        scale = max(0.0001, (abs(self.item.transform.a) + abs(self.item.transform.d)) / 2.0)
+        scale = max(0.0001, (math.hypot(self.item.transform.a, self.item.transform.b) + math.hypot(self.item.transform.c, self.item.transform.d)) / 2.0)
         # 3.0 mm hit radius in scene mm
         hit_radius = 3.0 / scale
         corners = {
@@ -66,11 +70,28 @@ class GraphicsImportItem(QGraphicsItem):
         return None
 
     def _cursor_for_handle(self, handle: str) -> Qt.CursorShape:
-        if handle in ("tl", "br"):
+        if self.item.original_bounds is None:
+            return Qt.ArrowCursor
+        ob = self.item.original_bounds
+        loc_corners = {
+            "tl": Point(ob.min_x, ob.min_y),
+            "tr": Point(ob.max_x, ob.min_y),
+            "bl": Point(ob.min_x, ob.max_y),
+            "br": Point(ob.max_x, ob.max_y),
+        }
+        loc_pt = loc_corners.get(handle)
+        if loc_pt is None:
+            return Qt.ArrowCursor
+        cb = self.item.current_bounds
+        if cb is None:
+            return Qt.ArrowCursor
+        sc_pt = self.item.transform.transform_point(loc_pt)
+        vx = sc_pt.x - cb.center.x
+        vy = sc_pt.y - cb.center.y
+        if vx * vy > 0:
             return Qt.SizeFDiagCursor
-        elif handle in ("tr", "bl"):
+        else:
             return Qt.SizeBDiagCursor
-        return Qt.ArrowCursor
 
     def hoverMoveEvent(self, event: QGraphicsSceneHoverEvent):
         if self.isSelected():
@@ -102,58 +123,57 @@ class GraphicsImportItem(QGraphicsItem):
         if self._resizing_handle and self._resize_start_transform and self.item.original_bounds:
             ob = self.item.original_bounds
             t0 = self._resize_start_transform
-            a0 = abs(t0.a)
-            d0 = abs(t0.d)
 
             # Check if user holds Alt for center-based proportional scaling
             scale_from_center = bool(event.modifiers() & Qt.AltModifier)
 
             if scale_from_center:
-                loc_anchor = QPointF(ob.center.x, ob.center.y)
-                anc_scene_x = t0.a * ob.center.x + t0.tx
-                anc_scene_y = t0.d * ob.center.y + t0.ty
+                loc_anchor = Point(ob.center.x, ob.center.y)
             else:
                 corners = {
-                    "tl": (QPointF(ob.min_x, ob.min_y), QPointF(ob.max_x, ob.max_y)),  # (handle, opposite anchor)
-                    "tr": (QPointF(ob.max_x, ob.min_y), QPointF(ob.min_x, ob.max_y)),
-                    "bl": (QPointF(ob.min_x, ob.max_y), QPointF(ob.max_x, ob.min_y)),
-                    "br": (QPointF(ob.max_x, ob.max_y), QPointF(ob.min_x, ob.min_y)),
+                    "tl": (Point(ob.min_x, ob.min_y), Point(ob.max_x, ob.max_y)),  # (handle, opposite anchor)
+                    "tr": (Point(ob.max_x, ob.min_y), Point(ob.min_x, ob.max_y)),
+                    "bl": (Point(ob.min_x, ob.max_y), Point(ob.max_x, ob.min_y)),
+                    "br": (Point(ob.max_x, ob.max_y), Point(ob.min_x, ob.min_y)),
                 }
                 _, loc_anchor = corners[self._resizing_handle]
-                anc_scene_x = t0.a * loc_anchor.x() + t0.tx
-                anc_scene_y = t0.d * loc_anchor.y() + t0.ty
 
-            # Handle position in scene at start
             handle_corners = {
-                "tl": QPointF(ob.min_x, ob.min_y),
-                "tr": QPointF(ob.max_x, ob.min_y),
-                "bl": QPointF(ob.min_x, ob.max_y),
-                "br": QPointF(ob.max_x, ob.max_y),
+                "tl": Point(ob.min_x, ob.min_y),
+                "tr": Point(ob.max_x, ob.min_y),
+                "bl": Point(ob.min_x, ob.max_y),
+                "br": Point(ob.max_x, ob.max_y),
             }
             loc_handle = handle_corners[self._resizing_handle]
-            h_start_scene_x = t0.a * loc_handle.x() + t0.tx
-            h_start_scene_y = t0.d * loc_handle.y() + t0.ty
 
-            v0_x = h_start_scene_x - anc_scene_x
-            v0_y = h_start_scene_y - anc_scene_y
+            anc_scene = t0.transform_point(loc_anchor)
+            h_start_scene = t0.transform_point(loc_handle)
+
+            v0_x = h_start_scene.x - anc_scene.x
+            v0_y = h_start_scene.y - anc_scene.y
             denom = v0_x * v0_x + v0_y * v0_y
 
             if denom > 1e-6:
                 cur_scene = event.scenePos()
-                v_x = cur_scene.x() - anc_scene_x
-                v_y = cur_scene.y() - anc_scene_y
+                v_x = cur_scene.x() - anc_scene.x
+                v_y = cur_scene.y() - anc_scene.y
 
                 # Proportional ratio via projection onto diagonal
                 r = (v_x * v0_x + v_y * v0_y) / denom
-                min_r = 0.01 / max(1e-4, a0)
+                scale0 = math.hypot(t0.a, t0.b)
+                min_r = 0.01 / max(1e-4, scale0)
                 r = max(min_r, r)
 
-                new_a = a0 * r
-                new_d = d0 * r
-                new_tx = anc_scene_x - new_a * loc_anchor.x()
-                new_ty = anc_scene_y - new_d * loc_anchor.y()
+                new_a = t0.a * r
+                new_b = t0.b * r
+                new_c = t0.c * r
+                new_d = t0.d * r
+                new_tx = anc_scene.x - (new_a * loc_anchor.x + new_c * loc_anchor.y)
+                new_ty = anc_scene.y - (new_b * loc_anchor.x + new_d * loc_anchor.y)
 
                 self.item.transform.a = new_a
+                self.item.transform.b = new_b
+                self.item.transform.c = new_c
                 self.item.transform.d = new_d
                 self.item.transform.tx = new_tx
                 self.item.transform.ty = new_ty
@@ -185,7 +205,7 @@ class GraphicsImportItem(QGraphicsItem):
         painter.setRenderHint(QPainter.Antialiasing, True)
 
         pens_dict = {p.pen_id: p for p in self.doc.pens}
-        scale = max(0.0001, (abs(self.item.transform.a) + abs(self.item.transform.d)) / 2.0)
+        scale = max(0.0001, (math.hypot(self.item.transform.a, self.item.transform.b) + math.hypot(self.item.transform.c, self.item.transform.d)) / 2.0)
 
         # Draw paths
         for path in self.item.paths:

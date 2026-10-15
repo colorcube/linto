@@ -3,6 +3,7 @@
 from __future__ import annotations
 import os
 import copy
+import math
 from typing import Optional
 from PySide6.QtCore import Qt, QPointF
 from PySide6.QtGui import QAction, QKeySequence, QIcon, QUndoStack, QActionGroup
@@ -176,6 +177,18 @@ class MainWindow(QMainWindow):
 
         menu_edit.addSeparator()
 
+        self.act_rotate_ccw = QAction("⟲ 90° gegen den Uhrzeigersinn drehen (-90°)", self)
+        self.act_rotate_ccw.setShortcut(QKeySequence("Ctrl+Shift+R"))
+        self.act_rotate_ccw.triggered.connect(lambda: self.rotate_selected_items(-90.0))
+        menu_edit.addAction(self.act_rotate_ccw)
+
+        self.act_rotate_cw = QAction("⟳ 90° im Uhrzeigersinn drehen (+90°)", self)
+        self.act_rotate_cw.setShortcut(QKeySequence("Ctrl+R"))
+        self.act_rotate_cw.triggered.connect(lambda: self.rotate_selected_items(90.0))
+        menu_edit.addAction(self.act_rotate_cw)
+
+        menu_edit.addSeparator()
+
         # Assign pen 1..8 shortcuts
         for pen_id in range(1, 9):
             act = QAction(f"Auswahl Stift {pen_id} zuweisen", self)
@@ -251,6 +264,10 @@ class MainWindow(QMainWindow):
         toolbar.addSeparator()
 
         toolbar.addAction(self.act_zoom_fit)
+        toolbar.addSeparator()
+
+        toolbar.addAction(self.act_rotate_ccw)
+        toolbar.addAction(self.act_rotate_cw)
         toolbar.addSeparator()
 
         btn_center = toolbar.addAction("Mittig ausrichten")
@@ -342,11 +359,37 @@ class MainWindow(QMainWindow):
         self._on_selection_changed()
 
     def _on_item_drag_finished(self, item: ImportItem, old_t: AffineTransform, new_t: AffineTransform):
-        action_name = "skalieren" if abs(old_t.a - new_t.a) > 1e-4 else "verschieben"
+        scale_diff = abs(math.hypot(old_t.a, old_t.b) - math.hypot(new_t.a, new_t.b))
+        action_name = "skalieren" if scale_diff > 1e-4 else "verschieben"
         cmd = TransformItemCommand(
             item, old_t, new_t, self._on_item_transformed, text=f"{item.name} {action_name}"
         )
         self.undo_stack.push(cmd)
+
+    def rotate_selected_items(self, angle_degrees: float):
+        """Rotate all currently selected items by angle_degrees."""
+        selected = self.canvas.get_selected_import_items()
+        if not selected:
+            return
+        if len(selected) == 1:
+            self.transform_dock.rotate_selected(angle_degrees)
+        else:
+            dir_str = "im Uhrzeigersinn" if angle_degrees > 0 else "gegen den Uhrzeigersinn"
+            self.undo_stack.beginMacro(f"Objekte drehen ({int(abs(angle_degrees))}° {dir_str})")
+            try:
+                for it in selected:
+                    cb = it.current_bounds
+                    if cb:
+                        cx, cy = cb.center.x, cb.center.y
+                        old_t = copy.deepcopy(it.transform)
+                        rot_t = AffineTransform.rotation(angle_degrees, cx, cy)
+                        new_t = rot_t.multiply(old_t)
+                        cmd = TransformItemCommand(
+                            it, old_t, new_t, self._on_item_transformed, text=f"{it.name} drehen"
+                        )
+                        self.undo_stack.push(cmd)
+            finally:
+                self.undo_stack.endMacro()
 
     def _on_selection_changed(self):
         selected = self.canvas.get_selected_import_items()
@@ -357,7 +400,7 @@ class MainWindow(QMainWindow):
             if b:
                 pb = self.doc.page.plottable_box
                 is_oob = not pb.contains_box(b)
-                scale_pct = abs(item.transform.a) * 100.0
+                scale_pct = math.hypot(item.transform.a, item.transform.b) * 100.0
                 warn_text = " — ⚠️ Außerhalb des Plottbereichs!" if is_oob else ""
                 self.lbl_info.setText(
                     f"Ausgewählt: {item.name} ({b.width:.1f} x {b.height:.1f} mm, Skalierung: {scale_pct:.0f}%){warn_text}"
