@@ -98,7 +98,7 @@ def test_docks_and_page_setup_dialog(qapp):
     assert not win.transform_dock.btn_center_h.icon().isNull()
     assert not win.transform_dock.btn_center_v.icon().isNull()
     assert not win.transform_dock.btn_center_both.icon().isNull()
-    assert win.transform_dock.spin_fit_margin.minimumWidth() >= 100
+    assert win.transform_dock.spin_fit_margin.minimumWidth() >= 75
 
     # Verify that Transform and Pen docks are tabified
     tabified_with_transform = win.tabifiedDockWidgets(win.transform_dock)
