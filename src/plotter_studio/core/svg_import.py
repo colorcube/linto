@@ -48,7 +48,7 @@ def segment_to_points(
         return flatten_cubic_bezier(p0, p1, p2, p3, tolerance=tolerance_mm)
     elif isinstance(seg, svgelements.QuadraticBezier):
         p0 = (seg.start.x * scale_mm, seg.start.y * scale_mm)
-        p1 = (seg.control1.x * scale_mm, seg.control1.y * scale_mm)
+        p1 = (seg.control.x * scale_mm, seg.control.y * scale_mm)
         p2 = (seg.end.x * scale_mm, seg.end.y * scale_mm)
         return flatten_quadratic_bezier(p0, p1, p2, tolerance=tolerance_mm)
     elif isinstance(seg, svgelements.Arc):

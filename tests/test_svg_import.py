@@ -30,3 +30,16 @@ def test_svg_load_shapes():
     assert math.isclose(b.min_y, 0.0, abs_tol=0.1)
     assert math.isclose(b.max_x, 200.0, abs_tol=0.1)
     assert math.isclose(b.max_y, 150.0, abs_tol=0.1)
+
+
+def test_svg_load_quadratic_bezier():
+    svg_sample = """<svg width="100mm" height="100mm" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <path d="M 10 10 Q 50 90 90 10" stroke="#000000" fill="none"/>
+    </svg>"""
+    item = load_svg(svg_sample, name="TestQuadratic")
+    assert len(item.paths) == 1
+    assert len(item.paths[0].points) > 2
+    b = item.original_bounds
+    assert b is not None
+    assert math.isclose(b.min_x, 10.0, abs_tol=0.5)
+    assert math.isclose(b.max_x, 90.0, abs_tol=0.5)
