@@ -1,6 +1,6 @@
-# 1. Konzepte & Architektur von Plotter Studio
+# 5. Hintergrund: Konzepte, Algorithmen & Architektur (Deep-Dive)
 
-Plotter Studio ist eine moderne, hochoptimierte Steuer- und Layout-Software für klassische und moderne Vektor-Stiftplotter. Es schlägt eine Brücke zwischen zeitgenössischen Vektorgrafikprogrammen (Inkscape, Illustrator, CAD, generative Python/Processing-Skripte) und der physikalischen Mechanik von Stiftplottern.
+Dieses Kapitel bietet einen detaillierten technischen Einblick in die mathematischen und maschinennahen Hintergründe von Plotter Studio: Wie der Slicer intern arbeitet, wie Algorithmen wie 2-Opt TSP und RDP funktionieren, wie Koordinaten mathematisch transformiert werden und wie die Multi-Plotter-Architektur aufgebaut ist.
 
 ---
 
@@ -156,3 +156,16 @@ margins_mm:
 * Verwaltet eine Liste aller konfigurierten Plotter in `~/.config/plotter-studio/devices.yaml`.
 * Ermöglicht es, in der Benutzeroberfläche mit einem Klick zwischen verschiedenen Plottern umzuschalten (z.B. vom Mutoh XP-500 Rollenplotter zu einem Roland DXY Flachbettplotter oder einem virtuellen Emulator).
 * Alle Docks, Lineale, Randbereiche und Emitter passen sich sofort dynamisch an das gewählte Gerät an.
+
+---
+
+## 6. Verwandte Projekte, Inspiration & Danksagung
+
+Plotter Studio baut auf den Erfahrungen und Erkenntnissen bewährter Open-Source-Projekte auf:
+
+* **vpype (Antoine Beyeler, GPL-3.0-or-later):**  
+  Die modulare Architektur der Slicer-Pipeline (Segmentverschmelzung, Umkehrung, Douglas-Peucker-Glättung und die 2-Opt TSP-Optimierung zur Minimierung von Leerfahrten) wurde maßgeblich durch *vpype* inspiriert. Plotter Studio implementiert diese Prinzipien auf Basis von reinem NumPy und integriert sie in eine interaktive Desktop-Oberfläche mit Echtzeit-Feedback und direkter Hardware-Ausgabe.
+* **MutohPlot (Oliver F., MIT-Lizenz):**  
+  Diente bei der Entstehung von Plotter Studio als Referenzprojekt und Testorakel für die Eigenheiten des Mutoh XP-500. Insbesondere die Hardware-Randprofile (Normal, Expanded, Type 1/3) und die Handshake-Eigenheiten wurden anhand von MutohPlot verifiziert. Es wurde **kein Code direkt übernommen**: Plotter Studio verwendet ein eigenes objektorientiertes Dokumentenmodell und eine native RTS/CTS-Flusssteuerung.
+* **InkCut (GPL-3.0-or-later):**  
+  Diente als architektonische Inspiration für die Entkopplung von Geräteprofilen und Transportmechanismen sowie für künftige Schleppmesser-Filter. Auch hier wurde **kein Code übernommen**; Plotter Studio setzt auf eine eigenständige Qt6- und NumPy-Architektur.
