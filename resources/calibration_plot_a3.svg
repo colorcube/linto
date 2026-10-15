@@ -1,0 +1,160 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420.0mm" height="297.0mm" viewBox="0 0 420.0 297.0">
+  <style>
+    text { font-family: "DejaVu Sans", "Helvetica", "Arial", sans-serif; font-size: 3.5px; fill: #1a1a1a; }
+    .title { font-size: 5px; font-weight: bold; }
+    .edge-label { font-size: 3.2px; font-weight: bold; fill: #d32f2f; }
+    .axis-label { font-size: 4px; font-weight: bold; }
+  </style>
+  <!-- Sheet border (physical paper: 420.0 x 297.0 mm) -->
+  <rect x="0" y="0" width="420.0" height="297.0" fill="none" stroke="#cbd5e1" stroke-width="0.2" stroke-dasharray="2,2"/>
+  <!-- Plottable Boundary (EXP: Top 25mm, Bottom 5mm, Left/Right 5mm) -->
+  <rect x="5.0" y="25.0" width="410.0" height="267.0" fill="none" stroke="#1a1a1a" stroke-width="0.35"/>
+  <!-- Inner border (2mm offset) -->
+  <rect x="7.0" y="27.0" width="406.0" height="263.0" fill="none" stroke="#1a1a1a" stroke-width="0.25"/>
+  <text x="210.0" y="23.0" text-anchor="middle" class="edge-label">▲ VORSCHUB-KANTE (TOP / LEADING EDGE: SOLL-ABSTAND 25.0 mm) ▲</text>
+  <text x="210.0" y="295.5" text-anchor="middle" class="edge-label">▼ HINTERKANTE (BOTTOM: SOLL-ABSTAND 5.0 mm) ▼</text>
+  <text x="2" y="158.5" text-anchor="middle" transform="rotate(-90 2 158.5)" class="edge-label">◄ LINKS (SOLL 5.0 mm)</text>
+  <text x="418.5" y="158.5" text-anchor="middle" transform="rotate(90 418.5 158.5)" class="edge-label">RECHTS (SOLL 5.0 mm) ►</text>
+  <text x="11.0" y="35.0" class="title">MUTOH XP-500 KALIBRIER- &amp; TESTPLOT (DIN A3 QUER)</text>
+  <text x="11.0" y="40.0">Plotter Studio Hardware-Verifikation · AP0 Testplan · Maße in Millimeter</text>
+  <!-- Orientation Coordinate System -->
+  <g stroke="#d32f2f" stroke-width="0.5" fill="none">
+    <line x1="20.0" y1="60.0" x2="45.0" y2="60.0"/>
+    <polyline points="42.0,58.0 45.0,60.0 42.0,62.0"/>
+    <line x1="20.0" y1="60.0" x2="20.0" y2="85.0"/>
+    <polyline points="18.0,82.0 20.0,85.0 22.0,82.0"/>
+  </g>
+  <text x="47.0" y="61.2" class="axis-label" fill="#d32f2f">+X (Vorschub / Rollenvorschub)</text>
+  <text x="19.0" y="90.0" class="axis-label" fill="#d32f2f">+Y (Wagen / Stiftachse)</text>
+  <!-- Precision Scale Ruler (X-Axis) -->
+  <g stroke="#1a1a1a" stroke-width="0.35">
+    <line x1="10.0" y1="148.5" x2="410.0" y2="148.5"/>
+    <line x1="10.0" y1="144.5" x2="10.0" y2="152.5"/>
+  </g>
+  <text x="10.0" y="143.5" text-anchor="middle">0 mm</text>
+  <g stroke="#1a1a1a" stroke-width="0.35">
+    <line x1="60.0" y1="146.0" x2="60.0" y2="151.0"/>
+  </g>
+  <text x="60.0" y="143.5" text-anchor="middle">50 mm</text>
+  <g stroke="#1a1a1a" stroke-width="0.35">
+    <line x1="110.0" y1="144.5" x2="110.0" y2="152.5"/>
+  </g>
+  <text x="110.0" y="143.5" text-anchor="middle">100 mm</text>
+  <g stroke="#1a1a1a" stroke-width="0.35">
+    <line x1="160.0" y1="146.0" x2="160.0" y2="151.0"/>
+  </g>
+  <text x="160.0" y="143.5" text-anchor="middle">150 mm</text>
+  <g stroke="#1a1a1a" stroke-width="0.35">
+    <line x1="210.0" y1="144.5" x2="210.0" y2="152.5"/>
+  </g>
+  <text x="210.0" y="143.5" text-anchor="middle">200 mm</text>
+  <g stroke="#1a1a1a" stroke-width="0.35">
+    <line x1="260.0" y1="146.0" x2="260.0" y2="151.0"/>
+  </g>
+  <text x="260.0" y="143.5" text-anchor="middle">250 mm</text>
+  <g stroke="#1a1a1a" stroke-width="0.35">
+    <line x1="310.0" y1="144.5" x2="310.0" y2="152.5"/>
+  </g>
+  <text x="310.0" y="143.5" text-anchor="middle">300 mm</text>
+  <g stroke="#1a1a1a" stroke-width="0.35">
+    <line x1="360.0" y1="146.0" x2="360.0" y2="151.0"/>
+  </g>
+  <text x="360.0" y="143.5" text-anchor="middle">350 mm</text>
+  <g stroke="#1a1a1a" stroke-width="0.35">
+    <line x1="410.0" y1="144.5" x2="410.0" y2="152.5"/>
+  </g>
+  <text x="410.0" y="143.5" text-anchor="middle">400 mm</text>
+  <g stroke="#1a1a1a" stroke-width="0.35">
+  </g>
+  <text x="210.0" y="156.5" text-anchor="middle" font-weight="bold">MASSTABSPRÜFUNG: EXAKT 400.0 mm (MIT STAHLMASSSTAB MESSEN)</text>
+  <!-- Precision Scale Ruler (Y-Axis) -->
+  <g stroke="#1a1a1a" stroke-width="0.35">
+    <line x1="385.0" y1="58.5" x2="385.0" y2="258.5"/>
+    <line x1="381.0" y1="58.5" x2="389.0" y2="58.5"/>
+  </g>
+  <text x="391.0" y="59.7">0</text>
+  <g stroke="#1a1a1a" stroke-width="0.35">
+    <line x1="381.0" y1="108.5" x2="389.0" y2="108.5"/>
+  </g>
+  <text x="391.0" y="109.7">50</text>
+  <g stroke="#1a1a1a" stroke-width="0.35">
+    <line x1="381.0" y1="158.5" x2="389.0" y2="158.5"/>
+  </g>
+  <text x="391.0" y="159.7">100</text>
+  <g stroke="#1a1a1a" stroke-width="0.35">
+    <line x1="381.0" y1="208.5" x2="389.0" y2="208.5"/>
+  </g>
+  <text x="391.0" y="209.7">150</text>
+  <g stroke="#1a1a1a" stroke-width="0.35">
+    <line x1="381.0" y1="258.5" x2="389.0" y2="258.5"/>
+  </g>
+  <text x="391.0" y="259.7">200</text>
+  <g stroke="#1a1a1a" stroke-width="0.35">
+  </g>
+  <text x="385.0" y="264.5" text-anchor="middle">Y: 200 mm</text>
+  <!-- Concentric circles for backlash & CV mode -->
+  <circle cx="45.0" cy="110.0" r="10.0" fill="none" stroke="#1976d2" stroke-width="0.35"/>
+  <circle cx="45.0" cy="110.0" r="20.0" fill="none" stroke="#388e3c" stroke-width="0.35"/>
+  <circle cx="45.0" cy="110.0" r="30.0" fill="none" stroke="#f57c00" stroke-width="0.35"/>
+  <line x1="10.0" y1="110.0" x2="80.0" y2="110.0" stroke="#1976d2" stroke-width="0.25"/>
+  <line x1="45.0" y1="75.0" x2="45.0" y2="145.0" stroke="#1976d2" stroke-width="0.25"/>
+  <text x="45.0" y="150.0" text-anchor="middle">Kreisbogen / CV-Test (R=10, 20, 30 mm)</text>
+  <!-- Pen 1..8 Verification Matrix -->
+  <text x="105.0" y="96.0" font-weight="bold">Stifte 1–8 Testmuster (SP1…SP8):</text>
+  <!-- Pen 1 -->
+  <g stroke="#1a1a1a" stroke-width="0.35">
+    <line x1="105.0" y1="100.0" x2="135.0" y2="100.0"/>
+    <polyline points="137.0,98.0 141.0,102.0 145.0,98.0 149.0,102.0"/>
+    <rect x="152.0" y="97.5" width="5" height="5" fill="none"/>
+  </g>
+  <text x="161.0" y="101.2">SP1 (#1a1a1a)</text>
+  <!-- Pen 2 -->
+  <g stroke="#d32f2f" stroke-width="0.35">
+    <line x1="105.0" y1="109.0" x2="135.0" y2="109.0"/>
+    <polyline points="137.0,107.0 141.0,111.0 145.0,107.0 149.0,111.0"/>
+    <rect x="152.0" y="106.5" width="5" height="5" fill="none"/>
+  </g>
+  <text x="161.0" y="110.2">SP2 (#d32f2f)</text>
+  <!-- Pen 3 -->
+  <g stroke="#1976d2" stroke-width="0.35">
+    <line x1="105.0" y1="118.0" x2="135.0" y2="118.0"/>
+    <polyline points="137.0,116.0 141.0,120.0 145.0,116.0 149.0,120.0"/>
+    <rect x="152.0" y="115.5" width="5" height="5" fill="none"/>
+  </g>
+  <text x="161.0" y="119.2">SP3 (#1976d2)</text>
+  <!-- Pen 4 -->
+  <g stroke="#388e3c" stroke-width="0.35">
+    <line x1="105.0" y1="127.0" x2="135.0" y2="127.0"/>
+    <polyline points="137.0,125.0 141.0,129.0 145.0,125.0 149.0,129.0"/>
+    <rect x="152.0" y="124.5" width="5" height="5" fill="none"/>
+  </g>
+  <text x="161.0" y="128.2">SP4 (#388e3c)</text>
+  <!-- Pen 5 -->
+  <g stroke="#f57c00" stroke-width="0.35">
+    <line x1="105.0" y1="136.0" x2="135.0" y2="136.0"/>
+    <polyline points="137.0,134.0 141.0,138.0 145.0,134.0 149.0,138.0"/>
+    <rect x="152.0" y="133.5" width="5" height="5" fill="none"/>
+  </g>
+  <text x="161.0" y="137.2">SP5 (#f57c00)</text>
+  <!-- Pen 6 -->
+  <g stroke="#7b1fa2" stroke-width="0.35">
+    <line x1="105.0" y1="145.0" x2="135.0" y2="145.0"/>
+    <polyline points="137.0,143.0 141.0,147.0 145.0,143.0 149.0,147.0"/>
+    <rect x="152.0" y="142.5" width="5" height="5" fill="none"/>
+  </g>
+  <text x="161.0" y="146.2">SP6 (#7b1fa2)</text>
+  <!-- Pen 7 -->
+  <g stroke="#0097a7" stroke-width="0.35">
+    <line x1="105.0" y1="154.0" x2="135.0" y2="154.0"/>
+    <polyline points="137.0,152.0 141.0,156.0 145.0,152.0 149.0,156.0"/>
+    <rect x="152.0" y="151.5" width="5" height="5" fill="none"/>
+  </g>
+  <text x="161.0" y="155.2">SP7 (#0097a7)</text>
+  <!-- Pen 8 -->
+  <g stroke="#c09000" stroke-width="0.35">
+    <line x1="105.0" y1="163.0" x2="135.0" y2="163.0"/>
+    <polyline points="137.0,161.0 141.0,165.0 145.0,161.0 149.0,165.0"/>
+    <rect x="152.0" y="160.5" width="5" height="5" fill="none"/>
+  </g>
+  <text x="161.0" y="164.2">SP8 (#c09000)</text>
+</svg>
