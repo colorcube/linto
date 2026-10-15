@@ -5,7 +5,7 @@ import os
 import copy
 from typing import Optional
 from PySide6.QtCore import Qt, QPointF
-from PySide6.QtGui import QAction, QKeySequence, QIcon, QUndoStack
+from PySide6.QtGui import QAction, QKeySequence, QIcon, QUndoStack, QActionGroup
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QGridLayout, QToolBar,
     QStatusBar, QLabel, QFileDialog, QMessageBox, QTabWidget
@@ -14,12 +14,17 @@ from ..core.document import Document, ImportItem
 from ..core.geometry import AffineTransform
 from ..core.svg_import import load_svg
 from ..core.svg_export import export_document_to_svg
-from .canvas import PlotterCanvas
+from ..pipeline.compiler import (
+    PipelineConfig, PlotJob, compile_document_to_plot_job
+)
+from .canvas import PlotterCanvas, CanvasMode
 from .rulers import RulerWidget, RULER_BREADTH
 from .pen_dock import PenDockWidget
 from .paper_dock import PaperDockWidget
 from .transform_dock import TransformDockWidget
 from .layout_dock import LayoutDockWidget
+from .plot_dock import PlotDockWidget
+from .simulation_bar import PlotSimulationBar
 from .commands import (
     TransformItemCommand, AssignPenCommand,
     AddItemCommand, DeleteItemsCommand
@@ -76,6 +81,11 @@ class MainWindow(QMainWindow):
         grid.addWidget(self.ruler_v, 1, 0)
         grid.addWidget(self.canvas, 1, 1)
 
+        # Simulation bar below canvas (visible only in Plot mode)
+        self.simulation_bar = PlotSimulationBar(container)
+        self.simulation_bar.hide()
+        grid.addWidget(self.simulation_bar, 2, 0, 1, 2)
+
         self.setCentralWidget(container)
 
     def _setup_docks(self):
@@ -103,9 +113,14 @@ class MainWindow(QMainWindow):
         self.pen_dock.set_undo_stack(self.undo_stack)
         self.addDockWidget(Qt.RightDockWidgetArea, self.pen_dock)
 
-        # Group as tabs: [Papier & Gerät] [Skalieren & Platzieren] [Stifte]
+        # Panel 4: Plot-Vorschau & Ausgabe
+        self.plot_dock = PlotDockWidget(self.doc, self)
+        self.addDockWidget(Qt.RightDockWidgetArea, self.plot_dock)
+
+        # Group as tabs: [Papier & Gerät] [Skalieren & Platzieren] [Stifte] [Plot-Vorschau & Ausgabe]
         self.tabifyDockWidget(self.paper_dock, self.transform_dock)
         self.tabifyDockWidget(self.transform_dock, self.pen_dock)
+        self.tabifyDockWidget(self.pen_dock, self.plot_dock)
 
         # Display Papier & Gerät as initial tab
         self.paper_dock.raise_()
@@ -170,16 +185,45 @@ class MainWindow(QMainWindow):
         # --- View Menu ---
         menu_view = menu_bar.addMenu("&Ansicht")
 
+        # Mode switching group
+        self.mode_group = QActionGroup(self)
+        self.mode_group.setExclusive(True)
+
+        self.act_mode_layout = QAction("📐 Layout-Modus", self)
+        self.act_mode_layout.setCheckable(True)
+        self.act_mode_layout.setChecked(True)
+        self.act_mode_layout.setShortcut(QKeySequence("Ctrl+L"))
+        self.act_mode_layout.triggered.connect(self.switch_to_layout_mode)
+        self.mode_group.addAction(self.act_mode_layout)
+        menu_view.addAction(self.act_mode_layout)
+
+        self.act_mode_plot = QAction("🖨️ Plot-Vorschau", self)
+        self.act_mode_plot.setCheckable(True)
+        self.act_mode_plot.setShortcut(QKeySequence("Ctrl+P"))
+        self.act_mode_plot.triggered.connect(self.switch_to_plot_mode)
+        self.mode_group.addAction(self.act_mode_plot)
+        menu_view.addAction(self.act_mode_plot)
+
+        menu_view.addSeparator()
+
         self.act_zoom_fit = QAction("Ganzes Blatt anzeigen", self)
         self.act_zoom_fit.setShortcut(QKeySequence("Ctrl+0"))
         self.act_zoom_fit.triggered.connect(self.canvas.zoom_to_fit)
         menu_view.addAction(self.act_zoom_fit)
 
-        # Docks toggle
+        # Docks toggle & Display options
+        menu_view.addSeparator()
+        self.act_show_nodes = QAction("Stützpunkte (Koordinaten) anzeigen", self)
+        self.act_show_nodes.setCheckable(True)
+        self.act_show_nodes.setChecked(False)
+        self.act_show_nodes.toggled.connect(self.plot_dock.chk_show_nodes.setChecked)
+        menu_view.addAction(self.act_show_nodes)
+
         menu_view.addSeparator()
         menu_view.addAction(self.paper_dock.toggleViewAction())
         menu_view.addAction(self.transform_dock.toggleViewAction())
         menu_view.addAction(self.pen_dock.toggleViewAction())
+        menu_view.addAction(self.plot_dock.toggleViewAction())
 
         # --- Help Menu ---
         menu_help = menu_bar.addMenu("&Hilfe")
@@ -191,6 +235,11 @@ class MainWindow(QMainWindow):
         toolbar = QToolBar("Haupt-Werkzeugleiste", self)
         toolbar.setMovable(False)
         self.addToolBar(Qt.TopToolBarArea, toolbar)
+
+        # Mode switches prominently in toolbar
+        toolbar.addAction(self.act_mode_layout)
+        toolbar.addAction(self.act_mode_plot)
+        toolbar.addSeparator()
 
         toolbar.addAction(self.act_import_svg)
         toolbar.addAction(self.act_save_as)
@@ -243,6 +292,18 @@ class MainWindow(QMainWindow):
         self.transform_dock.item_transformed.connect(self._on_item_transformed)
         self.canvas.item_transformed_live.connect(self._on_item_transformed_live)
 
+        # Simulation bar
+        self.simulation_bar.step_changed.connect(self.canvas.set_simulation_step)
+
+        # Plot dock
+        self.plot_dock.config_changed.connect(self.recompile_plot_job)
+        self.plot_dock.toggle_travels.connect(self.canvas.set_show_travels)
+        self.plot_dock.toggle_nodes.connect(self.canvas.set_show_nodes)
+        self.plot_dock.toggle_nodes.connect(self.act_show_nodes.setChecked)
+        self.plot_dock.pen_filter_changed.connect(self.canvas.set_visible_pens)
+        self.plot_dock.export_hpgl_requested.connect(self.export_hpgl_dialog)
+        self.plot_dock.export_svg_requested.connect(self.export_plot_svg_dialog)
+
     def _on_mouse_moved(self, x_mm: float, y_mm: float):
         self.ruler_h.set_cursor_pos(x_mm)
         self.ruler_v.set_cursor_pos(y_mm)
@@ -257,16 +318,22 @@ class MainWindow(QMainWindow):
         self.transform_dock.refresh_item_fields()
         self.canvas.update_scene_rect()
         self.canvas.zoom_to_fit()
+        if self.canvas._mode == CanvasMode.PLOT:
+            self.recompile_plot_job()
 
     def _on_pens_changed(self):
         self.canvas.viewport().update()
         self._on_selection_changed()
+        if self.canvas._mode == CanvasMode.PLOT:
+            self.recompile_plot_job()
 
     def _on_item_transformed(self):
         for g_item in self.canvas._item_map.values():
             g_item.sync_from_transform()
         self.canvas.viewport().update()
         self._on_selection_changed()
+        if self.canvas._mode == CanvasMode.PLOT:
+            self.recompile_plot_job()
 
     def _on_item_transformed_live(self):
         self._on_selection_changed()
@@ -413,8 +480,125 @@ class MainWindow(QMainWindow):
                     return
         event.ignore()
 
+    def switch_to_plot_mode(self):
+        """Switch view and controls into Plot/Slice mode."""
+        self.act_mode_plot.setChecked(True)
+        self.recompile_plot_job()
+        self.canvas.set_mode(CanvasMode.PLOT)
+        self.simulation_bar.show()
+        self.plot_dock.show()
+        self.plot_dock.raise_()
+        self.lbl_info.setText("Plot-Vorschau aktiv")
+
+    def switch_to_layout_mode(self):
+        """Switch view and controls back into Layout mode."""
+        self.act_mode_layout.setChecked(True)
+        self.simulation_bar.pause()
+        self.simulation_bar.hide()
+        self.canvas.set_mode(CanvasMode.LAYOUT)
+        self.paper_dock.show()
+        self.paper_dock.raise_()
+        self.lbl_info.setText("Layout-Modus aktiv")
+
+    def recompile_plot_job(self):
+        """Compile document paths through pipeline and update preview, scrubber and stats."""
+        cfg = self.plot_dock.get_pipeline_config()
+        self._current_job = compile_document_to_plot_job(self.doc, cfg)
+        self.canvas.set_plot_job(self._current_job)
+        self.simulation_bar.set_job(self._current_job)
+        self.plot_dock.set_job(self._current_job)
+
+    def export_hpgl_dialog(self):
+        """Export compiled plot job to an HP-GL / PLT file."""
+        if not hasattr(self, "_current_job") or not self._current_job:
+            self.recompile_plot_job()
+        if not self._current_job or not self._current_job.layers:
+            QMessageBox.information(self, "Export nicht möglich", "Keine Pfade zum Exportieren vorhanden.")
+            return
+
+        fpath, _ = QFileDialog.getSaveFileName(
+            self, "Plotdatei exportieren", "job.hpgl", "HP-GL Plotdatei (*.hpgl *.plt);;Alle Dateien (*)"
+        )
+        if not fpath:
+            return
+
+        units_per_mm = 40.0  # Default 0.025 mm
+        lines_out = ["IN;"]
+        for pen_id, layer in sorted(self._current_job.layers.items()):
+            speed = int(layer.pen.speed_cm_s)
+            lines_out.append(f"SP{pen_id};")
+            if speed > 0:
+                lines_out.append(f"VS{speed};")
+            for poly in layer.lines:
+                if len(poly) < 2:
+                    continue
+                p0 = poly[0]
+                lines_out.append(f"PU{round(p0[0] * units_per_mm)},{round(p0[1] * units_per_mm)};")
+                pd_pts = [f"{round(p[0] * units_per_mm)},{round(p[1] * units_per_mm)}" for p in poly[1:]]
+                lines_out.append("PD" + ",".join(pd_pts) + ";")
+        lines_out.append("PU;SP0;")
+
+        try:
+            with open(fpath, "w", encoding="ascii") as f:
+                f.write("\n".join(lines_out) + "\n")
+            self.lbl_info.setText(f"HP-GL exportiert: {os.path.basename(fpath)}")
+        except Exception as e:
+            QMessageBox.critical(self, "Fehler beim Export", f"HP-GL-Export fehlgeschlagen:\n{e}")
+
+    def export_plot_svg_dialog(self):
+        """Export compiled polylines into a clean SVG file grouped by pen."""
+        if not hasattr(self, "_current_job") or not self._current_job:
+            self.recompile_plot_job()
+        if not self._current_job or not self._current_job.layers:
+            QMessageBox.information(self, "Export nicht möglich", "Keine Pfade zum Exportieren vorhanden.")
+            return
+
+        fpath, _ = QFileDialog.getSaveFileName(
+            self, "Plot-Vektoren exportieren", "plot_output.svg", "SVG Vektordatei (*.svg);;Alle Dateien (*)"
+        )
+        if not fpath:
+            return
+
+        import xml.etree.ElementTree as ET
+        w_mm = self.doc.page.width_mm
+        h_mm = self.doc.page.height_mm
+        root = ET.Element("svg", {
+            "xmlns": "http://www.w3.org/2000/svg",
+            "width": f"{w_mm:.2f}mm",
+            "height": f"{h_mm:.2f}mm",
+            "viewBox": f"0 0 {w_mm:.2f} {h_mm:.2f}",
+            "version": "1.1",
+        })
+
+        for pen_id, layer in sorted(self._current_job.layers.items()):
+            g_layer = ET.SubElement(root, "g", {
+                "id": f"pen_{pen_id}_{layer.pen.name.replace(' ', '_')}",
+                "stroke": layer.pen.color_hex,
+                "stroke-width": f"{layer.pen.width_mm:.2f}",
+                "fill": "none",
+                "stroke-linecap": "round",
+                "stroke-linejoin": "round",
+            })
+            for poly in layer.lines:
+                if len(poly) < 2:
+                    continue
+                d_parts = [f"M {poly[0, 0]:.3f},{poly[0, 1]:.3f}"]
+                for pt in poly[1:]:
+                    d_parts.append(f"L {pt[0]:.3f},{pt[1]:.3f}")
+                ET.SubElement(g_layer, "path", {"d": " ".join(d_parts)})
+
+        try:
+            tree = ET.ElementTree(root)
+            ET.indent(tree, space="  ")
+            tree.write(fpath, encoding="utf-8", xml_declaration=True)
+            self.lbl_info.setText(f"Plot-SVG exportiert: {os.path.basename(fpath)}")
+        except Exception as e:
+            QMessageBox.critical(self, "Fehler beim Export", f"SVG-Export fehlgeschlagen:\n{e}")
+
     def cleanup(self):
         """Clean up canvas and docks to ensure safe, warning-free Qt teardown."""
+        if hasattr(self, "simulation_bar") and self.simulation_bar:
+            self.simulation_bar.pause()
         if hasattr(self, "canvas") and self.canvas:
             self.canvas.cleanup()
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 import copy
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Set
 from PySide6.QtCore import Qt, QRectF, QPointF, Signal
 from PySide6.QtGui import (
     QPainter, QPen, QColor, QBrush, QWheelEvent,
@@ -10,7 +10,14 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsItem
 from ..core.document import Document, ImportItem
+from ..pipeline.compiler import PlotJob
 from .items import GraphicsImportItem
+from .plot_items import GraphicsPlotPreviewItem
+
+
+class CanvasMode:
+    LAYOUT = "layout"
+    PLOT = "plot"
 
 
 class PlotterCanvas(QGraphicsView):
@@ -50,6 +57,8 @@ class PlotterCanvas(QGraphicsView):
         self._space_pressed = False
 
         self._item_map: Dict[str, GraphicsImportItem] = {}
+        self._mode: str = CanvasMode.LAYOUT
+        self._plot_preview_item: Optional[GraphicsPlotPreviewItem] = None
 
         self.update_scene_rect()
         self.rebuild_items()
@@ -65,11 +74,15 @@ class PlotterCanvas(QGraphicsView):
         if hasattr(self, "_scene") and self._scene is not None:
             self._scene.blockSignals(True)
             self._item_map.clear()
+            self._plot_preview_item = None
             self._scene.clear()
 
     def closeEvent(self, event):
         self.cleanup()
         super().closeEvent(event)
+
+    def _get_paper_rect(self) -> QRectF:
+        return QRectF(0.0, 0.0, self.doc.page.width_mm, self.doc.page.height_mm)
 
     def update_scene_rect(self):
         """Update paper boundaries and scene size."""
@@ -78,7 +91,65 @@ class PlotterCanvas(QGraphicsView):
         # Give generous margin around the paper for panning and margins
         pad = max(100.0, max(w, h) * 0.2)
         self._scene.setSceneRect(-pad, -pad, w + 2 * pad, h + 2 * pad)
+        if self._plot_preview_item is not None:
+            self._plot_preview_item.page_rect = self._get_paper_rect()
+            self._plot_preview_item.update()
         self.viewport().update()
+
+    def set_mode(self, mode: str):
+        """Switch canvas between CanvasMode.LAYOUT and CanvasMode.PLOT."""
+        self._mode = mode
+        if mode == CanvasMode.PLOT:
+            # Hide interactive layout items
+            for g_item in self._item_map.values():
+                g_item.setVisible(False)
+            if self._plot_preview_item is None:
+                self._plot_preview_item = GraphicsPlotPreviewItem(page_rect=self._get_paper_rect())
+                self._scene.addItem(self._plot_preview_item)
+            self._plot_preview_item.setVisible(True)
+            self._scene.clearSelection()
+        else:
+            # Show interactive layout items
+            if self._plot_preview_item is not None:
+                self._plot_preview_item.setVisible(False)
+            for g_item in self._item_map.values():
+                g_item.setVisible(True)
+        self.viewport().update()
+
+    def set_plot_job(self, job: Optional[PlotJob]):
+        """Supply compiled PlotJob to preview item."""
+        if self._plot_preview_item is None:
+            self._plot_preview_item = GraphicsPlotPreviewItem(job, page_rect=self._get_paper_rect())
+            self._scene.addItem(self._plot_preview_item)
+            if self._mode != CanvasMode.PLOT:
+                self._plot_preview_item.setVisible(False)
+        else:
+            self._plot_preview_item.set_job(job, page_rect=self._get_paper_rect())
+        self.viewport().update()
+
+    def set_simulation_step(self, step: int):
+        """Set active step for simulation rendering."""
+        if self._plot_preview_item is not None:
+            self._plot_preview_item.set_simulation_step(step)
+            self.viewport().update()
+
+    def set_show_travels(self, show: bool):
+        """Toggle display of dashed pen-up travel lines."""
+        if self._plot_preview_item is not None:
+            self._plot_preview_item.set_show_travels(show)
+            self.viewport().update()
+
+    def set_show_nodes(self, show: bool):
+        """Toggle display of coordinate vertices (nodes)."""
+        if self._plot_preview_item is not None:
+            self._plot_preview_item.set_show_nodes(show)
+            self.viewport().update()
+
+    def set_visible_pens(self, pens: Optional[Set[int]]):
+        """Filter paths by pen IDs (None means all)."""
+        if self._plot_preview_item is not None:
+            self._plot_preview_item.set_visible_pens(pens)
+            self.viewport().update()
 
     def rebuild_items(self):
         """Synchronize QGraphicsItems with Document items."""
@@ -92,6 +163,8 @@ class PlotterCanvas(QGraphicsView):
         for item in self.doc.items:
             g_item = GraphicsImportItem(item, self.doc)
             self._scene.addItem(g_item)
+            if self._mode == CanvasMode.PLOT:
+                g_item.setVisible(False)
             self._item_map[item.item_id] = g_item
 
         self.viewport().update()
