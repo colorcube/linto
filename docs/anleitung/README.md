@@ -11,6 +11,7 @@ Plotter Studio ist ein spezialisierter **Slicer und Arbeitsbereich für Vektor-S
 
 ### Was ist es gar nicht?
 * **Kein Druckertreiber für Tintenstrahl-Großformatdrucker:** Großformatige Fotodrucker (z.B. HP DesignJet, Epson SureColor, Canon imagePROGRAF) werden in Büros umgangssprachlich oft als „Plotter“ bezeichnet, sind aber Pixel-Rasterdrucker. Plotter Studio steuert ausschließlich echte **Vektor-Stiftplotter** an, die physische Stifte über Papier bewegen.
+* **Keine Schneideplotter-Software (Cutter):** Plotter Studio ist für **Stiftplotter** konzipiert. Reine Schneideplotter mit Messerklingen (Vinyl-Cutter) werden noch nicht unterstützt, da die dafür nötige Klingen-Offset-Kompensation noch fehlt (viele Cutter lassen sich jedoch mit Stifteinsatz als Stiftplotter nutzen).
 * **Kein Vektor-Zeichenprogramm:** Plotter Studio ersetzt weder Inkscape noch Adobe Illustrator. Sie erstellen Ihre Kunstwerke, CAD-Pläne oder Algorithmen in Ihrem gewohnten Werkzeug und exportieren sie als Standard-SVG. Plotter Studio übernimmt dann das Layouten, Skalieren, Pfadoptimieren und Plotten.
 
 ### Was kann Plotter Studio heute schon?
@@ -24,14 +25,13 @@ Plotter Studio ist ein spezialisierter **Slicer und Arbeitsbereich für Vektor-S
 * Stift-Filterung zum selektiven Plotten einzelner Farben (z.B. für manuelle Stiftwechsel).
 * Live-Streaming über RS-232 oder TCP mit striktem **RTS/CTS-Hardware-Handshake** (kein Pufferüberlauf).
 * Sicherer Notfallabbruch (`ESC.K`, `PU;`, `SP0;`) schützt Papier und Stiftspitze.
-* Offene Multi-Plotter-Architektur (Center-Origin & Bottom-Left) über YAML-Profile.
+* Offene Multi-Plotter-Architektur (Center-Origin & Bottom-Left) über YAML-Profile mit 26 Profilen: Neben Mutoh XP-500 und Generic Flatbed wurden **24 Geräteprofile direkt aus InkCut übernommen** (Roland, Graphtec, US Cutter, Summa, Sekonic etc.) sowie das Konverter-Tool `tools/import_inkcut_devices.py` bereitgestellt.
 * Hardware-Diagnosetool (`tools/xp500_probe.py`), Kalibriermuster (`resources/calibration_plot_a3.svg`) und integrierter Software-Emulator (`VirtualPlotter`).
 
 ### Was kann Plotter Studio (noch) nicht bzw. was ist geplant?
+* **Schneideplotter / Schleppmesser-Kompensation (Drag-Knife Offset):** Das Schneiden von Vinylfolie mit Klingen wird noch nicht unterstützt; der Fokus liegt aktuell auf Stiftplottern.
 * **HP-GL/PLT-Import:** Das Einlesen bestehender HP-GL-Plotdateien ist für spätere Versionen geplant; aktuell dient SVG als universelles Quellformat, während HP-GL für die Ausgabe und den Export genutzt wird.
 * **Direkter DXF-Import:** Aktuell müssen CAD-Zeichnungen im DXF-Format vorab z.B. in Inkscape oder QCAD als SVG exportiert werden.
-* **Schleppmesser-Kompensation (Drag-Knife Offset):** Für reine Schneideplotter (Vinyl-Cutter) ist eine Offset-Korrektur für drehbare Messerklingen wie in InkCut geplant, aktuell liegt der Fokus auf Stiftplottern.
-* **Direkter Import von InkCut-Gerätedefinitionen:** Profile werden derzeit über die eigene, transparente YAML-Struktur (`resources/devices/*.yaml`) gepflegt.
 * **G-Code-Plotter (Marlin / Grbl):** Die direkte Generierung von CNC-G-Code für 3D-Drucker mit Stifthalter befindet sich in der Konzeption; aktuell werden Plotter mit HP-GL / MH-GL angesteuert.
 
 ---

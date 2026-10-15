@@ -12,7 +12,7 @@ Die Arbeitsumgebung ist übersichtlich in funktionale Bereiche unterteilt:
 
 1. **Haupt-Canvas (Mitte):**
    * Zeigt das gewählte Papierblatt maßstabsgetreu in Millimetern an.
-   * Ein **roter/gestrichelter Innenrahmen** markiert den physisch plottbaren Bereich (das sogenannte *Hard-Clip-Fenster*). Liegen Vektoren außerhalb dieses Rahmens, warnt Plotter Studio vor möglichem Beschnitt.
+   * Ein **roter, gestrichelter Innenrahmen** markiert den physisch plottbaren Bereich (das sogenannte *Hard-Clip-Fenster*). Liegen Vektoren außerhalb dieses Rahmens, warnt Plotter Studio vor möglichem Beschnitt.
    * **Lineale (oben und links):** Zeigen präzise Millimeterangaben. Der Nullpunkt (0, 0) liegt an der oberen linken Ecke des Papiers.
    * **Maus-Navigation:**
      * **Mausrad:** Zoomt stufenlos hinein und heraus (zentriert auf den Mauszeiger).
@@ -20,7 +20,7 @@ Die Arbeitsumgebung ist übersichtlich in funktionale Bereiche unterteilt:
      * **Linke Maustaste:** Selektiert Objekte und ermöglicht direktes Verschieben per Drag & Drop.
 
 2. **Geräte- & Statusleiste (oben):**
-   * Schnellauswahl des aktiven Plotters (z.B. *Mutoh XP-500 (Seriell)* oder *Generic HP-GL*).
+   * Schnellauswahl des aktiven Plotters (z.B. *Mutoh XP-500 (Seriell)*, *Roland Stika*, *Graphtec CE5000* oder *Generic HP-GL*).
    * Verbindungsstatus und Schnelltasten für **Seiteneinrichtung** und **Geräte-Einstellungen**.
    * Modus-Umschaltung zwischen **Layout-Modus** und **Ausgabe-Modus** (Plot-Vorschau).
 
@@ -33,7 +33,7 @@ Die Arbeitsumgebung ist übersichtlich in funktionale Bereiche unterteilt:
 
 ## 2. Blatt- & Seiteneinrichtung
 
-Vor dem Platzieren von Grafiken sollten Sie das gewünschte Blattformat und Randprofil festlegen. Klicken Sie in der Werkzeugleiste auf **[ 📄 Seiteneinrichtung... ]**.
+Vor dem Platzieren von Grafiken sollten Sie das gewünschte Blattformat und Randprofil festlegen. Klicken Sie in der Werkzeugleiste auf **[ Seiteneinrichtung... ]**.
 
 ![Dialog Seiteneinrichtung](../images/dialog_page_setup.png)
 
@@ -45,7 +45,8 @@ Vor dem Platzieren von Grafiken sollten Sie das gewünschte Blattformat und Rand
   * *EXP (Expanded):* Minimale Ränder für maximale Zeichenfläche (Standard beim Mutoh XP-500: 25 mm Einzug, 5 mm an den anderen drei Seiten).
   * *NORM (Normal):* Größere Sicherheitsabstände (35 mm / 15 mm).
   * *TYPE1 / TYPE3:* Spezialprofile für Rollenpapier.
-* **🔍 Plotter abfragen (Live-Hard-Clip):**
+  * *default / minimal:* Symmetrische Ränder für Flachbettplotter und Schneideplotter.
+* **Plotter abfragen (Live-Hard-Clip):**
   Ist ein Plotter per RS-232 oder Netzwerk verbunden, fragt dieser Button über den HP-GL-Befehl `OH;` die exakten Grenzen des aktuell eingespannten Papiers direkt von den optischen Sensoren der Hardware ab. Format und Maße werden automatisch übernommen.
 
 ---
@@ -58,7 +59,7 @@ Plotter Studio verwendet standardmäßig **SVG (Scalable Vector Graphics)** als 
 
 ### Import-Möglichkeiten:
 1. **Drag & Drop:** Ziehen Sie eine `.svg`-Datei direkt aus dem Dateimanager in das Canvas-Fenster.
-2. **Menü:** Wählen Sie **Datei ➔ Öffnen...** (`Strg+O`) oder **Datei ➔ Importieren...** (`Strg+I`).
+2. **Menü:** Wählen Sie **Datei -> Öffnen...** (`Strg+O`) oder **Datei -> Importieren...** (`Strg+I`).
 
 ### Automatisches Farb-Clustering
 Beim Import analysiert Plotter Studio alle Strichfarben (Strokes) in der Datei und ordnet sie über einen Farbabstands-Algorithmus (Delta-E im Lab-Farbraum) automatisch den verfügbaren Stiften (1–8) zu. Pfade gleicher Farbe werden logisch gruppiert.
@@ -76,11 +77,11 @@ Das Dock **Objekte & Ebenen** listet alle geladenen Zeichnungselemente hierarchi
 * **Sperren (Schloss-Symbol):** Schützt das Objekt vor versehentlichem Verschieben oder Transformieren im Canvas.
 * **Z-Reihenfolge (Zeichenabfolge):**
   * Objekte, die in der Liste weiter oben stehen, werden im Canvas über den darunter liegenden Objekten dargestellt.
-  * Über die Schaltflächen **[ ▲ Nach oben ]** und **[ ▼ Nach unten ]** (oder per Drag & Drop in der Liste) können Sie die Reihenfolge ändern.
+  * Über die Schaltflächen **[ Nach oben ]** und **[ Nach unten ]** (oder per Drag & Drop in der Liste) können Sie die Reihenfolge ändern.
   * *Praxistipp:* Bestimmen Sie so, welche Stiftfarben oder Detailzeichnungen zuerst gezeichnet werden (z.B. Hintergrundschraffuren vor Vordergrundkonturen).
 * **Verwaltung:**
-  * **[ 📄 Duplizieren ]:** Erstellt eine identische Kopie des ausgewählten Objekts.
-  * **[ 🗑️ Löschen ] (`Entf`):** Entfernt das Objekt aus dem Dokument.
+  * **[ Duplizieren ]:** Erstellt eine identische Kopie des ausgewählten Objekts.
+  * **[ Löschen ] (`Entf`):** Entfernt das Objekt aus dem Dokument.
 
 ---
 
@@ -94,20 +95,20 @@ Das Dock **Transformation** erlaubt die millimetergenaue Positionierung und Skal
 * **X / Y (mm):** Legt die Position des Ankerpunkts (oben links) auf dem Blatt fest.
 * **Breite / Höhe (mm):** Exakte Zielgröße des Objekts.
 * **Skalierungsfaktor (%):** Relative Größenänderung in Prozent.
-* **Seitenverhältnis sperren (🔗 Schloss-Symbol):**
+* **Seitenverhältnis sperren (Schloss-Symbol):**
   * *Aktiviert (geschlossen):* Änderungen an Breite oder X-Skalierung passen Höhe und Y-Skalierung automatisch proportional an.
   * *Deaktiviert (geöffnet):* Erlaubt verzerrtes Skalieren in nur eine Achsenrichtung.
 
 ### Schnelltasten & Ausrichtung:
 * **[ 50 % ] / [ 100 % ] / [ 200 % ]:** Schnelle Skalierung auf halbe, originale oder doppelte Größe mit einem einzigen Klick.
-* **[ 🎯 Auf Blatt einpassen ]:** Skaliert das gewählte Objekt proportional so groß wie möglich, sodass es die plottbare Fläche (Hard-Clip-Fenster) optimal ausnutzt.
-* **[ ⊕ Auf Blatt zentrieren ]:** Verschiebt das Objekt exakt in die geometrische Mitte des Papiers.
+* **[ Auf Blatt einpassen ]:** Skaliert das gewählte Objekt proportional so groß wie möglich, sodass es die plottbare Fläche (Hard-Clip-Fenster) optimal ausnutzt.
+* **[ Auf Blatt zentrieren ]:** Verschiebt das Objekt exakt in die geometrische Mitte des Papiers.
 
 ### Drehung & Spiegelung:
 * **Winkel (°):** Schnelltasten für **0°**, **90°**, **180°**, **270°** sowie freie Eingabe.
 * **Spiegeln:**
-  * **[ ↔ Horizontal spiegeln ]:** Spiegelt das Objekt an der vertikalen Mittelachse.
-  * **[ ↕ Vertikal spiegeln ]:** Spiegelt das Objekt an der horizontalen Mittelachse.
+  * **[ Horizontal spiegeln ]:** Spiegelt das Objekt an der vertikalen Mittelachse.
+  * **[ Vertikal spiegeln ]:** Spiegelt das Objekt an der horizontalen Mittelachse.
 
 ---
 

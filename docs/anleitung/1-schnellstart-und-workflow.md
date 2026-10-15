@@ -12,7 +12,8 @@ Dieser Leitfaden führt Sie Schritt für Schritt von einer vorhandenen Vektordat
 ### Variante A: Mit angeschlossenem Plotter
 1. Verbinden Sie Ihren Plotter per seriellem Nullmodemkabel (RS-232 mit RTS/CTS) oder USB-Seriell-Adapter mit dem PC.
 2. Schalten Sie den Plotter ein und spannen Sie ein Blatt Papier ein.
-3. Ausführliche Details zur Verkabelung finden Sie in [Kapitel 4: Hardware-Setup & Diagnose](4-hardware-setup-und-test.md).
+3. Wählen Sie oben Ihr Gerätemodell aus (über 25 Profile für Mutoh, Roland, Graphtec, US Cutter, Secabo etc. sind bereits hinterlegt).
+4. Ausführliche Details zur Verkabelung finden Sie in [Kapitel 4: Hardware-Setup & Diagnose](4-hardware-setup-und-test.md).
 
 ### Variante B: Schneller Test mit dem Software-Simulator
 Wenn Sie noch keine Hardware aufgebaut haben:
@@ -27,18 +28,18 @@ Wenn Sie noch keine Hardware aufgebaut haben:
 ## Der 5-Schritte-Workflow
 
 ```
-[ 1. Blatt wählen ] ➔ [ 2. SVG importieren & skalieren ] ➔ [ 3. Stifte prüfen ] ➔ [ 4. Simulieren ] ➔ [ 5. Plotten ]
+[ 1. Blatt wählen ] -> [ 2. SVG importieren & skalieren ] -> [ 3. Stifte prüfen ] -> [ 4. Simulieren ] -> [ 5. Plotten ]
 ```
 
 ---
 
 ### Schritt 1: Blattgröße & Randprofil festlegen
 
-Klicken Sie in der oberen Leiste auf **[ 📄 Seiteneinrichtung... ]**:
+Klicken Sie in der oberen Leiste auf **[ Seiteneinrichtung... ]**:
 
 1. **Format wählen:** Wählen Sie z.B. **DIN A3** und **Querformat (Landscape)**.
 2. **Randprofil:** Belassen Sie die Voreinstellung auf **EXP** (Expanded – maximale Zeichenfläche).
-3. **Live-Abfrage (optional):** Ist ein physischer Plotter verbunden, klicken Sie auf **[ 🔍 Plotter abfragen ]**. Plotter Studio fragt über den Befehl `OH;` die exakten Abmessungen des eingespannten Papiers direkt von den optischen Sensoren der Hardware ab.
+3. **Live-Abfrage (optional):** Ist ein physischer Plotter verbunden, klicken Sie auf **[ Plotter abfragen ]**. Plotter Studio fragt über den Befehl `OH;` die exakten Abmessungen des eingespannten Papiers direkt von den optischen Sensoren der Hardware ab.
 4. Bestätigen Sie mit **OK**. Das Canvas zeigt nun das Papierblatt mit dem rot gestrichelten *Hard-Clip-Rahmen* an.
 
 *(Ausführliche Details: [Kapitel 2: Layout & Seiteneinrichtung](2-layout-und-objektverwaltung.md#2-blatt--seiteneinrichtung))*
@@ -50,10 +51,10 @@ Klicken Sie in der oberen Leiste auf **[ 📄 Seiteneinrichtung... ]**:
 1. Ziehen Sie eine beliebige `.svg`-Datei per **Drag & Drop** aus Ihrem Dateimanager direkt in das Canvas (oder drücken Sie `Strg+O`).
 2. Das Dokument wird geladen. Beim Import analysiert Plotter Studio alle Strichfarben und teilt sie automatisch den Stiften 1 bis 8 zu.
 3. Wechseln Sie in das rechte Dock **Transformation**:
-   * Klicken Sie auf **[ 🎯 Auf Blatt einpassen ]**, um die Grafik maximal vergrößert auf dem Blatt zu platzieren.
-   * Oder klicken Sie auf **[ ⊕ Auf Blatt zentrieren ]**, um das Motiv exakt in der Mitte auszurichten.
+   * Klicken Sie auf **[ Auf Blatt einpassen ]**, um die Grafik maximal vergrößert auf dem Blatt zu platzieren.
+   * Oder klicken Sie auf **[ Auf Blatt zentrieren ]**, um das Motiv exakt in der Mitte auszurichten.
    * Mit den Schnelltasten **[ 50 % ]**, **[ 100 % ]** und **[ 200 % ]** oder den numerischen Feldern können Sie die Größe millimetergenau anpassen.
-   * Das geschlossene Kettensymbol **(🔗)** sorgt dafür, dass das Seitenverhältnis beim Skalieren erhalten bleibt.
+   * Das aktivierte Schloss-Symbol sorgt dafür, dass das Seitenverhältnis beim Skalieren proportional erhalten bleibt.
 
 *(Ausführliche Details: [Kapitel 2: Transformation & Objektverwaltung](2-layout-und-objektverwaltung.md#5-dock-transformation))*
 
@@ -81,7 +82,7 @@ Klicken Sie oben auf den Reiter **Ausgabe / Plotten**:
      * Wie viel Zeit und Leerweg durch die automatische **2-Opt-Pfadoptimierung** eingespart wurden (meist **40 % bis 70 %**).
 2. **Simulation mit dem Scrubber:**
    * Unter dem Canvas befindet sich die Simulationsleiste.
-   * Klicken Sie auf **[ ▶ Play ]** oder ziehen Sie den **Schieberegler**:
+   * Klicken Sie auf **[ Play ]** oder ziehen Sie den **Schieberegler**:
      * Türkis/Cyan gestrichelte Linien zeigen alle Eilgang-Fahrten in der Luft.
      * Gelbe Markierungen zeigen jeden Punkt, an dem der Stift aufgesetzt oder angehoben wird.
      * Das Fadenkreuz (Toolhead-Cursor) wandert genau so über das Blatt, wie es der echte Plotterkopf tun wird.
@@ -95,16 +96,16 @@ Klicken Sie oben auf den Reiter **Ausgabe / Plotten**:
 ### Schritt 5: Plot an das Gerät senden oder exportieren
 
 1. **Hardware prüfen:**
-   * Klicken Sie im Dock *Ausgabe* auf **[ 🔍 Plotter prüfen (Inquiry) ]**.
+   * Klicken Sie im Dock *Ausgabe* auf **[ Plotter prüfen (Inquiry) ]**.
    * Nach erfolgreicher Antwort leuchtet das Banner grün auf:  
-     `✓ 7585B (A3, 40 U/mm) • Hard-Clip: 390×287 mm`.
+     `7585B (A3, 40 U/mm) • Hard-Clip: 390x287 mm`.
 2. **Plot starten:**
-   * Klicken Sie auf **[ 🚀 Plot senden ]**.
+   * Klicken Sie auf **[ Plot senden ]**.
    * Die Übertragung startet im Hintergrund. Der Fortschrittsbalken und der Toolhead-Cursor im Canvas zeigen den aktuellen Status in Echtzeit an.
-   * **[ ⏸ Pause ]:** Hält die Übertragung an (z.B. um Tinte zu prüfen).
-   * **[ ⏹ Abbrechen ]:** Löst den Notfall-Rückzug aus: Der Plotter stoppt sofort, hebt den Stift an (`PU;`) und parkt ihn sicher im Halter (`SP0;`).
+   * **[ Pause ]:** Hält die Übertragung an (z.B. um Tinte zu prüfen).
+   * **[ Abbrechen ]:** Löst den Notfall-Rückzug aus: Der Plotter stoppt sofort, hebt den Stift an (`PU;`) und parkt ihn sicher im Halter (`SP0;`).
 3. **Datei-Export (Alternative):**
-   * Klicken Sie auf **[ 📄 Plotdatei (.hpgl) exportieren... ]**, wenn Sie die fertige, optimierte Maschinendatei für eine spätere Ausführung speichern möchten.
+   * Klicken Sie auf **[ Plotdatei (.hpgl) exportieren... ]**, wenn Sie die fertige, optimierte Maschinendatei für eine spätere Ausführung speichern möchten.
 
 *(Ausführliche Details: [Kapitel 3: Live-Plotten & Export](3-ausgabe-simulation-export.md#5-live-plotten-auf-der-hardware))*
 
@@ -113,10 +114,10 @@ Klicken Sie oben auf den Reiter **Ausgabe / Plotten**:
 ## Nächste Schritte
 
 * Ausführliche Erklärungen zu allen Layout- und Zeichenwerkzeugen:  
-  ➔ **[Kapitel 2: Layout-Modus & Objektverwaltung](2-layout-und-objektverwaltung.md)**
+  -> **[Kapitel 2: Layout-Modus & Objektverwaltung](2-layout-und-objektverwaltung.md)**
 * Alle Einstellungen zur Pfadoptimierung und Scrubber-Simulation:  
-  ➔ **[Kapitel 3: Ausgabe-Modus, Simulation & Export](3-ausgabe-simulation-export.md)**
+  -> **[Kapitel 3: Ausgabe-Modus, Simulation & Export](3-ausgabe-simulation-export.md)**
 * RS-232 Verkabelung, Hardware-Diagnosetool und der Kalibrierplot:  
-  ➔ **[Kapitel 4: Hardware-Setup, Kalibrierung & Diagnose](4-hardware-setup-und-test.md)**
+  -> **[Kapitel 4: Hardware-Setup, Kalibrierung & Diagnose](4-hardware-setup-und-test.md)**
 * Mathematische Hintergründe, Slicer-Algorithmen und Multi-Plotter-Treiber:  
-  ➔ **[Kapitel 5: Hintergrund: Konzepte, Algorithmen & Architektur (Deep-Dive)](5-konzepte-und-architektur.md)**
+  -> **[Kapitel 5: Hintergrund: Konzepte, Algorithmen & Architektur (Deep-Dive)](5-konzepte-und-architektur.md)**

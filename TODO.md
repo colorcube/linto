@@ -22,6 +22,7 @@ Nächster Schritt: **AP0 Hardware-Verifikation am realen Mutoh XP-500 Plotter**.
   - Diagnosetool: `tools/xp500_probe.py` (vollständige Registerabfrage `OI`, `OF`, `OH`, `OS`, `ESC.L`, `ESC.B` via Terminal).
   - Kalibrier- & Testplots: `resources/calibration_plot_a4.svg` / `.hpgl` und `resources/calibration_plot_a3.svg` / `.hpgl` (Orientierungspfeile +X/+Y, 400 mm Messstrecke für Maßstabsprüfung, 4-Rand-Rahmen, Stifte 1–8 Matrix, Rundlauf-Kreise).
   - Generator-Skript: `tools/generate_calibration_plot.py`.
+  - InkCut Geräte-Importer: `tools/import_inkcut_devices.py` (automatische Konvertierung von 24 HP-GL-Gerätetreibern für Roland Stika/CAMM, Graphtec, US Cutter, Secabo, Summa etc. in gebrauchsfertige Plotter-Studio-Profile).
 
 ---
 

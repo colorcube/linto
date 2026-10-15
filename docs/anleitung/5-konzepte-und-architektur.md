@@ -41,7 +41,7 @@ Plotter Studio fungiert für Stiftplotter ähnlich wie ein **Slicer** in der 3D-
 4. 2-Opt Pfadoptimierung (Minimierung der Stift-Leerfahrten)
         │
         ▼
-5. Koordinatentransformation (Blatt-mm ➔ Plotter-Units mit Randversatz)
+5. Koordinatentransformation (Blatt-mm -> Plotter-Units mit Randversatz)
         │
         ▼
 [ Live-Streaming mit RTS/CTS-Handshake oder HP-GL-Export ]
@@ -161,11 +161,6 @@ margins_mm:
 
 ## 6. Verwandte Projekte, Inspiration & Danksagung
 
-Plotter Studio baut auf den Erfahrungen und Erkenntnissen bewährter Open-Source-Projekte auf:
-
-* **vpype (Antoine Beyeler, GPL-3.0-or-later):**  
-  Die modulare Architektur der Slicer-Pipeline (Segmentverschmelzung, Umkehrung, Douglas-Peucker-Glättung und die 2-Opt TSP-Optimierung zur Minimierung von Leerfahrten) wurde maßgeblich durch *vpype* inspiriert. Plotter Studio implementiert diese Prinzipien auf Basis von reinem NumPy und integriert sie in eine interaktive Desktop-Oberfläche mit Echtzeit-Feedback und direkter Hardware-Ausgabe.
-* **MutohPlot (Oliver F., MIT-Lizenz):**  
-  Diente bei der Entstehung von Plotter Studio als Referenzprojekt und Testorakel für die Eigenheiten des Mutoh XP-500. Insbesondere die Hardware-Randprofile (Normal, Expanded, Type 1/3) und die Handshake-Eigenheiten wurden anhand von MutohPlot verifiziert. Es wurde **kein Code direkt übernommen**: Plotter Studio verwendet ein eigenes objektorientiertes Dokumentenmodell und eine native RTS/CTS-Flusssteuerung.
-* **InkCut (GPL-3.0-or-later):**  
-  Diente als architektonische Inspiration für die Entkopplung von Geräteprofilen und Transportmechanismen sowie für künftige Schleppmesser-Filter. Auch hier wurde **kein Code übernommen**; Plotter Studio setzt auf eine eigenständige Qt6- und NumPy-Architektur.
+* **InkCut (GPL-3.0-or-later):** Aus InkCut wurden 24 HP-GL-Geräteprofile (u.a. Roland, Graphtec, US Cutter, Summa, Sekonic) übernommen und für Plotter Studio aufbereitet (`tools/import_inkcut_devices.py`). Zudem diente es als Referenz für geräteunabhängige Treiberabstraktion.
+* **vpype (Antoine Beyeler, GPL-3.0-or-later):** Konzeptionelle Inspiration für die modulare Slicer-Pipeline (Linienzusammenfassung, RDP-Glättung und 2-Opt TSP-Pfadoptimierung zur Reduktion von Leerfahrten).
+* **MutohPlot (Oliver F., MIT-Lizenz):** Wertvolle Referenz für die gerätespezifischen Eigenheiten des Mutoh XP-500 (Hard-Clip-Fenster, Randprofile EXP/NORM, Achsen-Mapping).

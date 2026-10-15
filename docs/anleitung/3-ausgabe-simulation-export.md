@@ -12,19 +12,19 @@ Im oberen Bereich des Docks **Ausgabe** konfigurieren Sie die Algorithmen, die a
 
 ![Dock Ausgabe](../images/dock_ausgabe.png)
 
-* **☑ Linien zusammenfassen (Merge):**
+* **Linien zusammenfassen (Merge):**
   Sucht nach offenen Pfadenden, die nahe beieinander liegen, und verbindet sie zu durchgehenden Polylinien.
   * *Toleranz-Schieberegler (mm):* Bestimmt den maximalen Abstand zweier Punkte, die als zusammenhängend gelten (Standard: 0,1 mm).
   * *Effekt:* Verhindert unnötiges Abheben und Aufsetzen des Stifts; Linien werden flüssig durchgezogen.
-* **☑ Pfade umkehren (Reverse):**
+* **Pfade umkehren (Reverse):**
   Erlaubt der Pipeline, die Zeichenrichtung einer Linie umzukehren, falls das Ende des vorherigen Pfads näher am Endpunkt als am Anfangspunkt des nächsten Pfads liegt.
-* **☑ RDP-Vereinfachung (Douglas-Peucker):**
+* **RDP-Vereinfachung (Douglas-Peucker):**
   Reduziert redundante Stützpunkte auf geraden oder gleichmäßig gekrümmten Linien.
   * *Toleranz-Schieberegler (mm):* Typischerweise 0,05 bis 0,1 mm.
   * *Effekt:* Deutlich schlankere Datenströme, weniger Belastung für den Plotter-Prozessor und ruhigere Motorbewegungen ohne Ruckeln.
-* **☑ Pfadoptimierung (2-Opt TSP):**
+* **Pfadoptimierung (2-Opt TSP):**
   Löst das *Problem des Handlungsreisenden* für die Stiftbewegungen. Die Reihenfolge aller Linien wird mathematisch so permutiert, dass die Distanz der Leerfahrten mit angehobenem Stift auf ein Minimum schrumpft.
-* **[ ⚡ Pipeline anwenden ]:**
+* **[ Pipeline anwenden ]:**
   Berechnet alle Optimierungen neu und aktualisiert die Vorschau im Canvas sowie die Pre-Flight-Statistiken.
 
 ---
@@ -48,7 +48,7 @@ Vor jedem Plot liefert die Pre-Flight-Analyse genaue Kennzahlen über den Auftra
 Unterhalb des Haupt-Canvas befindet sich die interaktive **Simulationsleiste**:
 
 ```
-[ ▶ Play ]  [ ◀ Einzel ]  [ Einzel ▶ ]  ═══●══════════════════════ 35 %   [ 5x ▼ ]
+[ Play ]  [ Einzel zurück ]  [ Einzel vor ]  ===●====================== 35 %   [ 5x ]
 ```
 
 ### Canvas-Visualisierung im Ausgabe-Modus:
@@ -59,7 +59,7 @@ Unterhalb des Haupt-Canvas befindet sich die interaktive **Simulationsleiste**:
 
 ### Steuerungsfunktionen:
 * **Schieberegler (Scrubber):** Ziehen Sie den Regler mit der Maus, um den gesamten Plotprozess in beliebiger Geschwindigkeit vor- oder zurückzuspulen.
-* **[ ▶ Play ] / [ ⏸ Pause ]:** Startet oder stoppt eine flüssige Animation des Plotvorgangs.
+* **[ Play ] / [ Pause ]:** Startet oder stoppt eine flüssige Animation des Plotvorgangs.
 * **Geschwindigkeitsauswahl:** Umschaltbar zwischen **1x**, **2x**, **5x** und **10x** Abspielgeschwindigkeit.
 * **Schrittweises Vor-/Zurückspringen:** Prüfen Sie kritische Stellen Vektor für Vektor.
 
@@ -79,24 +79,24 @@ In der Stiftliste des Ausgabe-Docks verfügt jeder der 8 Stifte über eine eigen
 
 ## 5. Live-Plotten auf der Hardware
 
-Die Sektion **🖨️ Plotter-Verbindung & Ausgabe** steuert den physikalischen Datentransfer:
+Die Sektion **Plotter-Verbindung & Ausgabe** steuert den physikalischen Datentransfer:
 
 ### Schritt 1: Verbindung & Hardware-Inquiry
 1. Wählen Sie den gewünschten Anschluss (z.B. `/dev/ttyUSB0` unter Linux oder `COM3` unter Windows bzw. `tcp://...`).
-2. Klicken Sie auf **[ 🔍 Plotter prüfen (Inquiry) ]**.
+2. Klicken Sie auf **[ Plotter prüfen (Inquiry) ]**.
 3. Plotter Studio sendet `OI;` (Modellabfrage) und `OH;` (Hard-Clip-Abfrage) an das Gerät.
 4. Bei erfolgreicher Rückmeldung leuchtet das Banner grün auf:
-   `✓ 7585B (A3, 40 U/mm) • Hard-Clip: 390×287 mm`.
+   `7585B (A3, 40 U/mm) • Hard-Clip: 390x287 mm`.
 
 ### Schritt 2: Plot starten
-* Klicken Sie auf **[ 🚀 Plot senden ]**.
+* Klicken Sie auf **[ Plot senden ]**.
 * Der Auftrag wird im Hintergrund über den `SerialStreamer` gestreamt.
 * Ein Fortschrittsbalken zeigt den Prozentsatz gesendeter Befehle an.
 * Im Canvas wandert der Toolhead-Cursor synchron mit dem realen Plotterkopf über das virtuelle Blatt.
 
 ### Schritt 3: Pausieren oder Notfall-Abbruch
-* **[ ⏸ Pause ] / [ ▶️ Fortsetzen ]:** Hält die Befehlsübertragung sofort an (z.B. um Tinte zu kontrollieren oder Papier nachzujustieren) und setzt sie nahtlos fort.
-* **[ ⏹ Abbrechen ]:** Löst den Notfall-Rückzug aus:
+* **[ Pause ] / [ Fortsetzen ]:** Hält die Befehlsübertragung sofort an (z.B. um Tinte zu kontrollieren oder Papier nachzujustieren) und setzt sie nahtlos fort.
+* **[ Abbrechen ]:** Löst den Notfall-Rückzug aus:
   1. Sendet sofort `\x1b.K` (Clear Buffer) zum Leeren des Plotter-Puffers.
   2. Hebt den Stift an (`PU;`).
   3. Legt den Stift sicher im Halter ab (`SP0;`).
@@ -107,7 +107,7 @@ Die Sektion **🖨️ Plotter-Verbindung & Ausgabe** steuert den physikalischen 
 
 Möchten Sie den optimierten Plot für später archivieren oder auf einem separaten Steuerungsrechner ausführen:
 
-* **[ 📄 Plotdatei (.hpgl) exportieren... ]:**
+* **[ Plotdatei (.hpgl) exportieren... ]:**
   Erzeugt eine saubere, standardkonforme HP-GL/PLT-Datei. Alle Koordinaten sind exakt auf das Zielgerät, den Nullpunkt und die Stiftwechsel abgestimmt.
-* **[ 🎨 Plot-Vektoren (.svg) exportieren... ]:**
+* **[ Plot-Vektoren (.svg) exportieren... ]:**
   Exportiert das Ergebnis der Optimierung als SVG-Vektordatei. Die Pfade sind sauber nach Stiftfarben in SVG-Gruppen (`<g id="pen_1">` etc.) strukturiert.

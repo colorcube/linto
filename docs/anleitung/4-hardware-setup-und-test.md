@@ -125,12 +125,12 @@ Plotter Studio beschränkt sich nicht auf den Mutoh XP-500. Sie können beliebig
 
 ### Dialog "Geräte-Einstellungen"
 
-Öffnen Sie über die obere Leiste oder das Menü **Geräte ➔ Einstellungen...** den Konfigurationsdialog:
+Öffnen Sie über die obere Leiste oder das Menü **Geräte -> Einstellungen...** den Konfigurationsdialog:
 
 ![Dialog Geräte-Einstellungen](../images/dialog_device_settings.png)
 
 * **Plotter-Liste:** Zeigt alle hinterlegten Geräte an.
-* **[ + Neues Gerät ]:** Legt ein neues Profil an.
+* **[ Neues Gerät ]:** Legt ein neues Profil an.
 * **Einstellungen pro Gerät:**
   * **Anzeigename:** z.B. `Roland DXY-1150 Flachbett`.
   * **Geräteprofil:** Auswahl des Hardware-Grundtyps (z.B. `mutoh_xp500` oder `hpgl_generic`).
@@ -173,3 +173,19 @@ default_margin_profile: "default"
 ```
 
 Sobald die Datei im Verzeichnis `resources/devices/` abgelegt ist, steht das neue Modell sofort im Dialog und in der Werkzeugleiste von Plotter Studio zur Verfügung.
+
+### Geräte-Import aus InkCut
+
+Plotter Studio liefert ein Import-Werkzeug mit, mit dem Sie alle HP-GL-Gerätetreiber aus einer InkCut-Installation (`manifest.enaml`) direkt in gebrauchsfertige Plotter-Studio-Profile konvertieren können:
+
+```bash
+# Geräte aus InkCut einlesen und auflisten:
+python3 tools/import_inkcut_devices.py --list-only
+
+# Profile nach resources/devices/ konvertieren:
+python3 tools/import_inkcut_devices.py
+```
+
+Plotter Studio bringt bereits über 25 vorinstallierte Profile für Modelle von Roland (Stika SV-8/12/15, CAMM-1), Graphtec (CE5000), US Cutter (Refine MH-721/1351), Secabo, Summa, Sekonic und weitere mit.
+
+> **Hinweis zu Schneideplottern (Cutter):** Viele dieser aus InkCut übernommenen Modelle sind Schneideplotter. Sie funktionieren in Plotter Studio hervorragend mit einem Stifteinsatz als Zeichenplotter. Das Schneiden von Folien mit Messerklingen wird noch nicht unterstützt, da die dafür notwendige Schleppmesser-Offset-Kompensation noch in Entwicklung ist.

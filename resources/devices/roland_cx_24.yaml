@@ -1,0 +1,33 @@
+model_id: roland_cx_24
+name: Roland CX-24
+manufacturer: Roland
+emulation: HP-GL
+protocol: hpgl
+origin: bottom_left
+units_per_mm: 40.0
+max_pens: 1
+swap_xy: false
+invert_x: false
+invert_y: false
+rotation_deg: 0
+connection:
+  baudrate: 9600
+  bytesize: 8
+  parity: N
+  stopbits: 1
+  rtscts: true
+  xonxoff: false
+margins_mm:
+  default:
+    top: 10.0
+    bottom: 10.0
+    left: 10.0
+    right: 10.0
+  minimal:
+    top: 5.0
+    bottom: 5.0
+    left: 5.0
+    right: 5.0
+default_margin_profile: default
+max_width_mm: 600.0
+max_length_mm: 500.0

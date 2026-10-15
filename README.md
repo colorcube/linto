@@ -28,6 +28,7 @@ Wenn Sie mit einem **physischen Stiftplotter** zeichnen (egal ob Oldtimer wie Mu
 
 ### Was ist Plotter Studio gar nicht?
 * **Kein Druckertreiber für Tintenstrahl-Großformatdrucker:** Großformatdrucker (z.B. HP DesignJet, Canon imagePROGRAF oder Epson SureColor) werden in der Praxis oft fälschlicherweise als „Plotter“ bezeichnet. Dabei handelt es sich jedoch um Pixel-Rasterdrucker mit Tintenpatronen. Plotter Studio steuert ausschließlich echte **mechanische Stiftplotter** an, die echte Schreibstifte über Papier führen.
+* **Keine Schneideplotter-Software (Cutter):** Plotter Studio ist für **Stiftplotter** ausgelegt. Reine Schneideplotter mit Schleppmesser (Vinyl-Cutter) werden noch nicht unterstützt, da die dafür nötige Klingen-Offset-Kompensation noch fehlt (viele Cutter lassen sich jedoch mit einem Stifteinsatz als Stiftplotter nutzen).
 * **Kein Zeichenprogramm:** Plotter Studio ersetzt weder Inkscape noch Adobe Illustrator oder CAD-Software. Sie zeichnen und entwerfen weiterhin in Ihrer gewohnten Software. Plotter Studio ist die nachgeschaltete Werkbank zum Vorbereiten, Prüfen und Ausführen des Plots.
 
 ### Was kann die Software heute schon?
@@ -40,15 +41,14 @@ Wenn Sie mit einem **physischen Stiftplotter** zeichnen (egal ob Oldtimer wie Mu
 * **Pre-Flight-Statistiken:** Exakte Berechnung von Zeichenweg, Leerweg, Ersparnis, Stiftwechseln und geschätzter Plotdauer.
 * **Stift-Filterung:** Gezieltes Aktivieren einzelner Stifte (z.B. für manuelle Stiftwechsel oder Testdurchläufe).
 * **Sicheres Live-Streaming:** Übertragung via RS-232 (USB-Adapter) oder TCP mit RTS/CTS-Handshake, Pause/Fortsetzen, Live-Werkzeugkopf im Canvas und Notfallabbruch (`ESC.K`, `PU;`, `SP0;`).
-* **Multi-Plotter-Unterstützung:** Modular über lesbare YAML-Profile (`resources/devices/*.yaml`) für Rollen- und Flachbettplotter (Center-Origin & Bottom-Left).
+* **Multi-Plotter-Unterstützung:** Modular über lesbare YAML-Profile (`resources/devices/*.yaml`). 26 Profile sind vorinstalliert: Neben Mutoh XP-500 und Generic Flatbed wurden **24 Geräteprofile direkt aus InkCut übernommen** (Roland Stika/CAMM, Graphtec, US Cutter, Secabo, Summa, Sekonic etc.).
 * **Hardware-Diagnose & Kalibrierung:** Eigenständiges Terminal-Diagnosetool (`tools/xp500_probe.py`) und offizielles Kalibriermuster (`resources/calibration_plot_a3.svg`).
 * **Integrierter Software-Emulator:** Vollwertiger virtueller Plotter (`VirtualPlotter`) zum sofortigen Testen ohne Hardware.
 
 ### Was kann Plotter Studio (noch) nicht bzw. was steht auf der Roadmap?
+* **Schneideplotter / Schleppmesser-Kompensation (Drag-Knife Offset):** Das Schneiden von Vinylfolien mit Messerklingen wird noch nicht unterstützt; derzeit liegt der Fokus rein auf Stiftplottern.
 * **HP-GL/PLT-Import:** Das Einlesen bestehender HP-GL-Plotdateien ist für eine spätere Version geplant; aktuell dient SVG als universelles Quellformat, während HP-GL das optimierte Ausgabe- und Exportformat ist.
 * **Direkter DXF-Import:** CAD-Dateien im DXF-Format müssen aktuell vor dem Import in Inkscape, QCAD oder LibreCAD als SVG gespeichert werden.
-* **Schleppmesser-Kompensation (Drag-Knife Offset):** Für Schneideplotter (Vinyl-Cutter) ist eine Offset-Kompensation für drehbare Klingen wie in InkCut geplant; derzeit liegt der Fokus auf Stiftplottern.
-* **Import von InkCut-Gerätedefinitionen:** Plotter Studio nutzt eigene, transparente YAML-Geräteprofile, die sich einfach für beliebige Fabrikate erstellen lassen.
 * **G-Code-Plotter (Marlin / Grbl):** Die direkte Erzeugung von CNC-G-Code für 3D-Drucker oder Fräsen mit Stifthalter befindet sich in Planung; aktuell wird der Industriestandard HP-GL / MH-GL ausgegeben.
 
 ---
@@ -117,14 +117,9 @@ pytest
 
 ## Verwandte Projekte, Inspiration
 
-Plotter Studio steht auf den Schultern bewährter Open-Source-Projekte aus der Plotter- und Maker-Community:
-
-* **vpype (Antoine Beyeler, GPL-3.0-or-later):**  
-  Das bekannte Kommandozeilenwerkzeug für generative Plotterkunst war die zentrale konzeptionelle Inspiration für die Trennung unserer Slicer-Pipeline in modulare Stufen: Linienzusammenfassung (*Merge*), Pfadumkehr (*Reverse*), Linienvereinfachung (*Ramer-Douglas-Peucker*) und insbesondere die 2-Opt-Pfadoptimierung (Traveling Salesperson Problem) zur Reduktion von Eilgang-Leerfahrten. Plotter Studio überträgt diese Konzepte in eine interaktive Desktop-GUI mit Live-Vorschau und Streaming.
-* **MutohPlot (Oliver F., MIT-Lizenz):**  
-  Diente bei der Entstehung von Plotter Studio als wertvolles Referenzprojekt und Testorakel für die Eigenheiten des Referenzplotters Mutoh XP-500. Die Dokumentation von MutohPlot half entscheidend beim Verständnis der Hardware-Randprofile (Normal, Expanded, Type 1/3), des Hard-Clip-Fensters und der Achsenorientierung. Es wurde **kein Code direkt übernommen**: Plotter Studio verwendet ein eigenständiges, hierarchisches Dokumenten- und Grafikmodell auf NumPy-Basis sowie eine native Hardware-Handshake-Übertragung.
-* **InkCut (GPL-3.0-or-later):**  
-  Ein etabliertes Open-Source-Programm für Schneideplotter. InkCut diente als architektonische Referenz für die geräteunabhängige Treiberabstraktion, alternative Plottersprachen (DMPL, CAMM-GL) und Filter für Schleppmesser. Auch hier wurde **kein Code übernommen**; die Implementierung in Plotter Studio ist eigenständig aufgebaut.
+* **InkCut (GPL-3.0-or-later):** Aus InkCut wurden 24 HP-GL-Geräteprofile (u.a. Roland, Graphtec, US Cutter, Summa, Sekonic) übernommen und für Plotter Studio aufbereitet (`tools/import_inkcut_devices.py`). Zudem diente es als Referenz für geräteunabhängige Treiberabstraktion.
+* **vpype (Antoine Beyeler, GPL-3.0-or-later):** Konzeptionelle Inspiration für die modulare Slicer-Pipeline (Linienzusammenfassung, RDP-Glättung und 2-Opt TSP-Pfadoptimierung zur Reduktion von Leerfahrten).
+* **MutohPlot (Oliver F., MIT-Lizenz):** Wertvolle Referenz für die gerätespezifischen Eigenheiten des Mutoh XP-500 (Hard-Clip-Fenster, Randprofile EXP/NORM, Achsen-Mapping).
 
 ---
 
