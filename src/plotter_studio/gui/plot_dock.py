@@ -214,6 +214,27 @@ class PlotDockWidget(QDockWidget):
         self.combo_margins.addItem("TYPE3 (38 / 5 / 5 / 5 mm)", "type3")
         grid_conn.addWidget(self.combo_margins, 1, 1, 1, 2)
 
+        grid_conn.addWidget(QLabel("Drehung:"), 2, 0)
+        self.combo_rotation = QComboBox()
+        self.combo_rotation.addItem("0° (Standard)", 0)
+        self.combo_rotation.addItem("90° (Quer/Vorschub)", 90)
+        self.combo_rotation.addItem("180°", 180)
+        self.combo_rotation.addItem("270°", 270)
+        grid_conn.addWidget(self.combo_rotation, 2, 1, 1, 2)
+
+        hbox_axes = QHBoxLayout()
+        hbox_axes.setSpacing(6)
+        self.chk_swap_xy = QCheckBox("X↔Y")
+        self.chk_swap_xy.setToolTip("Achsentausch: X- und Y-Achsen vertauschen (z.B. Rollenvorschub ↔ Wagen)")
+        self.chk_invert_x = QCheckBox("X inv.")
+        self.chk_invert_x.setToolTip("X-Achse spiegeln")
+        self.chk_invert_y = QCheckBox("Y inv.")
+        self.chk_invert_y.setToolTip("Y-Achse spiegeln")
+        hbox_axes.addWidget(self.chk_swap_xy)
+        hbox_axes.addWidget(self.chk_invert_x)
+        hbox_axes.addWidget(self.chk_invert_y)
+        grid_conn.addLayout(hbox_axes, 3, 0, 1, 3)
+
         vbox_device.addLayout(grid_conn)
 
         self.btn_probe = QPushButton("🔍 Plotter prüfen (Inquiry)")
@@ -334,8 +355,11 @@ class PlotDockWidget(QDockWidget):
             clip_info = ""
             if result.hard_clip_mm:
                 clip_info = f" • Hard-Clip: {result.hard_clip_mm[0]:.0f}×{result.hard_clip_mm[1]:.0f} mm"
+            pin_info = ""
+            if result.cts is not None:
+                pin_info = " • CTS: Bereit" if result.cts else " • ⚠️ CTS: Low"
             self.lbl_probe_status.setText(
-                f"✓ {result.model} ({result.detected_format}, {result.units_per_mm:.0f} U/mm){clip_info}"
+                f"✓ {result.model} ({result.detected_format}, {result.units_per_mm:.0f} U/mm){clip_info}{pin_info}"
             )
             self.lbl_probe_status.setStyleSheet("""
                 padding: 6px;
@@ -356,6 +380,15 @@ class PlotDockWidget(QDockWidget):
                 font-size: 11px;
             """)
 
+    def get_emitter_options(self) -> dict[str, Any]:
+        """Return user-configured axis transformation parameters."""
+        return {
+            "rotation_deg": int(self.combo_rotation.currentData() or 0),
+            "swap_xy": self.chk_swap_xy.isChecked(),
+            "invert_x": self.chk_invert_x.isChecked(),
+            "invert_y": self.chk_invert_y.isChecked(),
+        }
+
     def start_plot(self):
         """Start streaming HP-GL commands to the selected plotter port."""
         if not self.job or not self.job.steps:
@@ -369,7 +402,11 @@ class PlotDockWidget(QDockWidget):
 
         margin_key = self.combo_margins.currentData() or "exp"
         profile = get_default_profile()
-        emitter = HPGLEmitter(profile, margin_profile=margin_key)
+        emitter = HPGLEmitter(
+            profile,
+            margin_profile=margin_key,
+            **self.get_emitter_options(),
+        )
         commands = emitter.emit_commands(self.job, self.doc)
 
         if not commands:
@@ -388,6 +425,10 @@ class PlotDockWidget(QDockWidget):
         self.btn_abort_plot.setEnabled(True)
         self.combo_port.setEnabled(False)
         self.combo_margins.setEnabled(False)
+        self.combo_rotation.setEnabled(False)
+        self.chk_swap_xy.setEnabled(False)
+        self.chk_invert_x.setEnabled(False)
+        self.chk_invert_y.setEnabled(False)
         self.progress_bar.setValue(0)
         self.lbl_stream_status.setText("Starte Übertragung...")
 
@@ -433,6 +474,10 @@ class PlotDockWidget(QDockWidget):
         self.btn_abort_plot.setEnabled(False)
         self.combo_port.setEnabled(True)
         self.combo_margins.setEnabled(True)
+        self.combo_rotation.setEnabled(True)
+        self.chk_swap_xy.setEnabled(True)
+        self.chk_invert_x.setEnabled(True)
+        self.chk_invert_y.setEnabled(True)
 
         if success:
             self.progress_bar.setValue(100)

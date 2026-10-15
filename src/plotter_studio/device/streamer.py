@@ -20,6 +20,10 @@ from .emitter import EmittedCommand
 logger = logging.getLogger("plotter_studio.device.streamer")
 
 
+XON = 0x11
+XOFF = 0x13
+
+
 class StreamerState(str, Enum):
     IDLE = "IDLE"
     CONNECTING = "CONNECTING"
@@ -49,6 +53,7 @@ class SerialStreamer:
         self._pause_event = threading.Event()
         self._pause_event.set()  # Unpaused by default
         self._abort_requested = False
+        self._xoff_paused = False
 
         self._serial: Optional[serial.Serial] = None
         self._socket: Optional[socket.socket] = None
@@ -64,6 +69,8 @@ class SerialStreamer:
         commands: list[EmittedCommand],
         baudrate: int = 19200,
         inter_command_delay_s: float = 0.0,
+        xonxoff_userspace: bool = True,
+        rtscts: bool = True,
     ) -> bool:
         """Start streaming commands in a background thread."""
         with self._lock:
@@ -72,11 +79,12 @@ class SerialStreamer:
 
             self.state = StreamerState.CONNECTING
             self._abort_requested = False
+            self._xoff_paused = False
             self._pause_event.set()
 
             self._thread = threading.Thread(
                 target=self._run_stream,
-                args=(port, commands, baudrate, inter_command_delay_s),
+                args=(port, commands, baudrate, inter_command_delay_s, xonxoff_userspace, rtscts),
                 daemon=True,
                 name="PlotStreamWorker",
             )
@@ -119,12 +127,39 @@ class SerialStreamer:
         elif self._serial:
             self._serial.write(data)
 
+    def _check_and_wait_xoff(self) -> None:
+        """Process incoming bytes for XON / XOFF flow control."""
+        if not self._serial:
+            return
+
+        while not self._abort_requested:
+            try:
+                available = self._serial.in_waiting
+                if available > 0:
+                    raw = self._serial.read(available)
+                    for b in raw:
+                        if b == XOFF:
+                            logger.debug("Plotter sent XOFF (0x13) - pausing send")
+                            self._xoff_paused = True
+                        elif b == XON:
+                            logger.debug("Plotter sent XON (0x11) - resuming send")
+                            self._xoff_paused = False
+            except Exception as e:
+                logger.warning(f"Error checking flow control: {e}")
+                break
+
+            if not self._xoff_paused:
+                break
+            time.sleep(0.02)
+
     def _run_stream(
         self,
         port: str,
         commands: list[EmittedCommand],
         baudrate: int,
         inter_command_delay_s: float = 0.0,
+        xonxoff_userspace: bool = True,
+        rtscts: bool = True,
     ) -> None:
         port_clean = port.strip()
         total_commands = len(commands)
@@ -146,8 +181,9 @@ class SerialStreamer:
                     bytesize=serial.EIGHTBITS,
                     parity=serial.PARITY_NONE,
                     stopbits=serial.STOPBITS_ONE,
-                    rtscts=True,
-                    timeout=2.0,
+                    rtscts=rtscts,
+                    xonxoff=False,
+                    timeout=0.1 if xonxoff_userspace else 2.0,
                 )
                 self._serial.reset_input_buffer()
                 self._serial.reset_output_buffer()
@@ -170,6 +206,12 @@ class SerialStreamer:
 
                 # Wait if paused
                 self._pause_event.wait()
+
+                # Flow control check (userspace XON/XOFF)
+                if xonxoff_userspace:
+                    self._check_and_wait_xoff()
+                    if self._abort_requested:
+                        continue
 
                 if inter_command_delay_s > 0.0:
                     time.sleep(inter_command_delay_s)

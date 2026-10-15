@@ -33,10 +33,18 @@ class HPGLEmitter:
         profile: DeviceProfile,
         margin_profile: str = "exp",
         points_per_cmd: int = 16,
+        swap_xy: Optional[bool] = None,
+        invert_x: Optional[bool] = None,
+        invert_y: Optional[bool] = None,
+        rotation_deg: Optional[int] = None,
     ):
         self.profile = profile
         self.margin_profile = margin_profile
         self.points_per_cmd = max(1, points_per_cmd)
+        self.swap_xy = profile.swap_xy if swap_xy is None else swap_xy
+        self.invert_x = profile.invert_x if invert_x is None else invert_x
+        self.invert_y = profile.invert_y if invert_y is None else invert_y
+        self.rotation_deg = profile.rotation_deg if rotation_deg is None else rotation_deg
 
     def to_plotter_units(
         self,
@@ -48,15 +56,38 @@ class HPGLEmitter:
         """Convert sheet coordinates (mm, top-left origin) to plotter units."""
         if self.profile.origin == "center":
             cx, cy = self.profile.calculate_center_mm(sheet_w_mm, sheet_h_mm, self.margin_profile)
-            px = int(round((x_mm - cx) * self.profile.units_per_mm))
-            # In plotter coords: +Y is upward, sheet coords: +Y is downward
-            py = int(round((cy - y_mm) * self.profile.units_per_mm))
-            return (px, py)
+            # Base Cartesian coordinates relative to center:
+            # +x_c is right, +y_c is up (since sheet y_mm has +Y down)
+            x_c = x_mm - cx
+            y_c = cy - y_mm
         else:
             # Bottom-left origin
-            px = int(round(x_mm * self.profile.units_per_mm))
-            py = int(round((sheet_h_mm - y_mm) * self.profile.units_per_mm))
-            return (px, py)
+            x_c = x_mm
+            y_c = sheet_h_mm - y_mm
+
+        # 1. Apply rotation around origin
+        if self.rotation_deg % 360 != 0:
+            rad = math.radians(self.rotation_deg)
+            cos_a = math.cos(rad)
+            sin_a = math.sin(rad)
+            rx = x_c * cos_a - y_c * sin_a
+            ry = x_c * sin_a + y_c * cos_a
+        else:
+            rx, ry = x_c, y_c
+
+        # 2. Invert axes if requested
+        if self.invert_x:
+            rx = -rx
+        if self.invert_y:
+            ry = -ry
+
+        # 3. Swap axes if requested
+        if self.swap_xy:
+            rx, ry = ry, rx
+
+        px = int(round(rx * self.profile.units_per_mm))
+        py = int(round(ry * self.profile.units_per_mm))
+        return (px, py)
 
     def emit_commands(
         self,

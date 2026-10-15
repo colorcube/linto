@@ -31,6 +31,10 @@ class DeviceProfile:
     origin: str = "center"  # "center" or "bottom_left"
     units_per_mm: float = 40.0  # 0.025 mm / unit
     max_pens: int = 8
+    swap_xy: bool = False
+    invert_x: bool = False
+    invert_y: bool = False
+    rotation_deg: int = 0
     connection: DeviceConnectionConfig = field(default_factory=DeviceConnectionConfig)
     margins_mm: dict[str, dict[str, float]] = field(default_factory=dict)
     default_margin_profile: str = "exp"
@@ -101,6 +105,10 @@ def load_profile(path_or_id: str | Path) -> DeviceProfile:
         origin=str(data.get("origin", "center")),
         units_per_mm=float(data.get("units_per_mm", 40.0)),
         max_pens=int(data.get("max_pens", 8)),
+        swap_xy=bool(data.get("swap_xy", False)),
+        invert_x=bool(data.get("invert_x", False)),
+        invert_y=bool(data.get("invert_y", False)),
+        rotation_deg=int(data.get("rotation_deg", 0)),
         connection=conn,
         margins_mm=data.get("margins_mm", {}),
         default_margin_profile=str(data.get("default_margin_profile", "exp")),

@@ -195,3 +195,97 @@ def test_streamer_abort():
         assert finished_box[0] is True
         assert finished_box[1] is False  # Aborted
         server.stop()
+
+
+def test_axis_transformations():
+    profile = get_default_profile()
+    # Center for A3 EXP is (200.0, 168.5)
+    # Point at center (200.0, 168.5) -> (0, 0)
+    # Point at +25mm X: (225.0, 168.5) -> dx=+25mm -> 1000 units
+    # Point at -10mm Y: (200.0, 158.5) -> y_mm is 10mm higher on sheet -> dy_c = +10mm (upwards) -> 400 units
+
+    # 1. Standard (0 deg, no invert, no swap)
+    e_std = HPGLEmitter(profile, margin_profile="exp")
+    assert e_std.to_plotter_units(200.0, 168.5, 420.0, 297.0) == (0, 0)
+    assert e_std.to_plotter_units(225.0, 168.5, 420.0, 297.0) == (1000, 0)
+    assert e_std.to_plotter_units(200.0, 158.5, 420.0, 297.0) == (0, 400)
+
+    # 2. Invert X
+    e_inv_x = HPGLEmitter(profile, margin_profile="exp", invert_x=True)
+    assert e_inv_x.to_plotter_units(225.0, 168.5, 420.0, 297.0) == (-1000, 0)
+
+    # 3. Invert Y
+    e_inv_y = HPGLEmitter(profile, margin_profile="exp", invert_y=True)
+    assert e_inv_y.to_plotter_units(200.0, 158.5, 420.0, 297.0) == (0, -400)
+
+    # 4. Swap XY
+    e_swap = HPGLEmitter(profile, margin_profile="exp", swap_xy=True)
+    assert e_swap.to_plotter_units(225.0, 168.5, 420.0, 297.0) == (0, 1000)
+    assert e_swap.to_plotter_units(200.0, 158.5, 420.0, 297.0) == (400, 0)
+
+    # 5. Rotation 90° (CCW in Cartesian: (1, 0) -> (0, 1))
+    e_rot90 = HPGLEmitter(profile, margin_profile="exp", rotation_deg=90)
+    assert e_rot90.to_plotter_units(225.0, 168.5, 420.0, 297.0) == (0, 1000)
+
+    # 6. Rotation 180°
+    e_rot180 = HPGLEmitter(profile, margin_profile="exp", rotation_deg=180)
+    assert e_rot180.to_plotter_units(225.0, 168.5, 420.0, 297.0) == (-1000, 0)
+
+    # 7. Rotation 270°
+    e_rot270 = HPGLEmitter(profile, margin_profile="exp", rotation_deg=270)
+    assert e_rot270.to_plotter_units(225.0, 168.5, 420.0, 297.0) == (0, -1000)
+
+
+def test_userspace_xon_xoff():
+    plotter = VirtualPlotter(paper="A3")
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        symlink = Path(tmpdir) / "streamer_xoff_port"
+        server = PtyServer(plotter, symlink_path=symlink)
+        port_path = server.start()
+
+        profile = get_default_profile()
+        emitter = HPGLEmitter(profile)
+        doc = Document()
+        doc.page.width = 420.0
+        doc.page.height = 297.0
+
+        # Create multiple lines
+        paths = [
+            VectorPath(points=np.array([[100.0 + i * 5, 100.0], [120.0 + i * 5, 120.0]]), pen_id=1)
+            for i in range(8)
+        ]
+        doc.items.append(ImportItem(name="TestLines", paths=paths))
+        job = compile_document_to_plot_job(doc)
+        cmds = emitter.emit_commands(job, doc)
+
+        finished_box = [False, False]
+        streamer = SerialStreamer(
+            on_finished=lambda success, msg: finished_box.__setitem__(0, True) or finished_box.__setitem__(1, success),
+        )
+
+        streamer.start_stream(port_path, cmds, inter_command_delay_s=0.03, xonxoff_userspace=True)
+        time.sleep(0.04)
+
+        # Plotter sends XOFF (0x13) to pause
+        server._enqueue_response(b"\x13")
+        time.sleep(0.1)
+
+        # Streamer should be paused by XOFF
+        assert streamer._xoff_paused is True
+        assert streamer.is_active()
+        assert finished_box[0] is False
+
+        # Now plotter sends XON (0x11) to resume
+        server._enqueue_response(b"\x11")
+        time.sleep(0.05)
+
+        # Wait for completion
+        start_t = time.time()
+        while not finished_box[0] and (time.time() - start_t < 3.0):
+            time.sleep(0.05)
+
+        assert finished_box[0] is True
+        assert finished_box[1] is True
+        server.stop()
+

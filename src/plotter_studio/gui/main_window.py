@@ -526,10 +526,14 @@ class MainWindow(QMainWindow):
             return
 
         margin_key = "exp"
-        if hasattr(self, "plot_dock") and hasattr(self.plot_dock, "combo_margins"):
-            margin_key = self.plot_dock.combo_margins.currentData() or "exp"
+        emitter_opts = {}
+        if hasattr(self, "plot_dock"):
+            if hasattr(self.plot_dock, "combo_margins"):
+                margin_key = self.plot_dock.combo_margins.currentData() or "exp"
+            if hasattr(self.plot_dock, "get_emitter_options"):
+                emitter_opts = self.plot_dock.get_emitter_options()
         profile = get_default_profile()
-        emitter = HPGLEmitter(profile, margin_profile=margin_key)
+        emitter = HPGLEmitter(profile, margin_profile=margin_key, **emitter_opts)
         hpgl_content = emitter.emit_string(self._current_job, self.doc)
 
         try:

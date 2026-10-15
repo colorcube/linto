@@ -172,6 +172,8 @@ def probe_plotter(
             hard_clip_units=hard_clip_units,
             hard_clip_mm=hard_clip_mm,
             detected_format=detected_fmt,
+            cts=cts_val,
+            dsr=dsr_val,
         )
 
     except Exception as e:
@@ -179,4 +181,6 @@ def probe_plotter(
             port=port_clean,
             success=False,
             error_message=str(e),
+            cts=cts_val if 'cts_val' in locals() else None,
+            dsr=dsr_val if 'dsr_val' in locals() else None,
         )

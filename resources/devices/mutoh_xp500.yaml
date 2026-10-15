@@ -6,6 +6,10 @@ protocol: "hpgl"
 origin: "center"
 units_per_mm: 40.0
 max_pens: 8
+swap_xy: false
+invert_x: false
+invert_y: false
+rotation_deg: 0
 
 connection:
   baudrate: 19200
