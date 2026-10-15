@@ -11,6 +11,7 @@ Aufwand: S ≈ 1–3 Abende, M ≈ 1–2 Wochenenden, L ≈ mehrere Wochenenden.
 | **M1 – CLI-Plot** | AP1–AP4 | SVG → Blatt plotten ohne GUI, mit Blatterkennung, Optimierung, Fortschritt, Abbruch, Resume |
 | **M2 – GUI Phase 1** | AP5–AP6 | Importieren & Anordnen, Stifte, Pre-Flight-Vorschau, Gerätesteuerung |
 | **M3 – GUI Phase 2** | AP7 | Objekte innerhalb von Importen selektieren, verändern, löschen |
+| **M4 – Distribution** | AP8 | Standalone Single-File Executables (Linux AppImage / Windows .exe) |
 | später | Ideenspeicher (konzept.md §9) | Text, Schraffur, weitere Treiber … |
 
 ```mermaid
@@ -108,3 +109,14 @@ Noch offen. Zuerst Panel und Handbuch, dann mit Skript `tools/xp500_probe.py` (p
 - Objekt-Panel (Baum), Gruppe „betreten“, Unterauswahl, Transformieren, Stift zuweisen, Löschen.
 
 **Abnahme = M3.**
+
+---
+
+## AP8 – Packaging & Standalone-Binary (S–M)
+- `sys._MEIPASS`-Weiche in `src/plotter_studio/device/profile.py` für Ressourcen (`resources/devices/`).
+- PyInstaller `.spec`-Konfiguration für Single-File-Builds (`--onefile`, `--windowed`).
+- Linux-AppImage-Workflow zur Vermeidung von `glibc`-Versionskonflikten.
+- GitHub-Actions-Workflow für automatisierte Multi-Plattform-Releases (Linux Standalone / AppImage und Windows `.exe`).
+
+**Abnahme = M4.**
+

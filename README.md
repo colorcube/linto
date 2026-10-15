@@ -49,6 +49,7 @@ Wenn Sie mit einem **physischen Stiftplotter** zeichnen (egal ob Oldtimer wie Mu
 * **Schneideplotter / Schleppmesser-Kompensation (Drag-Knife Offset):** Das Schneiden von Vinylfolien mit Messerklingen wird noch nicht unterstützt; derzeit liegt der Fokus rein auf Stiftplottern.
 * **HP-GL/PLT-Import:** Das Einlesen bestehender HP-GL-Plotdateien ist für eine spätere Version geplant; aktuell dient SVG als universelles Quellformat, während HP-GL das optimierte Ausgabe- und Exportformat ist.
 * **Direkter DXF-Import:** CAD-Dateien im DXF-Format müssen aktuell vor dem Import in Inkscape, QCAD oder LibreCAD als SVG gespeichert werden.
+* **Eigenständiges Binärpaket (Single-File Executable / AppImage):** Bündelung der Anwendung (z.B. per PyInstaller oder als Linux-AppImage / Windows-`.exe`), sodass Plotter Studio ohne vorinstalliertes Python direkt per Klick gestartet werden kann.
 * **G-Code-Plotter (Marlin / Grbl):** Die direkte Erzeugung von CNC-G-Code für 3D-Drucker oder Fräsen mit Stifthalter befindet sich in Planung; aktuell wird der Industriestandard HP-GL / MH-GL ausgegeben.
 
 ---

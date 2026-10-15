@@ -487,4 +487,5 @@ Zwei Betriebsmodi im Hauptfenster (Tabs):
 | **Stipple / TSP-Art** | Konvertierung von Rastergrafiken in Punktmuster oder durchgehende Linien |
 | **Rollenmedien / Banner** | Endlospapier-Plots (Vorschub ohne Längenlimit) |
 | **Web-Fernanzeige** | Status und Webcam-Stream im Browser über `plotd` |
+| **Standalone-Packaging** | Bündelung als Single-File Executable (`pyinstaller` / `AppImage` / `.exe`) für klickbare Distribution ohne Python-Installation |
 
