@@ -49,14 +49,22 @@ class ObjectDockWidget(QDockWidget):
         self.tree.setRootIsDecorated(False)
         self.tree.setSelectionMode(QAbstractItemView.SingleSelection)
         self.tree.setEditTriggers(QAbstractItemView.DoubleClicked | QAbstractItemView.EditKeyPressed)
+        self.tree.setStyleSheet("QTreeWidget { outline: none; } QTreeWidget::item { outline: none; }")
 
         header = self.tree.header()
+        header.setMinimumSectionSize(24)
         header.setSectionResizeMode(0, QHeaderView.Fixed)
-        header.resizeSection(0, 28)
+        header.resizeSection(0, 24)
         header.setSectionResizeMode(1, QHeaderView.Fixed)
-        header.resizeSection(1, 28)
+        header.resizeSection(1, 24)
         header.setSectionResizeMode(2, QHeaderView.Stretch)
         header.setStretchLastSection(True)
+
+        h_item = self.tree.headerItem()
+        h_item.setIcon(0, get_icon("eye", size=14))
+        h_item.setToolTip(0, "Sichtbarkeit umschalten")
+        h_item.setIcon(1, get_icon("lock", size=14))
+        h_item.setToolTip(1, "Sperren umschalten")
 
         layout.addWidget(self.tree)
 
@@ -150,7 +158,7 @@ class ObjectDockWidget(QDockWidget):
             label = f"{item.name} ({path_count} Pfade)" if path_count != 1 else f"{item.name} (1 Pfad)"
             node.setText(2, label)
             node.setData(2, Qt.UserRole, item.name)  # Raw name for renaming
-            node.setFlags(node.flags() | Qt.ItemIsEditable | Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+            node.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable)
 
             if item.item_id == current_sel_id:
                 node.setSelected(True)
