@@ -52,12 +52,12 @@ Vor dem Platzieren von Grafiken sollten Sie das gewünschte Blattformat und Rand
 
 ## 3. Vektorgrafiken importieren
 
-Plotter Studio unterstützt zwei Hauptformate für den Import:
-* **SVG (Scalable Vector Graphics):** Der moderne Standard für Vektorgrafiken aus Inkscape, Adobe Illustrator, Affinity Designer, Figma oder CAD.
-* **HP-GL / PLT (Hewlett-Packard Graphics Language):** Klassische Plotterdateien aus CAD- und Architekturprogrammen.
+Plotter Studio verwendet standardmäßig **SVG (Scalable Vector Graphics)** als universelles Import- und Layoutformat:
+* **SVG:** Der moderne Standard für Vektorgrafiken aus Inkscape, Adobe Illustrator, Affinity Designer, Figma oder CAD-Exporten.
+* *(Hinweis zu HP-GL / PLT: HP-GL ist das primäre Ausgabe- und Exportformat von Plotter Studio. Der direkte Re-Import alter HP-GL-Plotdateien befindet sich auf der Roadmap für künftige Versionen.)*
 
 ### Import-Möglichkeiten:
-1. **Drag & Drop:** Ziehen Sie eine oder mehrere `.svg`- oder `.hpgl`-Dateien direkt aus dem Dateimanager in das Canvas-Fenster.
+1. **Drag & Drop:** Ziehen Sie eine `.svg`-Datei direkt aus dem Dateimanager in das Canvas-Fenster.
 2. **Menü:** Wählen Sie **Datei ➔ Öffnen...** (`Strg+O`) oder **Datei ➔ Importieren...** (`Strg+I`).
 
 ### Automatisches Farb-Clustering

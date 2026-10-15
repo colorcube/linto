@@ -31,7 +31,7 @@ Wenn Sie mit einem **physischen Stiftplotter** zeichnen (egal ob Oldtimer wie Mu
 * **Kein Zeichenprogramm:** Plotter Studio ersetzt weder Inkscape noch Adobe Illustrator oder CAD-Software. Sie zeichnen und entwerfen weiterhin in Ihrer gewohnten Software. Plotter Studio ist die nachgeschaltete Werkbank zum Vorbereiten, Prüfen und Ausführen des Plots.
 
 ### Was kann die Software heute schon?
-* **Vektor-Import:** Schneller Import von SVG- und HP-GL/PLT-Dateien per Drag & Drop.
+* **Vektor-Import:** Schneller Import von SVG-Vektordateien per Drag & Drop oder Dateidialog.
 * **Automatisches Farb-Clustering:** Grafikelemente werden anhand ihrer Strichfarbe automatisch auf die Stifte 1 bis 8 gruppiert.
 * **Layout & Transformation:** Numerische Positionierung, Skalierung mit Proportions-Sperre, 50%/100%/200%-Schnelltasten, Einpassen auf das Papier, Zentrieren, Drehen und Spiegeln.
 * **Objekt- & Ebenenverwaltung:** Z-Order (Zeichenreihenfolge per Drag & Drop ändern), Sichtbarkeit umschalten und Bearbeitung sperren.
@@ -45,6 +45,7 @@ Wenn Sie mit einem **physischen Stiftplotter** zeichnen (egal ob Oldtimer wie Mu
 * **Integrierter Software-Emulator:** Vollwertiger virtueller Plotter (`VirtualPlotter`) zum sofortigen Testen ohne Hardware.
 
 ### Was kann Plotter Studio (noch) nicht bzw. was steht auf der Roadmap?
+* **HP-GL/PLT-Import:** Das Einlesen bestehender HP-GL-Plotdateien ist für eine spätere Version geplant; aktuell dient SVG als universelles Quellformat, während HP-GL das optimierte Ausgabe- und Exportformat ist.
 * **Direkter DXF-Import:** CAD-Dateien im DXF-Format müssen aktuell vor dem Import in Inkscape, QCAD oder LibreCAD als SVG gespeichert werden.
 * **Schleppmesser-Kompensation (Drag-Knife Offset):** Für Schneideplotter (Vinyl-Cutter) ist eine Offset-Kompensation für drehbare Klingen wie in InkCut geplant; derzeit liegt der Fokus auf Stiftplottern.
 * **Import von InkCut-Gerätedefinitionen:** Plotter Studio nutzt eigene, transparente YAML-Geräteprofile, die sich einfach für beliebige Fabrikate erstellen lassen.

@@ -11,10 +11,10 @@ Plotter Studio ist ein spezialisierter **Slicer und Arbeitsbereich für Vektor-S
 
 ### Was ist es gar nicht?
 * **Kein Druckertreiber für Tintenstrahl-Großformatdrucker:** Großformatige Fotodrucker (z.B. HP DesignJet, Epson SureColor, Canon imagePROGRAF) werden in Büros umgangssprachlich oft als „Plotter“ bezeichnet, sind aber Pixel-Rasterdrucker. Plotter Studio steuert ausschließlich echte **Vektor-Stiftplotter** an, die physische Stifte über Papier bewegen.
-* **Kein Vektor-Zeichenprogramm:** Plotter Studio ersetzt weder Inkscape noch Adobe Illustrator. Sie erstellen Ihre Kunstwerke, CAD-Pläne oder Algorithmen in Ihrem gewohnten Werkzeug und exportieren sie als Standard-SVG oder HP-GL. Plotter Studio übernimmt dann das Layouten, Skalieren, Pfadoptimieren und Plotten.
+* **Kein Vektor-Zeichenprogramm:** Plotter Studio ersetzt weder Inkscape noch Adobe Illustrator. Sie erstellen Ihre Kunstwerke, CAD-Pläne oder Algorithmen in Ihrem gewohnten Werkzeug und exportieren sie als Standard-SVG. Plotter Studio übernimmt dann das Layouten, Skalieren, Pfadoptimieren und Plotten.
 
 ### Was kann Plotter Studio heute schon?
-* SVG- und HP-GL-Vektordateien laden, platzieren, numerisch skalieren (50%, 100%, 200%, Proportions-Sperre), drehen und auf dem Papier zentrieren.
+* SVG-Vektordateien laden, platzieren, numerisch skalieren (50%, 100%, 200%, Proportions-Sperre), drehen und auf dem Papier zentrieren.
 * Randprofile für Rollen- und Flachbettplotter (z.B. EXP, NORM mit asymmetrischem Vorschubrand) und optische Papiererkennung (`OH;`).
 * Automatisches Farb-Clustering auf bis zu 8 Stifte.
 * Multi-Objektverwaltung mit Z-Order (Zeichenabfolge), Sichtbarkeit und Bearbeitungssperre.
@@ -28,6 +28,7 @@ Plotter Studio ist ein spezialisierter **Slicer und Arbeitsbereich für Vektor-S
 * Hardware-Diagnosetool (`tools/xp500_probe.py`), Kalibriermuster (`resources/calibration_plot_a3.svg`) und integrierter Software-Emulator (`VirtualPlotter`).
 
 ### Was kann Plotter Studio (noch) nicht bzw. was ist geplant?
+* **HP-GL/PLT-Import:** Das Einlesen bestehender HP-GL-Plotdateien ist für spätere Versionen geplant; aktuell dient SVG als universelles Quellformat, während HP-GL für die Ausgabe und den Export genutzt wird.
 * **Direkter DXF-Import:** Aktuell müssen CAD-Zeichnungen im DXF-Format vorab z.B. in Inkscape oder QCAD als SVG exportiert werden.
 * **Schleppmesser-Kompensation (Drag-Knife Offset):** Für reine Schneideplotter (Vinyl-Cutter) ist eine Offset-Korrektur für drehbare Messerklingen wie in InkCut geplant, aktuell liegt der Fokus auf Stiftplottern.
 * **Direkter Import von InkCut-Gerätedefinitionen:** Profile werden derzeit über die eigene, transparente YAML-Struktur (`resources/devices/*.yaml`) gepflegt.
