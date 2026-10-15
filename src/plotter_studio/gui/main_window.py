@@ -25,6 +25,7 @@ from .transform_dock import TransformDockWidget
 from .layout_dock import LayoutDockWidget
 from .plot_dock import PlotDockWidget
 from .simulation_bar import PlotSimulationBar
+from ..device import get_default_profile, HPGLEmitter
 from .commands import (
     TransformItemCommand, AssignPenCommand,
     AddItemCommand, DeleteItemsCommand
@@ -303,6 +304,8 @@ class MainWindow(QMainWindow):
         self.plot_dock.pen_filter_changed.connect(self.canvas.set_visible_pens)
         self.plot_dock.export_hpgl_requested.connect(self.export_hpgl_dialog)
         self.plot_dock.export_svg_requested.connect(self.export_plot_svg_dialog)
+        self.plot_dock.stream_step_changed.connect(self.canvas.set_simulation_step)
+        self.plot_dock.stream_step_changed.connect(self.simulation_bar.set_step)
 
     def _on_mouse_moved(self, x_mm: float, y_mm: float):
         self.ruler_h.set_cursor_pos(x_mm)
@@ -522,25 +525,16 @@ class MainWindow(QMainWindow):
         if not fpath:
             return
 
-        units_per_mm = 40.0  # Default 0.025 mm
-        lines_out = ["IN;"]
-        for pen_id, layer in sorted(self._current_job.layers.items()):
-            speed = int(layer.pen.speed_cm_s)
-            lines_out.append(f"SP{pen_id};")
-            if speed > 0:
-                lines_out.append(f"VS{speed};")
-            for poly in layer.lines:
-                if len(poly) < 2:
-                    continue
-                p0 = poly[0]
-                lines_out.append(f"PU{round(p0[0] * units_per_mm)},{round(p0[1] * units_per_mm)};")
-                pd_pts = [f"{round(p[0] * units_per_mm)},{round(p[1] * units_per_mm)}" for p in poly[1:]]
-                lines_out.append("PD" + ",".join(pd_pts) + ";")
-        lines_out.append("PU;SP0;")
+        margin_key = "exp"
+        if hasattr(self, "plot_dock") and hasattr(self.plot_dock, "combo_margins"):
+            margin_key = self.plot_dock.combo_margins.currentData() or "exp"
+        profile = get_default_profile()
+        emitter = HPGLEmitter(profile, margin_profile=margin_key)
+        hpgl_content = emitter.emit_string(self._current_job, self.doc)
 
         try:
             with open(fpath, "w", encoding="ascii") as f:
-                f.write("\n".join(lines_out) + "\n")
+                f.write(hpgl_content)
             self.lbl_info.setText(f"HP-GL exportiert: {os.path.basename(fpath)}")
         except Exception as e:
             QMessageBox.critical(self, "Fehler beim Export", f"HP-GL-Export fehlgeschlagen:\n{e}")
@@ -599,6 +593,9 @@ class MainWindow(QMainWindow):
         """Clean up canvas and docks to ensure safe, warning-free Qt teardown."""
         if hasattr(self, "simulation_bar") and self.simulation_bar:
             self.simulation_bar.pause()
+        if hasattr(self, "plot_dock") and self.plot_dock:
+            if getattr(self.plot_dock, "_streamer", None) and self.plot_dock._streamer.is_active():
+                self.plot_dock._streamer.abort()
         if hasattr(self, "canvas") and self.canvas:
             self.canvas.cleanup()
 

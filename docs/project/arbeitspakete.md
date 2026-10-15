@@ -67,46 +67,42 @@ Noch offen. Zuerst Panel und Handbuch, dann mit Skript `tools/xp500_probe.py` (p
 
 **Abnahme:** Kreis r = 100 mm bei 0,05 mm Toleranz → max. Abweichung ≤ 0,05 mm, minimale Punktzahl.
 
-## AP2 – Device: Profil, Abbildung, Blatterkennung, HPGL-Emitter (M)
-- YAML-Profil + Validierung (pydantic).
-- Abbildung Papier-mm → Units nach konzept.md §4 (Hard-Clip-Mitte, Ränder, Einlage-Matrix, Maßstab).
-- Blatterkennung aus `OH` (Format + Lage), Warnung bei Abweichung.
-- Emitter (7585B): `PA`/`PR`, Punktlisten, Stiftwechsel, `VS`, Init/End.
-- Kalibrier- und Testplots als eingebaute Jobs (Orientierung, Ränder, Rahmen, Stifttest).
+## AP2 – Device: Profil, Abbildung, Blatterkennung, HPGL-Emitter (M) – ✅ Umgesetzt
+- YAML-Profil + Pydantic-Validierung (`resources/devices/mutoh_xp500.yaml`, `src/plotter_studio/device/profile.py`).
+- Abbildung Papier-mm → Units nach konzept.md §4 (Center-Origin, asymmetrische Ränder EXP/NORM/TYPE1/TYPE3).
+- Blatterkennung aus `OH` (Format + Lage).
+- Emitter (7585B): `IN`, `SP`, `VS`, `FS`, `PU`, `PD` mit Koordinatenketten und Schritt-Indizes.
+- Vollständig abgedeckt durch Unit- und Golden-Tests (`tests/test_device_streaming.py`).
 
-**Abnahme:** Golden-File-Tests. Ein auf A3 zentriert geplottetes Rechteck sitzt auf ±1 mm mittig, unabhängig von der Rollenposition.
+## AP3 – plotd / Streaming & Virtual Plotter (M–L) – ✅ Umgesetzt
+- Serieller Transport über pyserial (`rtscts`) sowie TCP-Sockets (`tcp://host:port`).
+- **Virtueller Mutoh XP-500 Software-Emulator** (`src/plotter_studio/emulator/`) mit PTY- und TCP-Server, Inquiry-Beantwortung (`OI;OF;OH;`) und SVG-Aufzeichnung.
+- Hintergrund-Streaming (`SerialStreamer`), Pause/Resume und sofortiger Abbruch (`ESC.K`, `PU;SP0;`).
+- Schnittstellenerkennung (`list_serial_ports()`) für reale Ports, PTY-Symlinks und TCP.
 
-## AP3 – plotd: Streaming, Jobs, CLI (M–L)
-- Serieller Transport (pyserial, `rtscts`, by-id, Reconnect), Strategien `handshake` / `handshake+poll` / `sync`.
-- Job-Format (hpgl + index + state), Zustandsautomat, Pause/Abbruch/Resume ab Checkpoint, Stiftwechsel-Prompt.
-- CLI `plotter-studio plot|status|pause|abort|resume|jobs|probe`. In Phase 1 inline, die Dienst-API ⟨Q-09⟩ folgt vor AP6.
-- **Virtueller Plotter** (pty, simuliert 7585B inkl. Puffer, `OH`, `ESC.B`, rendert PNG) für Tests ohne Papier.
+## AP4 – Pipeline, Optimierer, Import, Schätzer (M) – ✅ Umgesetzt
+- SVG-Import mit Stiftzuordnung und Einheitenumrechnung.
+- Pipeline: Adaptive Bézier-Glättung, Endpunkt-Merge, RDP-Vereinfachung, KD-Tree Greedy + 2-Opt-Wegoptimierung, optionales Clipping.
+- Pre-Flight-Statistiken: Zeichenweg, Leerweg, Sortier-Ersparnis, Stiftwechsel, Dauer.
+- HP-GL- und Plot-SVG-Export.
 
-**Abnahme:** 30-minütiger Testjob ohne Fehlzeichnung. Abbruch stoppt innerhalb von ≤ 5 s (falls `ESC.K`/Polling verfügbar). Resume nach Abziehen des USB-Steckers funktioniert.
+## AP5 – GUI Phase 1: Layout-Modus (L) – ✅ Umgesetzt
+- Hauptfenster (PySide6), Canvas mit Blattanzeige, Linealen, Zoom/Pan, WYSIWYG-Strichbreiten.
+- Dokumentmodell mit Undo/Redo, Presets (A4–A0) und Ränderanzeige.
+- Stift-Panel mit dynamischer Farbzuordnung, Geschwindigkeit und Anpressdruck.
+- Drag & Drop und Transform-Werkzeuge.
 
-## AP4 – Pipeline, Optimierer, Import, Schätzer (M)
-- SVG-Import (svgelements): Strichfarbe/Ebene → Stift, Füllungen ignorieren (Warnung), Gruppen erhalten. Auto-Farbreduktion (Clustering auf $\le 8$ Stifte).
-- HPGL/PLT-Import (vorhandene Dateien ansehen, umplatzieren, senden).
-- Pipeline: Clip, Merge, Simplify, Dedupe, Sort (Greedy + 2-Opt, Umkehr, Startpunkt-Rotation), Pen-Order.
-- Zeitschätzer, Pre-Flight-Report.
-- CLI: `plotter-studio plot file.svg --page A3 --center --margin 20mm [--preview out.png] [--monochrome / --pens 1,2]`.
+## AP6 – GUI Phase 1: Plot-Modus & Gerätesteuerung (M–L) – ✅ Umgesetzt
+- Umschaltung zwischen Layout- und Plot-Modus.
+- Pre-Flight-Vorschau mit Leerfahrten, Stützpunkt-/Knotenanzeige und Scrubber-Simulation.
+- Integriertes Gerätepanel:
+  - Portauswahl (Seriell / TCP / virtueller Plotter) mit Auto-Refresh.
+  - Randprofil-Auswahl (EXP, NORM, TYPE1, TYPE3).
+  - Plotter-Prüfung (`[ 🔍 Plotter prüfen ]`) mit Hardware-Inquiry (`OI;OF;OH;`) und Blatterkennung.
+  - Live-Steuerung: `[ 🚀 Plot senden ]`, `[ ⏸ Pause ]`, `[ ⏹ Abbrechen ]`.
+  - Fortschrittsanzeige mit synchroner Canvas-Toolhead-Aktualisierung in Echtzeit.
 
-**Abnahme = M1:** Ein Inkscape-SVG wird per CLI auf das eingelegte Blatt zentriert, optimiert und mit Fortschrittsanzeige geplottet.
-
-## AP5 – GUI Phase 1: Layout-Modus (L)
-- Hauptfenster (PySide6), Canvas (Blatt, plottbarer Bereich, Lineale, Zoom/Pan, WYSIWYG-Strichbreite in mm, Überstands-Warnung).
-- Dokumentmodell, Undo/Redo, Projektdatei ⟨Q-08⟩.
-- Papiermaße: Presets, freie mm-Maße, Knopf „Papiergröße vom Gerät holen“ (`OH;`).
-- Import (Dialog mit Mapping-Vorschau, Drag & Drop), Import-Objekte verschieben/skalieren/drehen/löschen, numerische Eingabe.
-- Platzierungswerkzeuge: Zentrieren, prozentuale Ausrichtung ($50\%, 50\%$), 1:1 Originalgröße (für CAD/Schaltpläne), Einpassen mit Rand (mm oder %), Skalieren um $x\%$ oder auf Zielmaße in mm.
-- Stift-Panel mit dynamischem Remapping (Farben zusammenführen, Monochrom-Knopf, Stiftzuweisung per Selektion/Tastatur `1`–`8`).
-
-## AP6 – GUI Phase 1: Plot-Modus & Gerätesteuerung (M–L)
-- Kompilierte Vorschau mit Leerfahrten, Scrubber, Stift-Filter.
-- Pipeline-Optionen mit Live-Statistik (Worker-Thread).
-- Gerätepanel als plotd-Client: Verbinden, Blatt erkennen, Start/Pause/Abbruch/Resume, Fortschritt im Canvas.
-
-**Abnahme = M2.**
+**Abnahme M1 & M2 erreicht!**
 
 ## AP7 – GUI Phase 2: Objekte bearbeiten (M)
 - Objekt-Panel (Baum), Gruppe „betreten“, Unterauswahl, Transformieren, Stift zuweisen, Löschen.

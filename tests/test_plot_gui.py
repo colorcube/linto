@@ -1,9 +1,13 @@
 import os
+import time
+from pathlib import Path
 import pytest
 from PySide6.QtWidgets import QApplication
 from plotter_studio.core.document import Document
 from plotter_studio.gui.main_window import MainWindow
 from plotter_studio.gui.canvas import CanvasMode
+from plotter_studio.device import ProbeResult
+from plotter_studio.emulator import VirtualPlotter, PtyServer
 
 
 @pytest.fixture(scope="session")
@@ -169,3 +173,93 @@ def test_plot_mode_exports(qapp, tmp_path, monkeypatch):
 
     win.close()
     win.cleanup()
+
+
+def test_plot_dock_device_controls(qapp, tmp_path):
+    doc = Document()
+    doc.page.apply_preset("A4", "landscape")
+    win = MainWindow(doc)
+    win.show()
+
+    svg_content = """<svg width="60mm" height="40mm" viewBox="0 0 60 40" xmlns="http://www.w3.org/2000/svg">
+      <line x1="10" y1="10" x2="50" y2="30" stroke="#000000"/>
+    </svg>"""
+    test_svg = str(tmp_path / "test_line.svg")
+    with open(test_svg, "w", encoding="utf-8") as f:
+        f.write(svg_content)
+    win.import_svg_file(test_svg)
+    win.switch_to_plot_mode()
+
+    dock = win.plot_dock
+    assert dock.isVisible()
+    assert dock.combo_port.count() > 0
+
+    # Test margins combobox
+    assert dock.combo_margins.count() >= 4
+    dock.combo_margins.setCurrentIndex(1)  # norm
+    assert dock.combo_margins.currentData() == "norm"
+    dock.combo_margins.setCurrentIndex(0)  # exp
+    assert dock.combo_margins.currentData() == "exp"
+
+    # Test probe handling
+    mock_res = ProbeResult(
+        port="tcp://127.0.0.1:9999",
+        success=True,
+        model="Mutoh XP-500",
+        units_per_mm=40.0,
+        detected_format="A3",
+        hard_clip_mm=(390.0, 287.0),
+    )
+    dock._on_probe_done(mock_res)
+    assert "Mutoh XP-500" in dock.lbl_probe_status.text()
+    assert "A3" in dock.lbl_probe_status.text()
+
+    # Test probe failure
+    fail_res = ProbeResult(
+        port="/dev/nonexistent",
+        success=False,
+        error_message="Gerät nicht gefunden",
+    )
+    dock._on_probe_done(fail_res)
+    assert "⚠️ Gerät nicht gefunden" in dock.lbl_probe_status.text()
+
+    # Test live streaming with VirtualPlotter over PtyServer
+    plotter = VirtualPlotter(paper="A4", margin_profile="EXP")
+    symlink = tmp_path / "gui_test_port"
+    server = PtyServer(plotter, symlink_path=symlink)
+    port_path = server.start()
+
+    try:
+        dock.combo_port.setEditText(port_path)
+        assert dock.btn_start_plot.isEnabled()
+        assert not dock.btn_pause_plot.isEnabled()
+        assert not dock.btn_abort_plot.isEnabled()
+
+        # Start streaming
+        dock.start_plot()
+        assert not dock.btn_start_plot.isEnabled()
+        assert dock.btn_pause_plot.isEnabled()
+        assert dock.btn_abort_plot.isEnabled()
+
+        # Wait for completion (process Qt events)
+        start_t = time.time()
+        while dock._streamer and dock._streamer.is_active() and (time.time() - start_t < 3.0):
+            qapp.processEvents()
+            time.sleep(0.02)
+
+        # Allow final Qt signals to propagate
+        for _ in range(15):
+            qapp.processEvents()
+            time.sleep(0.01)
+
+        assert dock.progress_bar.value() == 100
+        assert "✓" in dock.lbl_stream_status.text()
+        assert dock.btn_start_plot.isEnabled()
+        assert not dock.btn_pause_plot.isEnabled()
+        assert not dock.btn_abort_plot.isEnabled()
+
+    finally:
+        server.stop()
+        win.close()
+        win.cleanup()
+

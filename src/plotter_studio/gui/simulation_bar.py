@@ -148,6 +148,16 @@ class PlotSimulationBar(QWidget):
             self.current_step = 0
         self._update_labels()
 
+    def set_step(self, step: int):
+        """Externally set active simulation step (e.g. during live device streaming)."""
+        self.pause()
+        clamped = max(0, min(self.total_steps, step))
+        self.slider.blockSignals(True)
+        self.slider.setValue(clamped)
+        self.slider.blockSignals(False)
+        self.current_step = clamped
+        self._update_labels()
+
     def rewind(self):
         self.pause()
         self.slider.setValue(0)

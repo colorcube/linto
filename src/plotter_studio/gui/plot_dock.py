@@ -1,21 +1,43 @@
-"""Dock widget for Plot Mode: Pipeline parameters, pre-flight statistics, pen filters and exports."""
+"""Dock widget for Plot Mode: Pipeline parameters, pre-flight statistics, pen filters,
+device connection & live plot control, and exports.
+"""
 
 from __future__ import annotations
+
+import threading
 from typing import Optional, Set
-from PySide6.QtCore import Qt, Signal
+
+from PySide6.QtCore import Qt, Signal, QObject
 from PySide6.QtWidgets import (
     QDockWidget, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QGroupBox, QLabel, QDoubleSpinBox, QCheckBox, QPushButton,
-    QScrollArea, QFileDialog, QMessageBox, QFrame
+    QScrollArea, QFileDialog, QMessageBox, QFrame, QComboBox, QProgressBar
 )
 from ..core.document import Document
 from ..pipeline.compiler import PipelineConfig, PlotJob, compile_document_to_plot_job
+from ..device import (
+    get_default_profile,
+    HPGLEmitter,
+    list_serial_ports,
+    probe_plotter,
+    SerialStreamer,
+    StreamerState,
+    ProbeResult,
+)
+
+
+class StreamerSignalBridge(QObject):
+    """Bridge for cross-thread communication from background worker to Qt main thread."""
+    progress = Signal(int, int, float, int, float)  # step_idx, total_cmds, pct, pen, drawn_m
+    status = Signal(str, str)                       # state_name, message
+    finished = Signal(bool, str)                    # success, message
+    probe_done = Signal(object)                     # ProbeResult
 
 
 class PlotDockWidget(QDockWidget):
     """
     Dock widget providing pipeline controls, pre-flight inspection statistics,
-    pen visibility filters, and export actions.
+    pen visibility filters, device streaming controls, and export actions.
     """
     config_changed = Signal()
     toggle_travels = Signal(bool)
@@ -23,6 +45,7 @@ class PlotDockWidget(QDockWidget):
     pen_filter_changed = Signal(object)  # Set[int] or None
     export_hpgl_requested = Signal()
     export_svg_requested = Signal()
+    stream_step_changed = Signal(int)
 
     def __init__(self, doc: Document, parent=None):
         super().__init__("Plot-Vorschau & Ausgabe", parent)
@@ -30,8 +53,18 @@ class PlotDockWidget(QDockWidget):
         self.job: Optional[PlotJob] = None
         self._pen_checkboxes: dict[int, QCheckBox] = {}
 
+        self._bridge = StreamerSignalBridge()
+        self._bridge.progress.connect(self._on_stream_progress)
+        self._bridge.status.connect(self._on_stream_status)
+        self._bridge.finished.connect(self._on_stream_finished)
+        self._bridge.probe_done.connect(self._on_probe_done)
+
+        self._streamer: Optional[SerialStreamer] = None
+        self._probe_thread: Optional[threading.Thread] = None
+
         self.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
         self._init_ui()
+        self.refresh_ports()
 
     def _init_ui(self):
         scroll = QScrollArea(self)
@@ -153,8 +186,89 @@ class PlotDockWidget(QDockWidget):
         self.vbox_pens = QVBoxLayout(self.grp_pens)
         layout.addWidget(self.grp_pens)
 
-        # 4. Export & Actions
-        grp_export = QGroupBox("💾 Ausgabe & Export", container)
+        # 4. Device Connection & Live Plot Control
+        grp_device = QGroupBox("🖨️ Plotter-Verbindung & Ausgabe", container)
+        vbox_device = QVBoxLayout(grp_device)
+        vbox_device.setSpacing(8)
+
+        grid_conn = QGridLayout()
+        grid_conn.setSpacing(4)
+        grid_conn.addWidget(QLabel("Port / Ziel:"), 0, 0)
+
+        self.combo_port = QComboBox()
+        self.combo_port.setEditable(True)
+        self.combo_port.setToolTip("Serielle Schnittstelle (z.B. /dev/ttyUSB0, COM3) oder TCP (tcp://127.0.0.1:9999)")
+        grid_conn.addWidget(self.combo_port, 0, 1)
+
+        self.btn_refresh_ports = QPushButton("🔄")
+        self.btn_refresh_ports.setFixedWidth(32)
+        self.btn_refresh_ports.setToolTip("Schnittstellenliste neu einlesen")
+        self.btn_refresh_ports.clicked.connect(self.refresh_ports)
+        grid_conn.addWidget(self.btn_refresh_ports, 0, 2)
+
+        grid_conn.addWidget(QLabel("Ränder (Clip):"), 1, 0)
+        self.combo_margins = QComboBox()
+        self.combo_margins.addItem("EXP (Erweitert: 25 / 5 / 5 / 5 mm)", "exp")
+        self.combo_margins.addItem("NORM (Normal: 25 / 10 / 10 / 10 mm)", "norm")
+        self.combo_margins.addItem("TYPE1 (38 / 10 / 10 / 10 mm)", "type1")
+        self.combo_margins.addItem("TYPE3 (38 / 5 / 5 / 5 mm)", "type3")
+        grid_conn.addWidget(self.combo_margins, 1, 1, 1, 2)
+
+        vbox_device.addLayout(grid_conn)
+
+        self.btn_probe = QPushButton("🔍 Plotter prüfen (Inquiry)")
+        self.btn_probe.clicked.connect(self.start_probe)
+        vbox_device.addWidget(self.btn_probe)
+
+        self.lbl_probe_status = QLabel("Kein Plotter geprüft")
+        self.lbl_probe_status.setWordWrap(True)
+        self.lbl_probe_status.setStyleSheet("""
+            padding: 6px;
+            background-color: #f5f5f5;
+            color: #616161;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            font-size: 11px;
+        """)
+        vbox_device.addWidget(self.lbl_probe_status)
+
+        hbox_ctrl = QHBoxLayout()
+        hbox_ctrl.setSpacing(6)
+
+        self.btn_start_plot = QPushButton("🚀 Plot senden")
+        self.btn_start_plot.setStyleSheet("font-weight: bold; background-color: #2e7d32; color: white; padding: 6px;")
+        self.btn_start_plot.setEnabled(False)
+        self.btn_start_plot.clicked.connect(self.start_plot)
+        hbox_ctrl.addWidget(self.btn_start_plot)
+
+        self.btn_pause_plot = QPushButton("⏸ Pause")
+        self.btn_pause_plot.setEnabled(False)
+        self.btn_pause_plot.clicked.connect(self.toggle_pause)
+        hbox_ctrl.addWidget(self.btn_pause_plot)
+
+        self.btn_abort_plot = QPushButton("⏹ Abbrechen")
+        self.btn_abort_plot.setEnabled(False)
+        self.btn_abort_plot.setStyleSheet("color: #c62828;")
+        self.btn_abort_plot.clicked.connect(self.abort_plot)
+        hbox_ctrl.addWidget(self.btn_abort_plot)
+
+        vbox_device.addLayout(hbox_ctrl)
+
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setRange(0, 100)
+        self.progress_bar.setValue(0)
+        self.progress_bar.setTextVisible(True)
+        vbox_device.addWidget(self.progress_bar)
+
+        self.lbl_stream_status = QLabel("Bereit")
+        self.lbl_stream_status.setStyleSheet("color: #555; font-size: 11px;")
+        self.lbl_stream_status.setWordWrap(True)
+        vbox_device.addWidget(self.lbl_stream_status)
+
+        layout.addWidget(grp_device)
+
+        # 5. Export & Actions
+        grp_export = QGroupBox("💾 Datei-Export", container)
         vbox_export = QVBoxLayout(grp_export)
         vbox_export.setSpacing(6)
 
@@ -172,6 +286,167 @@ class PlotDockWidget(QDockWidget):
         scroll.setWidget(container)
         self.setWidget(scroll)
 
+    def refresh_ports(self):
+        """Scan available serial ports, virtual plotter symlinks, and TCP."""
+        current = self.combo_port.currentText().strip()
+        self.combo_port.clear()
+        ports = list_serial_ports()
+        for p in ports:
+            self.combo_port.addItem(p)
+
+        if current:
+            idx = self.combo_port.findText(current)
+            if idx >= 0:
+                self.combo_port.setCurrentIndex(idx)
+            else:
+                self.combo_port.setEditText(current)
+        elif ports:
+            self.combo_port.setCurrentIndex(0)
+
+    def start_probe(self):
+        """Inquire connected plotter (OI/OF/OH) in background thread."""
+        port = self.combo_port.currentText().strip()
+        if not port:
+            self.lbl_probe_status.setText("⚠️ Kein Port ausgewählt")
+            return
+
+        self.btn_probe.setEnabled(False)
+        self.lbl_probe_status.setText(f"Prüfe {port}...")
+        self.lbl_probe_status.setStyleSheet("""
+            padding: 6px;
+            background-color: #fff9c4;
+            color: #f57f17;
+            border: 1px solid #fff59d;
+            border-radius: 4px;
+            font-size: 11px;
+        """)
+
+        def _probe_worker():
+            res = probe_plotter(port, timeout=1.5)
+            self._bridge.probe_done.emit(res)
+
+        self._probe_thread = threading.Thread(target=_probe_worker, daemon=True, name="PlotterProbeThread")
+        self._probe_thread.start()
+
+    def _on_probe_done(self, result: ProbeResult):
+        self.btn_probe.setEnabled(True)
+        if result.success:
+            clip_info = ""
+            if result.hard_clip_mm:
+                clip_info = f" • Hard-Clip: {result.hard_clip_mm[0]:.0f}×{result.hard_clip_mm[1]:.0f} mm"
+            self.lbl_probe_status.setText(
+                f"✓ {result.model} ({result.detected_format}, {result.units_per_mm:.0f} U/mm){clip_info}"
+            )
+            self.lbl_probe_status.setStyleSheet("""
+                padding: 6px;
+                background-color: #e8f5e9;
+                color: #2e7d32;
+                border: 1px solid #c8e6c9;
+                border-radius: 4px;
+                font-size: 11px;
+            """)
+        else:
+            self.lbl_probe_status.setText(f"⚠️ {result.error_message}")
+            self.lbl_probe_status.setStyleSheet("""
+                padding: 6px;
+                background-color: #ffebee;
+                color: #c62828;
+                border: 1px solid #ffcdd2;
+                border-radius: 4px;
+                font-size: 11px;
+            """)
+
+    def start_plot(self):
+        """Start streaming HP-GL commands to the selected plotter port."""
+        if not self.job or not self.job.steps:
+            QMessageBox.warning(self, "Plot-Ausgabe", "Es sind keine Vektoren für die Ausgabe vorhanden.")
+            return
+
+        port = self.combo_port.currentText().strip()
+        if not port:
+            QMessageBox.warning(self, "Plot-Ausgabe", "Bitte wählen Sie eine Schnittstelle oder Adresse aus.")
+            return
+
+        margin_key = self.combo_margins.currentData() or "exp"
+        profile = get_default_profile()
+        emitter = HPGLEmitter(profile, margin_profile=margin_key)
+        commands = emitter.emit_commands(self.job, self.doc)
+
+        if not commands:
+            QMessageBox.warning(self, "Plot-Ausgabe", "Keine HP-GL Befehle generiert.")
+            return
+
+        self._streamer = SerialStreamer(
+            on_progress=lambda s, t, pct, p, d: self._bridge.progress.emit(s, t, pct, p, d),
+            on_status=lambda state, msg: self._bridge.status.emit(state.value, msg),
+            on_finished=lambda success, msg: self._bridge.finished.emit(success, msg),
+        )
+
+        self.btn_start_plot.setEnabled(False)
+        self.btn_pause_plot.setEnabled(True)
+        self.btn_pause_plot.setText("⏸ Pause")
+        self.btn_abort_plot.setEnabled(True)
+        self.combo_port.setEnabled(False)
+        self.combo_margins.setEnabled(False)
+        self.progress_bar.setValue(0)
+        self.lbl_stream_status.setText("Starte Übertragung...")
+
+        baud = profile.connection.baudrate
+        started = self._streamer.start_stream(port, commands, baudrate=baud)
+        if not started:
+            self._on_stream_finished(False, "Streamer konnte nicht gestartet werden.")
+
+    def toggle_pause(self):
+        """Toggle pause/resume during streaming."""
+        if not self._streamer:
+            return
+        if self._streamer.state == StreamerState.PAUSED:
+            self._streamer.resume()
+            self.btn_pause_plot.setText("⏸ Pause")
+        elif self._streamer.state == StreamerState.STREAMING:
+            self._streamer.pause()
+            self.btn_pause_plot.setText("▶️ Fortsetzen")
+
+    def abort_plot(self):
+        """Abort active plot and lift pen immediately."""
+        if not self._streamer:
+            return
+        self.btn_pause_plot.setEnabled(False)
+        self.btn_abort_plot.setEnabled(False)
+        self.lbl_stream_status.setText("Abbruch eingeleitet (ESC.K & Pen-Up)...")
+        self._streamer.abort()
+
+    def _on_stream_progress(self, step_idx: int, total_cmds: int, pct: float, pen: int, drawn_m: float):
+        self.progress_bar.setValue(int(round(pct)))
+        self.lbl_stream_status.setText(
+            f"Befehl {step_idx}/{total_cmds} ({pct:.1f}%) • Stift {pen} • {drawn_m:.2f} m"
+        )
+        self.stream_step_changed.emit(step_idx)
+
+    def _on_stream_status(self, state_str: str, msg: str):
+        self.lbl_stream_status.setText(msg)
+
+    def _on_stream_finished(self, success: bool, msg: str):
+        self.btn_start_plot.setEnabled(bool(self.job and self.job.steps))
+        self.btn_pause_plot.setEnabled(False)
+        self.btn_pause_plot.setText("⏸ Pause")
+        self.btn_abort_plot.setEnabled(False)
+        self.combo_port.setEnabled(True)
+        self.combo_margins.setEnabled(True)
+
+        if success:
+            self.progress_bar.setValue(100)
+            self.lbl_stream_status.setText(f"✓ {msg}")
+            if self.job:
+                self.stream_step_changed.emit(len(self.job.steps))
+        else:
+            self.lbl_stream_status.setText(f"⚠️ {msg}")
+
+    def closeEvent(self, event):
+        if self._streamer and self._streamer.is_active():
+            self._streamer.abort()
+        super().closeEvent(event)
+
     def get_pipeline_config(self) -> PipelineConfig:
         return PipelineConfig(
             flatten_tolerance_mm=self.spin_flatten.value(),
@@ -183,6 +458,9 @@ class PlotDockWidget(QDockWidget):
 
     def set_job(self, job: Optional[PlotJob]):
         self.job = job
+        if not (self._streamer and self._streamer.is_active()):
+            self.btn_start_plot.setEnabled(bool(job and job.steps))
+
         if not job:
             self.lbl_draw.setText("0.00 m")
             self.lbl_travel.setText("0.00 m")

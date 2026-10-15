@@ -75,6 +75,7 @@ class VirtualPlotter:
         realtime: bool = False,
         speedup: float = 1.0,
         on_response: Optional[Callable[[bytes], None]] = None,
+        on_event: Optional[Callable[[str, dict], None]] = None,
     ):
         """
         Args:
@@ -103,6 +104,7 @@ class VirtualPlotter:
         self.realtime = realtime
         self.speedup = max(0.1, speedup)
         self.on_response = on_response
+        self.on_event = on_event
 
         # Lock for thread-safe state access
         self._lock = threading.RLock()
@@ -170,6 +172,8 @@ class VirtualPlotter:
             self.pen_down = False
             self.buffer_used = 0
             self._rx_accumulator.clear()
+            if self.on_event:
+                self.on_event("abort", {})
 
     def receive_bytes(self, data: bytes) -> None:
         """Push incoming raw bytes into the plotter input."""
@@ -179,18 +183,30 @@ class VirtualPlotter:
             self._rx_accumulator.extend(data)
             self._process_rx_buffer()
 
-    def _send_response(self, text: str) -> None:
+    def _send_response(self, text: str, inquiry_cmd: str = "") -> None:
         """Send response string to host terminated with CR."""
         resp = (text + "\r").encode("ascii")
         self.stats.bytes_sent += len(resp)
         if self.on_response:
             self.on_response(resp)
+        if self.on_event and inquiry_cmd:
+            self.on_event("inquiry", {"cmd": inquiry_cmd, "response": text})
 
     def _flush_current_polyline(self) -> None:
         if self._current_polyline and len(self._current_polyline) >= 2:
-            self.recorded_polylines.append(
-                RecordedPolyline(pen=self.active_pen, points=list(self._current_polyline))
-            )
+            poly = RecordedPolyline(pen=self.active_pen, points=list(self._current_polyline))
+            self.recorded_polylines.append(poly)
+            if self.on_event:
+                dist = sum(
+                    math.hypot(poly.points[i + 1][0] - poly.points[i][0], poly.points[i + 1][1] - poly.points[i][1])
+                    for i in range(len(poly.points) - 1)
+                )
+                self.on_event("polyline_drawn", {
+                    "pen": self.active_pen,
+                    "points": len(poly.points),
+                    "dist_mm": dist,
+                    "total_polylines": len(self.recorded_polylines),
+                })
         self._current_polyline.clear()
 
     def _process_rx_buffer(self) -> None:
@@ -293,37 +309,50 @@ class VirtualPlotter:
 
         # Inquiries
         if opcode == "OI":
-            self._send_response("7585B")
+            self._send_response("7585B", inquiry_cmd="OI")
         elif opcode == "OF":
             u = int(round(self.units_per_mm))
-            self._send_response(f"{u},{u}")
+            self._send_response(f"{u},{u}", inquiry_cmd="OF")
         elif opcode == "OH":
             self._send_response(
                 f"{self.hard_clip_xmin_units},{self.hard_clip_ymin_units},"
-                f"{self.hard_clip_xmax_units},{self.hard_clip_ymax_units}"
+                f"{self.hard_clip_xmax_units},{self.hard_clip_ymax_units}",
+                inquiry_cmd="OH",
             )
         elif opcode == "OT":
             # Stocker type 1, pen loaded
-            self._send_response("1,1")
+            self._send_response("1,1", inquiry_cmd="OT")
         elif opcode == "OS":
-            self._send_response(str(self.status_byte))
+            self._send_response(str(self.status_byte), inquiry_cmd="OS")
         elif opcode == "OE":
-            self._send_response(str(self.error_code))
+            self._send_response(str(self.error_code), inquiry_cmd="OE")
             self.error_code = 0
         elif opcode in ("OA", "OC"):
             # Position & pen status (0 = up, 1 = down)
             p_state = 1 if self.pen_down else 0
-            self._send_response(f"{self.pos_units[0]},{self.pos_units[1]},{p_state}")
+            self._send_response(f"{self.pos_units[0]},{self.pos_units[1]},{p_state}", inquiry_cmd=opcode)
 
         # Control commands
         elif opcode == "IN":
             self.reset()
+            if self.on_event:
+                self.on_event("init", {})
         elif opcode == "SP":
             p = int(args_str) if args_str.isdigit() else 0
             if p != self.active_pen:
+                old_p = self.active_pen
                 self._flush_current_polyline()
                 self.active_pen = p
                 self.stats.pen_changes += 1
+                if self.on_event:
+                    self.on_event("pen_change", {"pen": p, "old_pen": old_p})
+                if p == 0 and len(self.recorded_polylines) > 0:
+                    if self.on_event:
+                        self.on_event("job_finished", {
+                            "polylines": len(self.recorded_polylines),
+                            "draw_m": self.stats.drawn_distance_mm / 1000.0,
+                            "travel_m": self.stats.travel_distance_mm / 1000.0,
+                        })
                 if self.realtime:
                     time.sleep(1.2 / self.speedup)
         elif opcode == "VS":
@@ -336,6 +365,8 @@ class VirtualPlotter:
                 else:
                     for p in self.pen_speed:
                         self.pen_speed[p] = v
+                if self.on_event:
+                    self.on_event("speed_change", {"speed_cm_s": v})
         elif opcode == "FS":
             parts = [s.strip() for s in args_str.split(",") if s.strip()]
             if parts:

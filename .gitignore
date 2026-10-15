@@ -1,6 +1,7 @@
 .idea
 /tmp/
-
 /.codebase-memory/
 __pycache__/
 *.pyc
+/virtual_plotter
+/emulator_output.svg

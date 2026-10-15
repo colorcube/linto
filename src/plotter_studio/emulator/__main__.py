@@ -80,6 +80,61 @@ def main() -> int:
 
     buf_size = 1000 if args.buffer == "small" else 1048576
 
+    out_svg_path = Path(args.svg_output).resolve()
+    last_saved_count = [0]
+
+    def on_plotter_event(event_type: str, data: dict):
+        timestamp = time.strftime("%H:%M:%S")
+        if event_type == "inquiry":
+            cmd = data.get("cmd", "")
+            resp = data.get("response", "")
+            if cmd == "OI":
+                print(f"[{timestamp}] 🔍 Inquiry 'OI' -> {resp} (Modellkennung)")
+            elif cmd == "OF":
+                print(f"[{timestamp}] 🔍 Inquiry 'OF' -> {resp} (40 Units/mm)")
+            elif cmd == "OH":
+                print(f"[{timestamp}] 🔍 Inquiry 'OH' -> {resp} (Hard-Clip)")
+            else:
+                print(f"[{timestamp}] 🔍 Inquiry '{cmd}' -> {resp}")
+
+        elif event_type == "init":
+            print(f"[{timestamp}] 🔄 Initialisierung (IN) empfangen – Plotter bereit")
+
+        elif event_type == "pen_change":
+            pen = data.get("pen", 0)
+            if pen == 0:
+                print(f"[{timestamp}] 🅿️  Stift 0 (Stift abgelegt)")
+            else:
+                speed = plotter.pen_speed.get(pen, plotter.default_speed_cm_s)
+                force = plotter.pen_force.get(pen, 2)
+                print(f"[{timestamp}] 🖊️  Stift {pen} gewählt (Geschwindigkeit: {speed:.0f} cm/s, Anpressdruck: {force})")
+
+        elif event_type == "speed_change":
+            speed = data.get("speed_cm_s", 0)
+            print(f"[{timestamp}] ⚡ Geschwindigkeit gesetzt: {speed:.0f} cm/s")
+
+        elif event_type == "polyline_drawn":
+            pts = data.get("points", 0)
+            dist = data.get("dist_mm", 0.0)
+            pen = data.get("pen", 1)
+            tot = data.get("total_polylines", len(plotter.recorded_polylines))
+            print(f"[{timestamp}] ✏️  Pfad {tot} gezeichnet: {pts} Stützpunkte, {dist:.1f} mm (Stift {pen})")
+
+        elif event_type == "job_finished":
+            polys = data.get("polylines", 0)
+            d_m = data.get("draw_m", 0.0)
+            t_m = data.get("travel_m", 0.0)
+            print(f"[{timestamp}] ✅ Plot-Auftrag abgeschlossen!")
+            print(f"           Pfade: {polys} | Zeichenweg: {d_m:.2f} m | Leerweg: {t_m:.2f} m")
+            export_plotter_svg(plotter, out_svg_path)
+            last_saved_count[0] = len(plotter.recorded_polylines)
+            print(f"           📁 Ergebnis-Vektoren gespeichert: {out_svg_path}\n")
+
+        elif event_type == "abort":
+            print(f"[{timestamp}] ⏹ Abbruch-Signal (ESC.K) empfangen! Puffer geleert, Stift angehoben.")
+
+        sys.stdout.flush()
+
     plotter = VirtualPlotter(
         paper=args.paper,
         margin_profile=args.margin,
@@ -87,6 +142,7 @@ def main() -> int:
         resolution_mm=args.unit,
         realtime=args.realtime,
         speedup=args.speedup,
+        on_event=on_plotter_event,
     )
 
     if args.tcp:
@@ -108,16 +164,17 @@ def main() -> int:
         print(f" Mechanik:         Echtzeit-Simulation ({args.speedup:.1f}x Speedup)")
     else:
         print(f" Mechanik:         Sofortige Abarbeitung (Fast-Mode)")
+    print(f" Ausgabe-SVG:      {out_svg_path}")
     print("=" * 64)
     print("Warte auf Befehle... (Drücke Strg+C zum Beenden)\n")
+    sys.stdout.flush()
 
     def handle_exit(signum, frame):
         print("\nBeende Emulator...")
         server.stop()
         if plotter.recorded_polylines:
-            out_svg = Path(args.svg_output)
-            export_plotter_svg(plotter, out_svg)
-            print(f"📁 Plot-Ergebnis gespeichert als: {out_svg.resolve()}")
+            export_plotter_svg(plotter, out_svg_path)
+            print(f"📁 Plot-Ergebnis gespeichert als: {out_svg_path}")
         print(f"Statistik:")
         print(f"  Empfangen:     {plotter.stats.bytes_received:,} Bytes")
         print(f"  Gesendet:      {plotter.stats.bytes_sent:,} Bytes")
@@ -130,9 +187,27 @@ def main() -> int:
     signal.signal(signal.SIGINT, handle_exit)
     signal.signal(signal.SIGTERM, handle_exit)
 
+    last_check_polys = 0
+    idle_cycles = 0
+
     try:
         while True:
             time.sleep(0.5)
+            # Auto-save if new polylines were drawn and no new commands arrived for 1 second
+            current_polys = len(plotter.recorded_polylines)
+            if current_polys > last_saved_count[0]:
+                if current_polys == last_check_polys:
+                    idle_cycles += 1
+                    if idle_cycles >= 2:  # 1 second idle after drawing
+                        export_plotter_svg(plotter, out_svg_path)
+                        last_saved_count[0] = current_polys
+                        idle_cycles = 0
+                        timestamp = time.strftime("%H:%M:%S")
+                        print(f"[{timestamp}] 📁 {current_polys} Pfade empfangen -> SVG aktualisiert: {out_svg_path}")
+                        sys.stdout.flush()
+                else:
+                    last_check_polys = current_polys
+                    idle_cycles = 0
     except KeyboardInterrupt:
         handle_exit(None, None)
 

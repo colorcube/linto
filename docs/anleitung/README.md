@@ -16,9 +16,10 @@ Dieses Verzeichnis enthält Anleitungen und Dokumentation für Anwender von Plot
    - Simulation der Stiftbewegungen mit dem Scrubber
    - Stiftbreiten, Leerfahrten und Knotenpunkte prüfen
    - Pre-Flight-Statistiken (Zeichenweg, Eilgang-Ersparnis, Stiftwechsel, Dauer)
-3. **Geräteanbindung & Plotten** *(in Vorbereitung)*
-   - Serielle Verbindung (RS-232, Baudrate, Hardware-Handshake)
-   - Plot starten, pausieren und abbrechen
+3. **[Geräteanbindung & Plotten](geraetesteuerung-und-plotten.md)**
+   - Serielle Verbindung (RS-232, Baudrate, Hardware-Handshake RTS/CTS)
+   - Plotter-Prüfung und automatische Blatterkennung (`OI;OF;OH;`)
+   - Plot starten, pausieren und abbrechen mit Notfall-Rückzug (`ESC.K`, `PU;SP0;`)
    - HP-GL- und Plot-SVG-Export
 4. **Vorbereitung von Vektordateien** *(in Vorbereitung)*
    - Exportieren sauberer SVGs aus Inkscape, Illustrator oder CAD

@@ -1,0 +1,139 @@
+"""Device profile data model and loader.
+
+Defines plotter parameters, connection defaults, and coordinate settings.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Optional
+import yaml
+
+
+@dataclass
+class DeviceConnectionConfig:
+    baudrate: int = 19200
+    bytesize: int = 8
+    parity: str = "N"
+    stopbits: int = 1
+    rtscts: bool = True
+    xonxoff: bool = False
+
+
+@dataclass
+class DeviceProfile:
+    model_id: str
+    name: str
+    manufacturer: str
+    emulation: str = "HP-7585B"
+    protocol: str = "hpgl"
+    origin: str = "center"  # "center" or "bottom_left"
+    units_per_mm: float = 40.0  # 0.025 mm / unit
+    max_pens: int = 8
+    connection: DeviceConnectionConfig = field(default_factory=DeviceConnectionConfig)
+    margins_mm: dict[str, dict[str, float]] = field(default_factory=dict)
+    default_margin_profile: str = "exp"
+
+    def get_margins(self, profile_name: str = "") -> tuple[float, float, float, float]:
+        """Return (top, bottom, left, right) margins in mm."""
+        name = (profile_name or self.default_margin_profile).lower()
+        if name in self.margins_mm:
+            m = self.margins_mm[name]
+            return (
+                float(m.get("top", 25.0)),
+                float(m.get("bottom", 5.0)),
+                float(m.get("left", 5.0)),
+                float(m.get("right", 5.0)),
+            )
+        # Default fallback
+        return (25.0, 5.0, 5.0, 5.0)
+
+    def calculate_center_mm(
+        self,
+        sheet_w_mm: float,
+        sheet_h_mm: float,
+        profile_name: str = "",
+    ) -> tuple[float, float]:
+        """Return (center_x, center_y) of hard-clip window in sheet coordinates (mm)."""
+        top_m, bottom_m, left_m, right_m = self.get_margins(profile_name)
+        hard_clip_w = max(1.0, sheet_w_mm - (top_m + bottom_m))
+        hard_clip_h = max(1.0, sheet_h_mm - (left_m + right_m))
+
+        center_x = left_m + (hard_clip_w / 2.0)
+        center_y = top_m + (hard_clip_h / 2.0)
+        return (center_x, center_y)
+
+
+def _get_devices_dir() -> Path:
+    return Path(__file__).resolve().parent.parent.parent.parent / "resources" / "devices"
+
+
+def load_profile(path_or_id: str | Path) -> DeviceProfile:
+    """Load DeviceProfile from a YAML file path or model ID."""
+    p = Path(path_or_id)
+    if not p.is_file():
+        # Check resources/devices/<id>.yaml
+        candidate = _get_devices_dir() / f"{path_or_id}.yaml"
+        if candidate.is_file():
+            p = candidate
+        else:
+            raise FileNotFoundError(f"Device profile not found: {path_or_id}")
+
+    data = yaml.safe_load(p.read_text(encoding="utf-8"))
+
+    conn_data = data.get("connection", {})
+    conn = DeviceConnectionConfig(
+        baudrate=int(conn_data.get("baudrate", 19200)),
+        bytesize=int(conn_data.get("bytesize", 8)),
+        parity=str(conn_data.get("parity", "N")),
+        stopbits=int(conn_data.get("stopbits", 1)),
+        rtscts=bool(conn_data.get("rtscts", True)),
+        xonxoff=bool(conn_data.get("xonxoff", False)),
+    )
+
+    return DeviceProfile(
+        model_id=str(data.get("model_id", p.stem)),
+        name=str(data.get("name", "Unknown Plotter")),
+        manufacturer=str(data.get("manufacturer", "Unknown")),
+        emulation=str(data.get("emulation", "HP-7585B")),
+        protocol=str(data.get("protocol", "hpgl")),
+        origin=str(data.get("origin", "center")),
+        units_per_mm=float(data.get("units_per_mm", 40.0)),
+        max_pens=int(data.get("max_pens", 8)),
+        connection=conn,
+        margins_mm=data.get("margins_mm", {}),
+        default_margin_profile=str(data.get("default_margin_profile", "exp")),
+    )
+
+
+def get_default_profile() -> DeviceProfile:
+    """Return the default Mutoh XP-500 profile."""
+    try:
+        return load_profile("mutoh_xp500")
+    except Exception:
+        # Hardcoded fallback if yaml missing
+        return DeviceProfile(
+            model_id="mutoh_xp500",
+            name="Mutoh XP-500",
+            manufacturer="Mutoh",
+            margins_mm={
+                "exp": {"top": 25.0, "bottom": 5.0, "left": 5.0, "right": 5.0},
+                "norm": {"top": 35.0, "bottom": 15.0, "left": 15.0, "right": 15.0},
+            },
+        )
+
+
+def list_available_profiles() -> list[DeviceProfile]:
+    """Scan resources/devices/ and return all valid DeviceProfiles."""
+    profiles: list[DeviceProfile] = []
+    d = _get_devices_dir()
+    if d.is_dir():
+        for yaml_file in sorted(d.glob("*.yaml")):
+            try:
+                profiles.append(load_profile(yaml_file))
+            except Exception:
+                pass
+    if not profiles:
+        profiles.append(get_default_profile())
+    return profiles
