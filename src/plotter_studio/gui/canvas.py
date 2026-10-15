@@ -6,7 +6,7 @@ from typing import Optional, List, Dict
 from PySide6.QtCore import Qt, QRectF, QPointF, Signal
 from PySide6.QtGui import (
     QPainter, QPen, QColor, QBrush, QWheelEvent,
-    QMouseEvent, QDragEnterEvent, QDropEvent, QTransform
+    QMouseEvent, QDragEnterEvent, QDropEvent, QDragMoveEvent, QTransform
 )
 from PySide6.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsItem
 from ..core.document import Document, ImportItem
@@ -23,6 +23,7 @@ class PlotterCanvas(QGraphicsView):
     file_dropped = Signal(str)
     selection_changed_signal = Signal()
     item_drag_finished = Signal(object, object, object)  # (item, old_transform, new_transform)
+    item_transformed_live = Signal()
 
     def __init__(self, doc: Document, parent=None):
         super().__init__(parent)
@@ -39,6 +40,7 @@ class PlotterCanvas(QGraphicsView):
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
         self.setAcceptDrops(True)
+        self.viewport().setAcceptDrops(True)
         self.setMouseTracking(True)
 
         # Pan state
@@ -196,8 +198,10 @@ class PlotterCanvas(QGraphicsView):
             return
         super().mouseReleaseEvent(event)
         if hasattr(self, "_drag_item") and self._drag_item is not None and self._drag_old_transform is not None:
-            if (self._drag_item.transform.tx != self._drag_old_transform.tx or
-                self._drag_item.transform.ty != self._drag_old_transform.ty):
+            old_t = self._drag_old_transform
+            cur_t = self._drag_item.transform
+            if (old_t.tx != cur_t.tx or old_t.ty != cur_t.ty or
+                abs(old_t.a - cur_t.a) > 1e-5 or abs(old_t.d - cur_t.d) > 1e-5):
                 self.item_drag_finished.emit(
                     self._drag_item, self._drag_old_transform, copy.deepcopy(self._drag_item.transform)
                 )
@@ -228,11 +232,20 @@ class PlotterCanvas(QGraphicsView):
                     return
         event.ignore()
 
+    def dragMoveEvent(self, event: QDragMoveEvent):
+        if event.mimeData().hasUrls():
+            for url in event.mimeData().urls():
+                if url.toLocalFile().lower().endswith((".svg", ".hpgl", ".plt")):
+                    event.acceptProposedAction()
+                    return
+        event.ignore()
+
     def dropEvent(self, event: QDropEvent):
-        for url in event.mimeData().urls():
-            fpath = url.toLocalFile()
-            if fpath.lower().endswith((".svg", ".hpgl", ".plt")):
-                self.file_dropped.emit(fpath)
-                event.acceptProposedAction()
-                return
+        if event.mimeData().hasUrls():
+            for url in event.mimeData().urls():
+                fpath = url.toLocalFile()
+                if fpath.lower().endswith((".svg", ".hpgl", ".plt")):
+                    self.file_dropped.emit(fpath)
+                    event.acceptProposedAction()
+                    return
         event.ignore()

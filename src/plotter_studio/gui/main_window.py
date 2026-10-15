@@ -37,6 +37,7 @@ class MainWindow(QMainWindow):
 
         self.setWindowTitle("Plotter Studio")
         self.resize(1280, 850)
+        self.setAcceptDrops(True)
 
         # Central canvas with rulers
         self._setup_central_canvas()
@@ -240,6 +241,7 @@ class MainWindow(QMainWindow):
 
         # Transform dock
         self.transform_dock.item_transformed.connect(self._on_item_transformed)
+        self.canvas.item_transformed_live.connect(self._on_item_transformed_live)
 
     def _on_mouse_moved(self, x_mm: float, y_mm: float):
         self.ruler_h.set_cursor_pos(x_mm)
@@ -266,9 +268,13 @@ class MainWindow(QMainWindow):
         self.canvas.viewport().update()
         self._on_selection_changed()
 
+    def _on_item_transformed_live(self):
+        self._on_selection_changed()
+
     def _on_item_drag_finished(self, item: ImportItem, old_t: AffineTransform, new_t: AffineTransform):
+        action_name = "skalieren" if abs(old_t.a - new_t.a) > 1e-4 else "verschieben"
         cmd = TransformItemCommand(
-            item, old_t, new_t, self._on_item_transformed, text=f"{item.name} verschieben"
+            item, old_t, new_t, self._on_item_transformed, text=f"{item.name} {action_name}"
         )
         self.undo_stack.push(cmd)
 
@@ -372,3 +378,37 @@ class MainWindow(QMainWindow):
             "Modularer Slicer & Layout-Studio für Stiftplotter unter Linux.<br><br>"
             "Lizenz: GPLv3"
         )
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        if not getattr(self, "_initial_zoom_done", False):
+            self._initial_zoom_done = True
+            from PySide6.QtCore import QTimer
+            self.canvas.zoom_to_fit()
+            QTimer.singleShot(50, self.canvas.zoom_to_fit)
+
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasUrls():
+            for url in event.mimeData().urls():
+                if url.toLocalFile().lower().endswith((".svg", ".hpgl", ".plt")):
+                    event.acceptProposedAction()
+                    return
+        event.ignore()
+
+    def dragMoveEvent(self, event):
+        if event.mimeData().hasUrls():
+            for url in event.mimeData().urls():
+                if url.toLocalFile().lower().endswith((".svg", ".hpgl", ".plt")):
+                    event.acceptProposedAction()
+                    return
+        event.ignore()
+
+    def dropEvent(self, event):
+        if event.mimeData().hasUrls():
+            for url in event.mimeData().urls():
+                fpath = url.toLocalFile()
+                if fpath.lower().endswith((".svg", ".hpgl", ".plt")):
+                    self.import_svg_file(fpath)
+                    event.acceptProposedAction()
+                    return
+        event.ignore()

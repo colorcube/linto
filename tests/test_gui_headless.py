@@ -115,3 +115,109 @@ def test_three_docks_tabified(qapp):
 
     win.close()
 
+
+def test_interactive_corner_handle_scaling(qapp, tmp_path):
+    doc = Document()
+    win = MainWindow(doc)
+    win.show()
+
+    # Create and import a test SVG
+    svg_content = """<svg width="50mm" height="50mm" viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0" y="0" width="50" height="50" stroke="#000" fill="none"/>
+    </svg>"""
+    test_svg_path = str(tmp_path / "square.svg")
+    with open(test_svg_path, "w", encoding="utf-8") as f:
+        f.write(svg_content)
+
+    win.import_svg_file(test_svg_path)
+    item = doc.items[0]
+    g_item = win.canvas._item_map[item.item_id]
+
+    g_item.setSelected(True)
+    ob = item.original_bounds
+    assert ob is not None
+
+    # Verify handle detection at corners
+    from PySide6.QtCore import QPointF
+    assert g_item._handle_at(QPointF(ob.min_x, ob.min_y)) == "tl"
+    assert g_item._handle_at(QPointF(ob.max_x, ob.min_y)) == "tr"
+    assert g_item._handle_at(QPointF(ob.min_x, ob.max_y)) == "bl"
+    assert g_item._handle_at(QPointF(ob.max_x, ob.max_y)) == "br"
+    assert g_item._handle_at(QPointF(ob.center.x, ob.center.y)) is None
+
+    # Verify cursors
+    from PySide6.QtCore import Qt
+    assert g_item._cursor_for_handle("tl") == Qt.SizeFDiagCursor
+    assert g_item._cursor_for_handle("br") == Qt.SizeFDiagCursor
+    assert g_item._cursor_for_handle("tr") == Qt.SizeBDiagCursor
+    assert g_item._cursor_for_handle("bl") == Qt.SizeBDiagCursor
+
+    # Simulate mouse press on bottom-right handle
+    from PySide6.QtWidgets import QGraphicsSceneMouseEvent
+    from PySide6.QtCore import QEvent
+    press_event = QGraphicsSceneMouseEvent(QEvent.GraphicsSceneMousePress)
+    press_event.setButton(Qt.LeftButton)
+    press_event.setPos(QPointF(ob.max_x, ob.max_y))
+    press_event.setScenePos(g_item.mapToScene(QPointF(ob.max_x, ob.max_y)))
+    g_item.mousePressEvent(press_event)
+    assert g_item._resizing_handle == "br"
+
+    # Simulate drag to double size (from 50mm to 100mm)
+    move_event = QGraphicsSceneMouseEvent(QEvent.GraphicsSceneMouseMove)
+    current_scene_br = g_item.mapToScene(QPointF(ob.max_x, ob.max_y))
+    move_event.setScenePos(current_scene_br + QPointF(50.0, 50.0))
+    g_item.mouseMoveEvent(move_event)
+
+    # Scale should be approximately 2.0
+    assert abs(item.transform.a - 2.0) < 0.1
+    assert abs(item.transform.d - 2.0) < 0.1
+    assert abs(item.current_bounds.width - 100.0) < 5.0
+
+    # Simulate mouse release
+    release_event = QGraphicsSceneMouseEvent(QEvent.GraphicsSceneMouseRelease)
+    release_event.setButton(Qt.LeftButton)
+    g_item.mouseReleaseEvent(release_event)
+    assert g_item._resizing_handle is None
+
+    win.close()
+
+
+def test_drag_and_drop_import_and_initial_zoom(qapp, tmp_path):
+    doc = Document()
+    win = MainWindow(doc)
+    win.show()
+
+    # Verify initial zoom flag is set by showEvent
+    assert getattr(win, "_initial_zoom_done", False) is True
+
+    # Create test SVG file
+    svg_content = """<svg width="40mm" height="40mm" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0" y="0" width="40" height="40" stroke="#ff0000" fill="none"/>
+    </svg>"""
+    test_svg_path = str(tmp_path / "drop_test.svg")
+    with open(test_svg_path, "w", encoding="utf-8") as f:
+        f.write(svg_content)
+
+    # Simulate DropEvent with QMimeData containing url
+    from PySide6.QtCore import QMimeData, QUrl, QPointF, Qt
+    from PySide6.QtGui import QDropEvent
+    mime = QMimeData()
+    mime.setUrls([QUrl.fromLocalFile(test_svg_path)])
+
+    drop_event = QDropEvent(
+        QPointF(200.0, 200.0),
+        Qt.CopyAction,
+        mime,
+        Qt.LeftButton,
+        Qt.NoModifier,
+    )
+    win.dropEvent(drop_event)
+
+    # Document should now contain the dropped item
+    assert len(doc.items) == 1
+    assert "drop_test" in doc.items[0].name
+
+    win.close()
+
+
+
