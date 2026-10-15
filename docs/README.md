@@ -5,10 +5,11 @@ Willkommen in der Dokumentation von Plotter Studio. Die Dokumentation ist in dre
 ---
 
 ## 1. [Benutzerhandbuch & Anleitungen](anleitung/README.md) (`docs/anleitung/`)
-Praktische Dokumentation für Anwender:
-* **Workflow:** Laden von SVG-Dateien, Skalieren und Platzieren auf dem Blatt.
-* **Plot-Modus:** Vektoroptimierung, Stift-Simulation mit Scrubber, Pre-Flight-Prüfung.
-* **Tipps für Vektordateien:** Vorbereitung von SVGs aus CAD, Inkscape oder eigenen Skripten.
+Praktische Dokumentation und Benutzerhandbuch für Anwender:
+* **[1. Konzepte & Architektur](anleitung/1-konzepte-und-architektur.md):** Warum Slicer statt Druckertreiber? 2-Opt Pfadoptimierung, Koordinatensysteme (Center-Origin vs. Bottom-Left), asymmetrische Rollenränder und Multi-Plotter-Architektur.
+* **[2. Layout-Modus & Objektverwaltung](anleitung/2-layout-und-objektverwaltung.md):** Import von SVG/HP-GL, Seiteneinrichtung mit Hard-Clip-Abfrage (`OH;`), Transformation (50%, 100%, 200%, Proportions-Sperre, Einpassen, Zentrieren), Z-Order Ebenenverwaltung und Stiftzuordnung.
+* **[3. Ausgabe-Modus, Simulation & Export](anleitung/3-ausgabe-simulation-export.md):** Pipeline-Tuning (Merge, Reverse, RDP, 2-Opt), Pre-Flight-Statistiken, interaktive Scrubber-Simulation mit Leerfahrten-Visualisierung, Stiftfilterung, serielles Streaming und HP-GL/SVG-Export.
+* **[4. Hardware-Setup, Kalibrierung & Diagnose](anleitung/4-hardware-setup-und-test.md):** RS-232 Verkabelung mit Hardware-Handshake (RTS/CTS), Bedienfeld-Setup, Hardware-Diagnosetool `xp500_probe.py`, der offizielle Kalibrierplot (`resources/calibration_plot_a3.svg`) und Einbindung weiterer Plottermodelle.
 
 ---
 
