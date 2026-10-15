@@ -14,6 +14,9 @@ def run_gui():
     app.setOrganizationName("PlotterStudio")
 
     window = MainWindow()
+    app.aboutToQuit.connect(window.cleanup)
     window.show()
 
-    return app.exec()
+    ret = app.exec()
+    window.cleanup()
+    return ret

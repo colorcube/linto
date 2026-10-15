@@ -220,4 +220,24 @@ def test_drag_and_drop_import_and_initial_zoom(qapp, tmp_path):
     win.close()
 
 
+def test_menu_exit_clean_shutdown(qapp, tmp_path):
+    doc = Document()
+    win = MainWindow(doc)
+    win.show()
+
+    # Import an item and select it
+    svg_content = """<svg width="40mm" height="40mm" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="20" cy="20" r="15" stroke="#1976d2" fill="none"/>
+    </svg>"""
+    test_svg_path = str(tmp_path / "exit_test.svg")
+    with open(test_svg_path, "w", encoding="utf-8") as f:
+        f.write(svg_content)
+    win.import_svg_file(test_svg_path)
+
+    # Verify that triggering act_exit closes window and cleans up without crash
+    win.act_exit.trigger()
+    assert not win.isVisible()
+
+
+
 

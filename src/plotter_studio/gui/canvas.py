@@ -57,6 +57,20 @@ class PlotterCanvas(QGraphicsView):
         # Connect scene selection change
         self._scene.selectionChanged.connect(self.selection_changed_signal.emit)
 
+    def cleanup(self):
+        """Mute signals and clear items before teardown to avoid PySide6 shutdown warnings/assertions."""
+        if getattr(self, "_is_cleaned_up", False):
+            return
+        self._is_cleaned_up = True
+        if hasattr(self, "_scene") and self._scene is not None:
+            self._scene.blockSignals(True)
+            self._item_map.clear()
+            self._scene.clear()
+
+    def closeEvent(self, event):
+        self.cleanup()
+        super().closeEvent(event)
+
     def update_scene_rect(self):
         """Update paper boundaries and scene size."""
         w = self.doc.page.width_mm

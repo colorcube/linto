@@ -412,3 +412,12 @@ class MainWindow(QMainWindow):
                     event.acceptProposedAction()
                     return
         event.ignore()
+
+    def cleanup(self):
+        """Clean up canvas and docks to ensure safe, warning-free Qt teardown."""
+        if hasattr(self, "canvas") and self.canvas:
+            self.canvas.cleanup()
+
+    def closeEvent(self, event):
+        self.cleanup()
+        super().closeEvent(event)
