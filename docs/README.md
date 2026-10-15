@@ -21,6 +21,7 @@ Hardware-Dokumentation, Spezifikationen und Schnittstellenbeschreibungen:
   * [RS-232C-Schnittstelle & Handshake](devices/mutoh-xp500/schnittstelle.md)
   * [Einheiten, Ursprung & Koordinaten](devices/mutoh-xp500/einheiten-und-koordinaten.md)
   * [MH-GL-Befehlssatz](devices/mutoh-xp500/mhgl-befehle.md) & [Escape-Sequenzen](devices/mutoh-xp500/escape-sequenzen.md)
+  * [Software-Emulator (`virtual_plotter`)](devices/mutoh-xp500/emulator.md) (PTY/TCP-Simulation & Firmware-Inquiries)
   * [Hardware-Testplan](devices/mutoh-xp500/testplan.md)
 
 ---

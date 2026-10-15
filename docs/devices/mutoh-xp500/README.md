@@ -13,6 +13,7 @@ Gesammelte, geprüfte Informationen zum Mutoh XP-500 (DIN-A0-Stiftplotter, MH-GL
 | [einheiten-und-koordinaten.md](einheiten-und-koordinaten.md) | Zeicheneinheit (konfigurierbar!), Ursprung, Achsen, Hard-Clip-Fenster, Randmessungen |
 | [mhgl-befehle.md](mhgl-befehle.md) | Vollständige MH-GL-Befehlstabelle aus dem Handbuch + Relevanz für Plotter Studio |
 | [escape-sequenzen.md](escape-sequenzen.md) | Device-Control-Befehle (`ESC.x`) für Puffer, Status, Abbruch, Handshake |
+| [emulator.md](emulator.md) | **Software-Emulator (`virtual_plotter`):** PTY/TCP-Simulation von Firmware, Puffer und HP-7585B-Befehlen |
 | [testplan.md](testplan.md) | Was am Gerät noch geprüft werden muss (Checkliste für AP0) |
 
 ## Quellen
