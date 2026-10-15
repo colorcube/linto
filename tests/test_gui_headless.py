@@ -7,13 +7,6 @@ from plotter_studio.core.svg_export import export_document_to_svg
 from plotter_studio.gui.main_window import MainWindow
 
 
-@pytest.fixture(scope="session")
-def qapp():
-    os.environ["QT_QPA_PLATFORM"] = "offscreen"
-    app = QApplication.instance()
-    if app is None:
-        app = QApplication([])
-    return app
 
 
 def test_main_window_headless(qapp, tmp_path):
@@ -84,27 +77,47 @@ def test_main_window_headless(qapp, tmp_path):
     win.close()
 
 
-def test_three_docks_tabified(qapp):
+def test_docks_and_page_setup_dialog(qapp):
     doc = Document()
     win = MainWindow(doc)
     win.show()
 
     # Verify dock instances and titles
-    assert win.paper_dock is not None
+    assert win.object_dock is not None
     assert win.transform_dock is not None
     assert win.pen_dock is not None
-    assert win.paper_dock.windowTitle() == "Papier & Gerät"
+    assert win.object_dock.windowTitle() == "Objekte & Ebenen"
     assert win.transform_dock.windowTitle() == "Skalieren & Platzieren"
     assert win.pen_dock.windowTitle() == "Stifte"
 
-    # Verify that the docks are grouped as tabs
-    tabified_with_paper = win.tabifiedDockWidgets(win.paper_dock)
-    assert win.transform_dock in tabified_with_paper
-    assert win.pen_dock in tabified_with_paper
+    # Verify group titles in TransformDock
+    assert win.transform_dock.grp_transform.title() == "Transformation"
+    assert win.transform_dock.grp_rotation.title() == "Rotation"
+    assert win.transform_dock.grp_placement.title() == "Platzieren"
+    assert win.transform_dock.grp_scaling.title() == "Skalieren"
+    assert not win.transform_dock.btn_center_h.icon().isNull()
+    assert not win.transform_dock.btn_center_v.icon().isNull()
+    assert not win.transform_dock.btn_center_both.icon().isNull()
+    assert win.transform_dock.spin_fit_margin.minimumWidth() >= 100
 
-    # Verify paper dock interaction
-    win.paper_dock.combo_preset.setCurrentIndex(win.paper_dock.combo_preset.findData("A4"))
+    # Verify that Transform and Pen docks are tabified
+    tabified_with_transform = win.tabifiedDockWidgets(win.transform_dock)
+    assert win.pen_dock in tabified_with_transform
+
+    # Verify toolbar paper setup button & status bar
+    assert "DIN A3" in win.btn_page_setup.text()
+    assert "DIN A3" in win.lbl_paper_status.text()
+
+    # Test PageSetupDialog interaction
+    from plotter_studio.gui.page_dialog import PageSetupDialog
+    dlg = PageSetupDialog(doc, win.device_manager, win.undo_stack, parent=win)
+    dlg.page_changed.connect(win._on_page_changed)
+    dlg.combo_preset.setCurrentIndex(dlg.combo_preset.findData("A4"))
+    dlg.accept()
+
     assert doc.page.preset == "A4"
+    assert "DIN A4" in win.btn_page_setup.text()
+    assert "DIN A4" in win.lbl_paper_status.text()
 
     # Verify tab switching (raise)
     win.transform_dock.raise_()

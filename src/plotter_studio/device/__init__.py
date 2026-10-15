@@ -4,6 +4,7 @@ from .profile import DeviceProfile, DeviceConnectionConfig, load_profile, get_de
 from .emitter import HPGLEmitter, EmittedCommand
 from .probe import ProbeResult, list_serial_ports, probe_plotter
 from .streamer import SerialStreamer, StreamerState
+from .manager import DeviceManager, ConfiguredDevice, DEFAULT_DEVICES
 
 __all__ = [
     "DeviceProfile",
@@ -18,4 +19,7 @@ __all__ = [
     "probe_plotter",
     "SerialStreamer",
     "StreamerState",
+    "DeviceManager",
+    "ConfiguredDevice",
+    "DEFAULT_DEVICES",
 ]

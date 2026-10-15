@@ -1,6 +1,7 @@
 """Document model for Plotter Studio."""
 
 from __future__ import annotations
+import copy
 import uuid
 from dataclasses import dataclass, field
 from typing import List, Dict, Optional, Tuple, Sequence
@@ -195,6 +196,8 @@ class ImportItem:
     source_path: Optional[str] = None
     item_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     original_bounds: Optional[BoundingBox] = None  # Bounds before item transform
+    visible: bool = True
+    locked: bool = False
 
     def __post_init__(self):
         if self.original_bounds is None:
@@ -262,4 +265,49 @@ class Document:
             if item.item_id == item_id:
                 del self.items[idx]
                 return True
+        return False
+
+    def duplicate_item(self, item: ImportItem, offset_mm: float = 10.0) -> ImportItem:
+        """Create a duplicate of an item offset by (offset_mm, offset_mm) and append to document."""
+        new_paths = []
+        for p in item.paths:
+            new_paths.append(VectorPath(
+                points=np.copy(p.points),
+                pen_id=p.pen_id,
+                closed=p.closed,
+            ))
+        new_transform = copy.deepcopy(item.transform)
+        new_transform.tx += offset_mm
+        new_transform.ty += offset_mm
+
+        new_name = f"{item.name} (Kopie)"
+        new_item = ImportItem(
+            name=new_name,
+            paths=new_paths,
+            transform=new_transform,
+            source_path=item.source_path,
+            visible=item.visible,
+            locked=False,
+        )
+        self.items.append(new_item)
+        return new_item
+
+    def move_item_up(self, item_id: str) -> bool:
+        """Move item one step up in z-order (drawn later / on top)."""
+        for i, it in enumerate(self.items):
+            if it.item_id == item_id:
+                if i < len(self.items) - 1:
+                    self.items[i], self.items[i + 1] = self.items[i + 1], self.items[i]
+                    return True
+                return False
+        return False
+
+    def move_item_down(self, item_id: str) -> bool:
+        """Move item one step down in z-order (drawn earlier / below)."""
+        for i, it in enumerate(self.items):
+            if it.item_id == item_id:
+                if i > 0:
+                    self.items[i], self.items[i - 1] = self.items[i - 1], self.items[i]
+                    return True
+                return False
         return False

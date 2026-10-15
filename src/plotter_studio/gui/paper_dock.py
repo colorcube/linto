@@ -7,9 +7,10 @@ from PySide6.QtGui import QUndoStack
 from PySide6.QtWidgets import (
     QDockWidget, QWidget, QVBoxLayout, QHBoxLayout,
     QFormLayout, QComboBox, QDoubleSpinBox, QPushButton,
-    QGroupBox, QLabel
+    QGroupBox, QLabel, QMessageBox
 )
 from ..core.document import Document, PAPER_PRESETS, DEVICE_PROFILES
+from ..device import probe_plotter, DeviceManager, ConfiguredDevice
 from .commands import PageConfigCommand
 
 
@@ -31,6 +32,7 @@ class PaperDockWidget(QDockWidget):
         self.setObjectName("PaperDockWidget")
         self.doc = doc
         self.undo_stack: Optional[QUndoStack] = None
+        self.device_manager: Optional[DeviceManager] = None
 
         self.container = QWidget(self)
         self.setWidget(self.container)
@@ -81,16 +83,16 @@ class PaperDockWidget(QDockWidget):
 
         self.main_layout.addWidget(fmt_group)
 
-        # --- Section: Plotter & Ränder ---
-        dev_group = QGroupBox("Gerät & Ränder")
+        # --- Section: Ränder & Vorschub ---
+        dev_group = QGroupBox("Ränder & Vorschub")
         d_layout = QFormLayout(dev_group)
 
-        # Device Profile
+        # Device Profile (hidden/internal, managed globally)
         self.combo_device = QComboBox()
         for prof_key, prof_info in DEVICE_PROFILES.items():
             self.combo_device.addItem(prof_info["name"], prof_key)
         self.combo_device.currentIndexChanged.connect(self._on_device_profile_changed)
-        d_layout.addRow("Gerätetyp:", self.combo_device)
+        self.combo_device.setVisible(False)
 
         # Feed edge for roller plotters
         self.combo_feed = QComboBox()
@@ -263,9 +265,38 @@ class PaperDockWidget(QDockWidget):
         self.refresh_page_fields()
         self.page_changed.emit()
 
+    def set_device_manager(self, manager: DeviceManager):
+        self.device_manager = manager
+        dev = manager.get_active_device()
+        if dev:
+            self.apply_configured_device(dev)
+
+    def apply_configured_device(self, dev: ConfiguredDevice):
+        if dev.model_id:
+            idx = self.combo_device.findData(dev.model_id)
+            if idx >= 0:
+                self.combo_device.setCurrentIndex(idx)
+
     def _on_fetch_device_size(self):
-        """Simulate or query OH; bounds from connected plotter."""
-        self.combo_preset.setCurrentIndex(self.combo_preset.findData("A2"))
-        self.combo_orient.setCurrentIndex(self.combo_orient.findData("landscape"))
-        self.doc.page.apply_device_profile("mutoh_xp500", "top")
-        self._on_page_cmd_updated()
+        """Query OH; bounds from connected plotter."""
+        dev = self.device_manager.get_active_device() if self.device_manager else None
+        target = dev.port if dev else "/dev/ttyUSB0"
+        res = probe_plotter(target, timeout=0.6)
+        if res.success:
+            if res.detected_format and res.detected_format in PAPER_PRESETS:
+                self.combo_preset.setCurrentIndex(self.combo_preset.findData(res.detected_format))
+                self.combo_orient.setCurrentIndex(self.combo_orient.findData("landscape"))
+            elif res.hard_clip_mm:
+                w, h = res.hard_clip_mm
+                self.doc.page.set_custom_size(w, h)
+            if dev and dev.model_id:
+                idx = self.combo_device.findData(dev.model_id)
+                if idx >= 0:
+                    self.combo_device.setCurrentIndex(idx)
+            self._on_page_cmd_updated()
+        else:
+            QMessageBox.warning(
+                self,
+                "Geräteabfrage fehlgeschlagen",
+                f"Konnte Papiergröße von '{target}' nicht abfragen:\n{res.error_message or 'Keine Antwort vom Gerät'}"
+            )

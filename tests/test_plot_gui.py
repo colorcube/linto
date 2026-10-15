@@ -10,13 +10,6 @@ from plotter_studio.device import ProbeResult
 from plotter_studio.emulator import VirtualPlotter, PtyServer
 
 
-@pytest.fixture(scope="session")
-def qapp():
-    os.environ["QT_QPA_PLATFORM"] = "offscreen"
-    app = QApplication.instance()
-    if app is None:
-        app = QApplication([])
-    return app
 
 
 def test_plot_mode_switching_and_simulation(qapp, tmp_path):
@@ -41,14 +34,16 @@ def test_plot_mode_switching_and_simulation(qapp, tmp_path):
     assert win.canvas._mode == CanvasMode.LAYOUT
     assert win.simulation_bar.isHidden()
     assert win.plot_dock.isHidden()
-    assert win.paper_dock.isVisible()
+    assert win.object_dock.isVisible()
+    assert win.transform_dock.isVisible()
+    assert "DIN A4" in win.btn_page_setup.text()
 
     # 1. Switch to Plot mode: layout docks hidden, plot dock visible
     win.switch_to_plot_mode()
     assert win.canvas._mode == CanvasMode.PLOT
     assert not win.simulation_bar.isHidden()
     assert win.plot_dock.isVisible()
-    assert win.paper_dock.isHidden()
+    assert win.object_dock.isHidden()
     assert win.transform_dock.isHidden()
     assert win.pen_dock.isHidden()
 
@@ -125,7 +120,8 @@ def test_plot_mode_switching_and_simulation(qapp, tmp_path):
     assert win.canvas._mode == CanvasMode.LAYOUT
     assert win.simulation_bar.isHidden()
     assert win.plot_dock.isHidden()
-    assert win.paper_dock.isVisible()
+    assert win.object_dock.isVisible()
+    assert win.transform_dock.isVisible()
     assert g_item.isVisible()
     assert not preview_item.isVisible()
 

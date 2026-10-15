@@ -29,6 +29,10 @@ class ProbeResult:
     cts: Optional[bool] = None
     dsr: Optional[bool] = None
 
+    @property
+    def error(self) -> str:
+        return self.error_message
+
 
 # Approximate hard-clip width ranges for format detection (mm)
 FORMAT_RANGES = {
@@ -55,7 +59,11 @@ def list_serial_ports() -> list[str]:
         if dev not in ports:
             ports.append(dev)
 
-    # 3. Add default TCP option
+    # 3. Always ensure standard serial port option exists
+    if "/dev/ttyUSB0" not in ports:
+        ports.append("/dev/ttyUSB0")
+
+    # 4. Add default TCP option
     ports.append("tcp://127.0.0.1:9999")
 
     return ports
@@ -64,7 +72,7 @@ def list_serial_ports() -> list[str]:
 def probe_plotter(
     port: str,
     baudrate: int = 19200,
-    timeout: float = 1.0,
+    timeout: float = 0.6,
 ) -> ProbeResult:
     """Send inquiry commands (OI, OF, OH) and detect plotter configuration."""
     port_clean = port.strip()
@@ -101,8 +109,9 @@ def probe_plotter(
                 bytesize=serial.EIGHTBITS,
                 parity=serial.PARITY_NONE,
                 stopbits=serial.STOPBITS_ONE,
-                rtscts=True,
+                rtscts=False,  # Non-blocking probe without handshake stall
                 timeout=timeout,
+                write_timeout=timeout,
             ) as ser:
                 try:
                     cts_val = bool(ser.cts)

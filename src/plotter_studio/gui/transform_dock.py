@@ -1,4 +1,4 @@
-"""Transform, scaling and placement dock widget."""
+"""Transform, scaling and placement dock widget in compact Inkscape tool style."""
 
 from __future__ import annotations
 import copy
@@ -8,74 +8,152 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QUndoStack
 from PySide6.QtWidgets import (
     QDockWidget, QWidget, QVBoxLayout, QHBoxLayout,
-    QFormLayout, QDoubleSpinBox, QPushButton,
-    QRadioButton, QButtonGroup, QGroupBox, QLabel, QCheckBox
+    QGridLayout, QDoubleSpinBox, QPushButton, QToolButton,
+    QRadioButton, QButtonGroup, QLabel, QFrame,
+    QGroupBox, QScrollArea
 )
 from ..core.document import Document, ImportItem
 from ..core.geometry import AffineTransform, Point, BoundingBox
 from .commands import TransformItemCommand
+from .icons import get_icon
 
 
 class TransformDockWidget(QDockWidget):
     """
-    Dock widget managing:
-    - Active object sizing & scaling (mm, percent, lock aspect ratio, fit to page, 1:1 original)
-    - Relative scaling (+10%, -10%)
-    - Active object placement (reference page vs clip area, absolute mm, percentage 0..100%)
-    - Quick alignment (horizontal center, vertical center, center both)
+    Compact, tool-oriented dock widget for scaling, rotating and placing objects.
+    Inkscape-like layout with direct mm inputs, aspect ratio lock, and quick tool buttons.
     """
     item_transformed = Signal()
 
     def __init__(self, doc: Document, parent=None):
         super().__init__("Skalieren & Platzieren", parent)
         self.setObjectName("TransformDockWidget")
+        self.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
         self.doc = doc
         self.active_item: Optional[ImportItem] = None
         self.undo_stack: Optional[QUndoStack] = None
         self._updating_fields = False
 
-        self.container = QWidget(self)
-        self.setWidget(self.container)
+        scroll = QScrollArea(self)
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame)
+
+        self.container = QWidget()
+        scroll.setWidget(self.container)
+        self.setWidget(scroll)
+
         self.main_layout = QVBoxLayout(self.container)
-        self.main_layout.setContentsMargins(8, 8, 8, 8)
-        self.main_layout.setSpacing(10)
+        self.main_layout.setContentsMargins(6, 6, 6, 6)
+        self.main_layout.setSpacing(8)
 
-        # Status / Item info
+        # 1. Header / Object Info
+        header_box = QHBoxLayout()
+        header_box.setSpacing(4)
+        self.lbl_item_icon = QLabel()
         self.lbl_item_name = QLabel("Kein Objekt ausgewählt")
-        self.lbl_item_name.setStyleSheet("font-weight: bold; color: #555; padding: 2px 0;")
-        self.main_layout.addWidget(self.lbl_item_name)
+        self.lbl_item_name.setStyleSheet("font-weight: bold; color: #374151;")
+        self.lbl_locked_badge = QLabel()
+        self.lbl_locked_badge.setStyleSheet("color: #b91c1c; font-size: 11px; font-weight: bold;")
+        self.lbl_locked_badge.setVisible(False)
 
-        # --- Section 1: Size & Scaling (Größe & Skalierung) ---
-        self.scale_group = QGroupBox("Größe & Skalierung")
-        s_layout = QVBoxLayout(self.scale_group)
+        header_box.addWidget(self.lbl_item_icon)
+        header_box.addWidget(self.lbl_item_name)
+        header_box.addStretch()
+        header_box.addWidget(self.lbl_locked_badge)
+        self.main_layout.addLayout(header_box)
 
-        # Dimensions mm
-        dim_form = QFormLayout()
-        mm_row = QHBoxLayout()
+        # 2. Gruppe "Transformation" (Numerische Maße, Position und Skalierung)
+        self.grp_transform = QGroupBox("Transformation")
+        t_layout = QVBoxLayout(self.grp_transform)
+        t_layout.setContentsMargins(8, 8, 8, 8)
+        t_layout.setSpacing(6)
+
+        # Position Section (X / Y with Reference Mode)
+        pos_header = QHBoxLayout()
+        lbl_pos = QLabel("Position:")
+        lbl_pos.setStyleSheet("font-weight: 600; color: #4b5563;")
+        pos_header.addWidget(lbl_pos)
+        pos_header.addStretch()
+
+        self.rb_ref_page = QRadioButton("Blatt")
+        self.rb_ref_clip = QRadioButton("Plottbereich")
+        self.rb_ref_page.setChecked(True)
+        self.ref_group = QButtonGroup(self)
+        self.ref_group.addButton(self.rb_ref_page)
+        self.ref_group.addButton(self.rb_ref_clip)
+        self.rb_ref_page.toggled.connect(self.refresh_item_fields)
+        pos_header.addWidget(self.rb_ref_page)
+        pos_header.addWidget(self.rb_ref_clip)
+        t_layout.addLayout(pos_header)
+
+        pos_grid = QGridLayout()
+        pos_grid.setContentsMargins(0, 0, 0, 0)
+        pos_grid.setSpacing(4)
+
+        pos_grid.addWidget(QLabel("X:"), 0, 0)
+        self.spin_pos_x = QDoubleSpinBox()
+        self.spin_pos_x.setRange(-2000.0, 5000.0)
+        self.spin_pos_x.setDecimals(1)
+        self.spin_pos_x.setSuffix(" mm")
+        self.spin_pos_x.valueChanged.connect(self._on_pos_mm_changed)
+        pos_grid.addWidget(self.spin_pos_x, 0, 1)
+
+        pos_grid.addWidget(QLabel("Y:"), 0, 2)
+        self.spin_pos_y = QDoubleSpinBox()
+        self.spin_pos_y.setRange(-2000.0, 5000.0)
+        self.spin_pos_y.setDecimals(1)
+        self.spin_pos_y.setSuffix(" mm")
+        self.spin_pos_y.valueChanged.connect(self._on_pos_mm_changed)
+        pos_grid.addWidget(self.spin_pos_y, 0, 3)
+
+        t_layout.addLayout(pos_grid)
+
+        # Dimensions Section (Width / Chain / Height)
+        dim_header = QHBoxLayout()
+        lbl_dim = QLabel("Abmessungen:")
+        lbl_dim.setStyleSheet("font-weight: 600; color: #4b5563;")
+        dim_header.addWidget(lbl_dim)
+        dim_header.addStretch()
+        t_layout.addLayout(dim_header)
+
+        dim_grid = QGridLayout()
+        dim_grid.setContentsMargins(0, 0, 0, 0)
+        dim_grid.setSpacing(4)
+
+        dim_grid.addWidget(QLabel("B:"), 0, 0)
         self.spin_obj_w = QDoubleSpinBox()
         self.spin_obj_w.setRange(1.0, 5000.0)
         self.spin_obj_w.setDecimals(1)
         self.spin_obj_w.setSuffix(" mm")
         self.spin_obj_w.valueChanged.connect(self._on_obj_w_changed)
+        dim_grid.addWidget(self.spin_obj_w, 0, 1)
 
+        # Proportional chain toggle button
+        self.btn_chain = QToolButton(self)
+        self.btn_chain.setCheckable(True)
+        self.btn_chain.setChecked(True)
+        self.btn_chain.setToolTip("Seitenverhältnis sperren")
+        self._update_chain_icon()
+        self.btn_chain.toggled.connect(self._on_chain_toggled)
+        dim_grid.addWidget(self.btn_chain, 0, 2)
+
+        dim_grid.addWidget(QLabel("H:"), 0, 3)
         self.spin_obj_h = QDoubleSpinBox()
         self.spin_obj_h.setRange(1.0, 5000.0)
         self.spin_obj_h.setDecimals(1)
         self.spin_obj_h.setSuffix(" mm")
         self.spin_obj_h.valueChanged.connect(self._on_obj_h_changed)
+        dim_grid.addWidget(self.spin_obj_h, 0, 4)
 
-        mm_row.addWidget(self.spin_obj_w)
-        mm_row.addWidget(QLabel("x"))
-        mm_row.addWidget(self.spin_obj_h)
-        dim_form.addRow("Größe (mm):", mm_row)
+        t_layout.addLayout(dim_grid)
 
-        # Lock aspect ratio
-        self.chk_keep_aspect = QCheckBox("Seitenverhältnis beibehalten")
-        self.chk_keep_aspect.setChecked(True)
-        dim_form.addRow("", self.chk_keep_aspect)
+        # Scale Percentage
+        scale_box = QHBoxLayout()
+        scale_box.setSpacing(4)
+        lbl_scale = QLabel("Skalierung:")
+        lbl_scale.setStyleSheet("font-weight: 600; color: #4b5563;")
+        scale_box.addWidget(lbl_scale)
 
-        # Scale percentage
-        pct_row = QHBoxLayout()
         self.spin_obj_scale = QDoubleSpinBox()
         self.spin_obj_scale.setRange(1.0, 5000.0)
         self.spin_obj_scale.setDecimals(1)
@@ -83,156 +161,174 @@ class TransformDockWidget(QDockWidget):
         self.spin_obj_scale.setSuffix(" %")
         self.spin_obj_scale.setValue(100.0)
         self.spin_obj_scale.valueChanged.connect(self._on_scale_spin_changed)
+        scale_box.addWidget(self.spin_obj_scale)
 
-        self.btn_scale_down = QPushButton("-10 %")
+        self.btn_scale_down = QPushButton("-10%")
+        self.btn_scale_down.setFixedWidth(44)
+        self.btn_scale_down.setToolTip("Um 10% verkleinern")
         self.btn_scale_down.clicked.connect(lambda: self.scale_relative(0.9))
-        self.btn_scale_up = QPushButton("+10 %")
+        scale_box.addWidget(self.btn_scale_down)
+
+        self.btn_scale_up = QPushButton("+10%")
+        self.btn_scale_up.setFixedWidth(44)
+        self.btn_scale_up.setToolTip("Um 10% vergrößern")
         self.btn_scale_up.clicked.connect(lambda: self.scale_relative(1.1))
+        scale_box.addWidget(self.btn_scale_up)
 
-        pct_row.addWidget(self.spin_obj_scale)
-        pct_row.addWidget(self.btn_scale_down)
-        pct_row.addWidget(self.btn_scale_up)
-        dim_form.addRow("Skalierung:", pct_row)
-        s_layout.addLayout(dim_form)
+        t_layout.addLayout(scale_box)
+        self.main_layout.addWidget(self.grp_transform)
 
-        # Quick action buttons: 1:1 and Fit to page with margin
-        quick_scale_row = QHBoxLayout()
-        self.btn_original_size = QPushButton("1:1 Originalgröße")
-        self.btn_original_size.setToolTip("Setzt Skalierung auf exakte 100% (mm-Maße aus Quelldatei)")
-        self.btn_original_size.clicked.connect(self.reset_to_original_size)
+        # 3. Gruppe "Rotation"
+        self.grp_rotation = QGroupBox("Rotation")
+        r_layout = QHBoxLayout(self.grp_rotation)
+        r_layout.setContentsMargins(8, 8, 8, 8)
+        r_layout.setSpacing(6)
 
-        self.btn_fit = QPushButton("Auf Blatt einpassen")
-        self.btn_fit.setToolTip("Skaliert das Objekt proportional auf Blatt/Plottbereich")
-        self.btn_fit.clicked.connect(lambda: self.fit_to_page())
+        self.btn_rotate_ccw = QPushButton("-90°")
+        self.btn_rotate_ccw.setIcon(get_icon("rotate-ccw", size=16))
+        self.btn_rotate_ccw.setToolTip("90° gegen Uhrzeigersinn drehen (Strg+Umschalt+R)")
+        self.btn_rotate_ccw.clicked.connect(lambda: self.rotate_selected(-90.0))
 
-        quick_scale_row.addWidget(self.btn_original_size)
-        quick_scale_row.addWidget(self.btn_fit)
-        s_layout.addLayout(quick_scale_row)
+        self.btn_rotate_cw = QPushButton("+90°")
+        self.btn_rotate_cw.setIcon(get_icon("rotate-cw", size=16))
+        self.btn_rotate_cw.setToolTip("90° im Uhrzeigersinn drehen (Strg+R)")
+        self.btn_rotate_cw.clicked.connect(lambda: self.rotate_selected(90.0))
 
-        # Margin input for fitting
-        fit_margin_layout = QHBoxLayout()
-        fit_margin_layout.addWidget(QLabel("Rand bei Einpassen:"))
+        r_layout.addWidget(self.btn_rotate_ccw)
+        r_layout.addWidget(self.btn_rotate_cw)
+        self.main_layout.addWidget(self.grp_rotation)
+
+        # 4. Gruppe "Platzieren"
+        self.grp_placement = QGroupBox("Platzieren")
+        p_layout = QHBoxLayout(self.grp_placement)
+        p_layout.setContentsMargins(8, 8, 8, 8)
+        p_layout.setSpacing(6)
+
+        self.btn_center_h = QPushButton("Horiz. Mittig")
+        self.btn_center_h.setIcon(get_icon("align-h-center", size=16))
+        self.btn_center_h.setToolTip("Horizontal auf Blatt / Plottbereich mittig ausrichten")
+        self.btn_center_h.clicked.connect(self.align_center_h)
+
+        self.btn_center_v = QPushButton("Vert. Mittig")
+        self.btn_center_v.setIcon(get_icon("align-v-center", size=16))
+        self.btn_center_v.setToolTip("Vertikal auf Blatt / Plottbereich mittig ausrichten")
+        self.btn_center_v.clicked.connect(self.align_center_v)
+
+        self.btn_center_both = QPushButton("Zentrieren")
+        self.btn_center_both.setIcon(get_icon("align-center", size=16))
+        self.btn_center_both.setToolTip("Auf Blatt / Plottbereich mittig zentrieren (beide Achsen)")
+        self.btn_center_both.clicked.connect(self.align_center_both)
+
+        p_layout.addWidget(self.btn_center_h)
+        p_layout.addWidget(self.btn_center_v)
+        p_layout.addWidget(self.btn_center_both)
+        self.main_layout.addWidget(self.grp_placement)
+
+        # 5. Gruppe "Skalieren"
+        self.grp_scaling = QGroupBox("Skalieren")
+        s_layout = QVBoxLayout(self.grp_scaling)
+        s_layout.setContentsMargins(8, 8, 8, 8)
+        s_layout.setSpacing(6)
+
+        margin_layout = QHBoxLayout()
+        margin_layout.setSpacing(6)
+        lbl_margin = QLabel("Rand beim Einpassen:")
+        lbl_margin.setStyleSheet("color: #4b5563;")
+        lbl_margin.setToolTip("Sicherheitsabstand / Mindestabstand zum Blattrand bzw. Plottbereich beim Einpassen")
+
         self.spin_fit_margin = QDoubleSpinBox()
-        self.spin_fit_margin.setRange(0.0, 100.0)
+        self.spin_fit_margin.setRange(0.0, 500.0)
         self.spin_fit_margin.setDecimals(1)
         self.spin_fit_margin.setValue(15.0)
         self.spin_fit_margin.setSuffix(" mm")
-        fit_margin_layout.addWidget(self.spin_fit_margin)
-        s_layout.addLayout(fit_margin_layout)
+        self.spin_fit_margin.setMinimumWidth(100)
+        self.spin_fit_margin.setToolTip("Sicherheitsabstand / Mindestabstand zum Blattrand bzw. Plottbereich beim Einpassen")
 
-        self.main_layout.addWidget(self.scale_group)
+        margin_layout.addWidget(lbl_margin)
+        margin_layout.addWidget(self.spin_fit_margin)
+        s_layout.addLayout(margin_layout)
 
-        # --- Section 2: Rotation (Drehung) ---
-        self.rot_group = QGroupBox("Drehung")
-        r_layout = QVBoxLayout(self.rot_group)
-        rot_btn_row = QHBoxLayout()
+        scale_btn_layout = QHBoxLayout()
+        scale_btn_layout.setSpacing(6)
 
-        self.btn_rotate_ccw = QPushButton("⟲  -90°")
-        self.btn_rotate_ccw.setToolTip("Objekt 90° gegen den Uhrzeigersinn drehen (Strg+Umschalt+R)")
-        self.btn_rotate_ccw.clicked.connect(lambda: self.rotate_selected(-90.0))
+        self.btn_fit = QPushButton("Einpassen")
+        self.btn_fit.setIcon(get_icon("fit-page", size=16))
+        self.btn_fit.setToolTip("Proportional auf Blatt/Plottbereich einpassen unter Beachtung des Randabstands")
+        self.btn_fit.clicked.connect(lambda: self.fit_to_page())
 
-        self.btn_rotate_cw = QPushButton("⟳  +90°")
-        self.btn_rotate_cw.setToolTip("Objekt 90° im Uhrzeigersinn drehen (Strg+R)")
-        self.btn_rotate_cw.clicked.connect(lambda: self.rotate_selected(90.0))
+        self.btn_original_size = QPushButton("1:1 Originalgröße")
+        self.btn_original_size.setIcon(get_icon("original-size", size=16))
+        self.btn_original_size.setToolTip("Auf Originalgröße (1:1 aus Quelldatei) zurücksetzen")
+        self.btn_original_size.clicked.connect(self.reset_to_original_size)
 
-        rot_btn_row.addWidget(self.btn_rotate_ccw)
-        rot_btn_row.addWidget(self.btn_rotate_cw)
-        r_layout.addLayout(rot_btn_row)
+        scale_btn_layout.addWidget(self.btn_fit)
+        scale_btn_layout.addWidget(self.btn_original_size)
+        s_layout.addLayout(scale_btn_layout)
 
-        self.main_layout.addWidget(self.rot_group)
-
-        # --- Section 3: Alignment & Placement (Objekt-Platzierung) ---
-        self.align_group = QGroupBox("Objekt-Platzierung")
-        a_layout = QVBoxLayout(self.align_group)
-
-        # Reference mode
-        ref_layout = QHBoxLayout()
-        self.rb_ref_page = QRadioButton("Bezug Blatt")
-        self.rb_ref_clip = QRadioButton("Bezug Plottbereich")
-        self.rb_ref_page.setChecked(True)
-        self.ref_group = QButtonGroup(self)
-        self.ref_group.addButton(self.rb_ref_page)
-        self.ref_group.addButton(self.rb_ref_clip)
-        self.rb_ref_page.toggled.connect(self.refresh_item_fields)
-        ref_layout.addWidget(self.rb_ref_page)
-        ref_layout.addWidget(self.rb_ref_clip)
-        a_layout.addLayout(ref_layout)
-
-        # Position inputs (mm and %)
-        pos_form = QFormLayout()
-        pos_mm_row = QHBoxLayout()
-        self.spin_pos_x = QDoubleSpinBox()
-        self.spin_pos_x.setRange(-2000.0, 5000.0)
-        self.spin_pos_x.setDecimals(1)
-        self.spin_pos_x.setSuffix(" mm")
-        self.spin_pos_x.valueChanged.connect(self._on_pos_mm_changed)
-
-        self.spin_pos_y = QDoubleSpinBox()
-        self.spin_pos_y.setRange(-2000.0, 5000.0)
-        self.spin_pos_y.setDecimals(1)
-        self.spin_pos_y.setSuffix(" mm")
-        self.spin_pos_y.valueChanged.connect(self._on_pos_mm_changed)
-
-        pos_mm_row.addWidget(QLabel("X:"))
-        pos_mm_row.addWidget(self.spin_pos_x)
-        pos_mm_row.addWidget(QLabel("Y:"))
-        pos_mm_row.addWidget(self.spin_pos_y)
-        pos_form.addRow("Position (mm):", pos_mm_row)
-
-        pos_pct_row = QHBoxLayout()
-        self.spin_pos_pct_x = QDoubleSpinBox()
-        self.spin_pos_pct_x.setRange(0.0, 100.0)
-        self.spin_pos_pct_x.setDecimals(1)
-        self.spin_pos_pct_x.setSuffix(" %")
-        self.spin_pos_pct_x.valueChanged.connect(self._on_pos_pct_changed)
-
-        self.spin_pos_pct_y = QDoubleSpinBox()
-        self.spin_pos_pct_y.setRange(0.0, 100.0)
-        self.spin_pos_pct_y.setDecimals(1)
-        self.spin_pos_pct_y.setSuffix(" %")
-        self.spin_pos_pct_y.valueChanged.connect(self._on_pos_pct_changed)
-
-        pos_pct_row.addWidget(QLabel("X:"))
-        pos_pct_row.addWidget(self.spin_pos_pct_x)
-        pos_pct_row.addWidget(QLabel("Y:"))
-        pos_pct_row.addWidget(self.spin_pos_pct_y)
-        pos_form.addRow("Ausrichtung (%):", pos_pct_row)
-        a_layout.addLayout(pos_form)
-
-        # Alignment buttons
-        btn_row1 = QHBoxLayout()
-        self.btn_center_h = QPushButton("Horizontal")
-        self.btn_center_h.clicked.connect(self.align_center_h)
-        self.btn_center_v = QPushButton("Vertikal")
-        self.btn_center_v.clicked.connect(self.align_center_v)
-        self.btn_center_both = QPushButton("Mittig (Beide)")
-        self.btn_center_both.clicked.connect(self.align_center_both)
-        btn_row1.addWidget(self.btn_center_h)
-        btn_row1.addWidget(self.btn_center_v)
-        btn_row1.addWidget(self.btn_center_both)
-        a_layout.addLayout(btn_row1)
-
-        self.main_layout.addWidget(self.align_group)
+        self.main_layout.addWidget(self.grp_scaling)
         self.main_layout.addStretch()
 
         self._set_item_controls_enabled(False)
+
+    @property
+    def rot_group(self):
+        """Backward compatibility alias for rotation controls."""
+        return self.grp_rotation
+
+    def _update_chain_icon(self):
+        if self.btn_chain.isChecked():
+            self.btn_chain.setIcon(get_icon("chain", size=16))
+            self.btn_chain.setToolTip("Seitenverhältnis gesperrt (klicken zum Lösen)")
+        else:
+            self.btn_chain.setIcon(get_icon("chain-broken", size=16))
+            self.btn_chain.setToolTip("Seitenverhältnis frei (klicken zum Sperren)")
+
+    def _on_chain_toggled(self, checked: bool):
+        self._update_chain_icon()
 
     def set_undo_stack(self, stack: QUndoStack):
         self.undo_stack = stack
 
     def _set_item_controls_enabled(self, enabled: bool):
-        self.scale_group.setEnabled(enabled)
-        self.rot_group.setEnabled(enabled)
-        self.align_group.setEnabled(enabled)
+        self.grp_transform.setEnabled(enabled)
+        self.grp_rotation.setEnabled(enabled)
+        self.grp_placement.setEnabled(enabled)
+        self.grp_scaling.setEnabled(enabled)
+
+        self.rb_ref_page.setEnabled(enabled)
+        self.rb_ref_clip.setEnabled(enabled)
+        self.spin_pos_x.setEnabled(enabled)
+        self.spin_pos_y.setEnabled(enabled)
+        self.spin_obj_w.setEnabled(enabled)
+        self.spin_obj_h.setEnabled(enabled)
+        self.btn_chain.setEnabled(enabled)
+        self.spin_obj_scale.setEnabled(enabled)
+        self.btn_scale_down.setEnabled(enabled)
+        self.btn_scale_up.setEnabled(enabled)
+        self.btn_rotate_ccw.setEnabled(enabled)
+        self.btn_rotate_cw.setEnabled(enabled)
+        self.btn_center_h.setEnabled(enabled)
+        self.btn_center_v.setEnabled(enabled)
+        self.btn_center_both.setEnabled(enabled)
+        self.btn_fit.setEnabled(enabled)
+        self.spin_fit_margin.setEnabled(enabled)
+        self.btn_original_size.setEnabled(enabled)
 
     def set_active_item(self, item: Optional[ImportItem]):
         self.active_item = item
         if item is None:
             self.lbl_item_name.setText("Kein Objekt ausgewählt")
+            self.lbl_locked_badge.setVisible(False)
             self._set_item_controls_enabled(False)
         else:
-            self.lbl_item_name.setText(f"Objekt: {item.name}")
-            self._set_item_controls_enabled(True)
+            self.lbl_item_name.setText(item.name)
+            if item.locked:
+                self.lbl_locked_badge.setText("🔒 Gesperrt")
+                self.lbl_locked_badge.setVisible(True)
+                self._set_item_controls_enabled(False)
+            else:
+                self.lbl_locked_badge.setVisible(False)
+                self._set_item_controls_enabled(True)
             self.refresh_item_fields()
 
     def refresh_item_fields(self):
@@ -248,7 +344,6 @@ class TransformDockWidget(QDockWidget):
                 return
 
             sx = math.hypot(self.active_item.transform.a, self.active_item.transform.b)
-            sy = math.hypot(self.active_item.transform.c, self.active_item.transform.d)
             scale_pct = sx * 100.0
 
             self.spin_obj_w.setValue(cb.width)
@@ -258,13 +353,6 @@ class TransformDockWidget(QDockWidget):
             tb = self._get_target_box()
             self.spin_pos_x.setValue(cb.min_x - tb.min_x)
             self.spin_pos_y.setValue(cb.min_y - tb.min_y)
-
-            slack_w = tb.width - cb.width
-            slack_h = tb.height - cb.height
-            pct_x = ((cb.min_x - tb.min_x) / slack_w * 100.0) if abs(slack_w) > 1e-4 else 50.0
-            pct_y = ((cb.min_y - tb.min_y) / slack_h * 100.0) if abs(slack_h) > 1e-4 else 50.0
-            self.spin_pos_pct_x.setValue(max(0.0, min(100.0, pct_x)))
-            self.spin_pos_pct_y.setValue(max(0.0, min(100.0, pct_y)))
         finally:
             self._updating_fields = False
 
@@ -332,7 +420,7 @@ class TransformDockWidget(QDockWidget):
         if cb is None or cb.width <= 0:
             return
         factor_x = new_w / cb.width
-        factor_y = factor_x if self.chk_keep_aspect.isChecked() else 1.0
+        factor_y = factor_x if self.btn_chain.isChecked() else 1.0
         self._apply_scene_scale(factor_x, factor_y)
 
     def _on_obj_h_changed(self, new_h: float):
@@ -342,7 +430,7 @@ class TransformDockWidget(QDockWidget):
         if cb is None or cb.height <= 0:
             return
         factor_y = new_h / cb.height
-        factor_x = factor_y if self.chk_keep_aspect.isChecked() else 1.0
+        factor_x = factor_y if self.btn_chain.isChecked() else 1.0
         self._apply_scene_scale(factor_x, factor_y)
 
     def _on_scale_spin_changed(self, pct: float):
@@ -414,32 +502,6 @@ class TransformDockWidget(QDockWidget):
         new_t.ty += dy
 
         self._apply_item_transform(old_t, new_t, "Position ändern (mm)")
-
-    def _on_pos_pct_changed(self):
-        if self._updating_fields or not self.active_item or not self.active_item.original_bounds:
-            return
-        tb = self._get_target_box()
-        cb = self.active_item.current_bounds
-        if cb is None:
-            return
-
-        slack_w = tb.width - cb.width
-        slack_h = tb.height - cb.height
-
-        pct_x = self.spin_pos_pct_x.value() / 100.0
-        pct_y = self.spin_pos_pct_y.value() / 100.0
-
-        target_left = tb.min_x + pct_x * slack_w
-        target_top = tb.min_y + pct_y * slack_h
-        dx = target_left - cb.min_x
-        dy = target_top - cb.min_y
-
-        old_t = copy.deepcopy(self.active_item.transform)
-        new_t = copy.deepcopy(old_t)
-        new_t.tx += dx
-        new_t.ty += dy
-
-        self._apply_item_transform(old_t, new_t, "Position ändern (%)")
 
     def align_center_h(self):
         if not self.active_item or not self.active_item.original_bounds:

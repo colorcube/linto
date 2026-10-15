@@ -119,7 +119,7 @@ class PlotterCanvas(QGraphicsView):
             if self._plot_preview_item is not None:
                 self._plot_preview_item.setVisible(False)
             for g_item in self._item_map.values():
-                g_item.setVisible(True)
+                g_item.setVisible(g_item.item.visible)
         self.viewport().update()
 
     def set_plot_job(self, job: Optional[PlotJob]):
@@ -173,10 +173,11 @@ class PlotterCanvas(QGraphicsView):
         self._item_map.clear()
 
         # Add items from doc
-        for item in self.doc.items:
+        for idx, item in enumerate(self.doc.items):
             g_item = GraphicsImportItem(item, self.doc)
+            g_item.setZValue(float(idx))
             self._scene.addItem(g_item)
-            if self._mode == CanvasMode.PLOT:
+            if self._mode == CanvasMode.PLOT or not item.visible:
                 g_item.setVisible(False)
             self._item_map[item.item_id] = g_item
 

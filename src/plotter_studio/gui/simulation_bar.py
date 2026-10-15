@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (
     QWidget, QHBoxLayout, QPushButton, QSlider, QLabel, QComboBox, QFrame
 )
 from ..pipeline.compiler import PlotJob
+from .icons import get_icon
 
 
 class PlotSimulationBar(QWidget):
@@ -89,20 +90,23 @@ class PlotSimulationBar(QWidget):
         layout.setSpacing(10)
 
         # Rewind button
-        self.btn_rewind = QPushButton("⏮")
+        self.btn_rewind = QPushButton()
+        self.btn_rewind.setIcon(get_icon("skip-back", size=16, color="#f0f0f0"))
         self.btn_rewind.setToolTip("Zum Anfang springen")
         self.btn_rewind.setFixedWidth(32)
         self.btn_rewind.clicked.connect(self.rewind)
         layout.addWidget(self.btn_rewind)
 
         # Play/Pause button
-        self.btn_play = QPushButton("▶ Abspielen")
+        self.btn_play = QPushButton("Abspielen")
+        self.btn_play.setIcon(get_icon("play", size=16, color="#f0f0f0"))
         self.btn_play.setFixedWidth(100)
         self.btn_play.clicked.connect(self.toggle_play)
         layout.addWidget(self.btn_play)
 
         # Forward button
-        self.btn_forward = QPushButton("⏭")
+        self.btn_forward = QPushButton()
+        self.btn_forward.setIcon(get_icon("skip-forward", size=16, color="#f0f0f0"))
         self.btn_forward.setToolTip("Zum Ende springen")
         self.btn_forward.setFixedWidth(32)
         self.btn_forward.clicked.connect(self.jump_to_end)
@@ -178,12 +182,14 @@ class PlotSimulationBar(QWidget):
         if self.current_step >= self.total_steps:
             self.slider.setValue(0)
         self.is_playing = True
-        self.btn_play.setText("⏸ Pause")
+        self.btn_play.setIcon(get_icon("pause", size=16, color="#f0f0f0"))
+        self.btn_play.setText("Pause")
         self._timer.start()
 
     def pause(self):
         self.is_playing = False
-        self.btn_play.setText("▶ Abspielen")
+        self.btn_play.setIcon(get_icon("play", size=16, color="#f0f0f0"))
+        self.btn_play.setText("Abspielen")
         self._timer.stop()
 
     def _on_speed_changed(self, index: int):

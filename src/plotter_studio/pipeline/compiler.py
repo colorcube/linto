@@ -105,6 +105,8 @@ def compile_document_to_plot_job(
     max_overhang = 0.0
 
     for item in doc.items:
+        if not item.visible:
+            continue
         for path in item.paths:
             if len(path.points) < 2:
                 continue

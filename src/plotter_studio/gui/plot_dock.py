@@ -23,7 +23,10 @@ from ..device import (
     SerialStreamer,
     StreamerState,
     ProbeResult,
+    DeviceManager,
+    ConfiguredDevice,
 )
+from .icons import get_icon
 
 
 class StreamerSignalBridge(QObject):
@@ -48,7 +51,7 @@ class PlotDockWidget(QDockWidget):
     stream_step_changed = Signal(int)
 
     def __init__(self, doc: Document, parent=None):
-        super().__init__("Plot-Vorschau & Ausgabe", parent)
+        super().__init__("Ausgabe", parent)
         self.doc = doc
         self.job: Optional[PlotJob] = None
         self._pen_checkboxes: dict[int, QCheckBox] = {}
@@ -62,6 +65,7 @@ class PlotDockWidget(QDockWidget):
 
         self._streamer: Optional[SerialStreamer] = None
         self._probe_thread: Optional[threading.Thread] = None
+        self.device_manager: Optional[DeviceManager] = None
 
         self.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
         self._init_ui()
@@ -78,7 +82,7 @@ class PlotDockWidget(QDockWidget):
         layout.setSpacing(12)
 
         # 1. Pipeline Settings
-        grp_pipeline = QGroupBox("⚙️ Pipeline-Optimierung", container)
+        grp_pipeline = QGroupBox("Pipeline-Optimierung", container)
         grid_pipe = QGridLayout(grp_pipeline)
         grid_pipe.setSpacing(6)
 
@@ -124,7 +128,7 @@ class PlotDockWidget(QDockWidget):
         self.chk_show_nodes.toggled.connect(self.toggle_nodes.emit)
         grid_pipe.addWidget(self.chk_show_nodes, 6, 0, 1, 2)
 
-        self.btn_recompute = QPushButton("🔄 Pipeline neu berechnen")
+        self.btn_recompute = QPushButton("Pipeline neu berechnen")
         self.btn_recompute.clicked.connect(self.config_changed.emit)
         grid_pipe.addWidget(self.btn_recompute, 7, 0, 1, 2)
 
@@ -138,39 +142,48 @@ class PlotDockWidget(QDockWidget):
         layout.addWidget(grp_pipeline)
 
         # 2. Pre-Flight Inspection Statistics
-        grp_stats = QGroupBox("📊 Pre-Flight-Inspektion", container)
+        grp_stats = QGroupBox("Pre-Flight-Inspektion", container)
         vbox_stats = QVBoxLayout(grp_stats)
         vbox_stats.setSpacing(6)
 
         grid_stat_values = QGridLayout()
         grid_stat_values.setSpacing(4)
+        grid_stat_values.setColumnStretch(1, 1)
 
-        grid_stat_values.addWidget(QLabel("✏️ Zeichenweg:"), 0, 0)
+        def _add_stat_row(row: int, icon_name: str, label_text: str, val_widget: QLabel):
+            icon_lbl = QLabel()
+            icon_lbl.setPixmap(get_icon(icon_name, size=16).pixmap(16, 16))
+            icon_lbl.setFixedSize(18, 18)
+            icon_lbl.setAlignment(Qt.AlignCenter)
+            grid_stat_values.addWidget(icon_lbl, row, 0)
+
+            title_lbl = QLabel(label_text)
+            title_lbl.setStyleSheet("color: #4b5563; font-size: 11px;")
+            grid_stat_values.addWidget(title_lbl, row, 1)
+
+            val_widget.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            grid_stat_values.addWidget(val_widget, row, 2)
+
         self.lbl_draw = QLabel("0.00 m")
         self.lbl_draw.setStyleSheet("font-weight: bold;")
-        grid_stat_values.addWidget(self.lbl_draw, 0, 1)
+        _add_stat_row(0, "pencil", "Zeichenweg:", self.lbl_draw)
 
-        grid_stat_values.addWidget(QLabel("✈️ Leerweg:"), 1, 0)
         self.lbl_travel = QLabel("0.00 m")
         self.lbl_travel.setStyleSheet("font-weight: bold; color: #00838f;")
-        grid_stat_values.addWidget(self.lbl_travel, 1, 1)
+        _add_stat_row(1, "travel", "Leerweg:", self.lbl_travel)
 
-        grid_stat_values.addWidget(QLabel("⚡ Ersparnis:"), 2, 0)
         self.lbl_savings = QLabel("0 %")
-        grid_stat_values.addWidget(self.lbl_savings, 2, 1)
+        _add_stat_row(2, "percent", "Ersparnis:", self.lbl_savings)
 
-        grid_stat_values.addWidget(QLabel("🔄 Stiftwechsel:"), 3, 0)
         self.lbl_pen_changes = QLabel("0")
-        grid_stat_values.addWidget(self.lbl_pen_changes, 3, 1)
+        _add_stat_row(3, "refresh", "Stiftwechsel:", self.lbl_pen_changes)
 
-        grid_stat_values.addWidget(QLabel("⏱️ Geschätzte Zeit:"), 4, 0)
         self.lbl_duration = QLabel("00m 00s")
-        self.lbl_duration.setStyleSheet("font-weight: bold; color: #2e7d32; font-size: 13px;")
-        grid_stat_values.addWidget(self.lbl_duration, 4, 1)
+        self.lbl_duration.setStyleSheet("font-weight: bold; color: #2e7d32; font-size: 12px;")
+        _add_stat_row(4, "clock", "Geschätzte Zeit:", self.lbl_duration)
 
-        grid_stat_values.addWidget(QLabel("📍 Stützpunkte:"), 5, 0)
         self.lbl_points = QLabel("0")
-        grid_stat_values.addWidget(self.lbl_points, 5, 1)
+        _add_stat_row(5, "node", "Stützpunkte:", self.lbl_points)
 
         vbox_stats.addLayout(grid_stat_values)
 
@@ -190,45 +203,56 @@ class PlotDockWidget(QDockWidget):
         layout.addWidget(grp_stats)
 
         # 3. Pen Visibility Filters
-        self.grp_pens = QGroupBox("🎨 Stift-Filter", container)
+        self.grp_pens = QGroupBox("Stift-Filter", container)
         self.vbox_pens = QVBoxLayout(self.grp_pens)
         layout.addWidget(self.grp_pens)
 
         # 4. Device Connection & Live Plot Control
-        grp_device = QGroupBox("🖨️ Plotter-Verbindung & Ausgabe", container)
+        grp_device = QGroupBox("Plotter-Verbindung & Ausgabe", container)
         vbox_device = QVBoxLayout(grp_device)
         vbox_device.setSpacing(8)
 
-        grid_conn = QGridLayout()
-        grid_conn.setSpacing(4)
-        grid_conn.addWidget(QLabel("Port / Ziel:"), 0, 0)
+        # Active Device Info Display (no duplicate port / margin inputs!)
+        self.lbl_active_device_info = QLabel("Kein Gerät ausgewählt")
+        self.lbl_active_device_info.setStyleSheet("""
+            padding: 8px 10px;
+            background-color: #f8fafc;
+            color: #334155;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            font-size: 11px;
+        """)
+        vbox_device.addWidget(self.lbl_active_device_info)
 
+        # Hidden controls to maintain compatibility with headless tests & internal state
         self.combo_port = QComboBox()
         self.combo_port.setEditable(True)
-        self.combo_port.setToolTip("Serielle Schnittstelle (z.B. /dev/ttyUSB0, COM3) oder TCP (tcp://127.0.0.1:9999)")
-        grid_conn.addWidget(self.combo_port, 0, 1)
+        self.combo_port.setVisible(False)
+        vbox_device.addWidget(self.combo_port)
 
-        self.btn_refresh_ports = QPushButton("🔄")
-        self.btn_refresh_ports.setFixedWidth(32)
-        self.btn_refresh_ports.setToolTip("Schnittstellenliste neu einlesen")
+        self.btn_refresh_ports = QPushButton()
+        self.btn_refresh_ports.setIcon(get_icon("refresh", size=16))
+        self.btn_refresh_ports.setVisible(False)
         self.btn_refresh_ports.clicked.connect(self.refresh_ports)
-        grid_conn.addWidget(self.btn_refresh_ports, 0, 2)
+        vbox_device.addWidget(self.btn_refresh_ports)
 
-        grid_conn.addWidget(QLabel("Ränder (Clip):"), 1, 0)
         self.combo_margins = QComboBox()
         self.combo_margins.addItem("EXP (Erweitert: 25 / 5 / 5 / 5 mm)", "exp")
         self.combo_margins.addItem("NORM (Normal: 25 / 10 / 10 / 10 mm)", "norm")
         self.combo_margins.addItem("TYPE1 (38 / 10 / 10 / 10 mm)", "type1")
         self.combo_margins.addItem("TYPE3 (38 / 5 / 5 / 5 mm)", "type3")
-        grid_conn.addWidget(self.combo_margins, 1, 1, 1, 2)
+        self.combo_margins.setVisible(False)
+        vbox_device.addWidget(self.combo_margins)
 
-        grid_conn.addWidget(QLabel("Drehung:"), 2, 0)
+        grid_conn = QGridLayout()
+        grid_conn.setSpacing(4)
+        grid_conn.addWidget(QLabel("Drehung:"), 0, 0)
         self.combo_rotation = QComboBox()
         self.combo_rotation.addItem("0° (Standard)", 0)
         self.combo_rotation.addItem("90° (Quer/Vorschub)", 90)
         self.combo_rotation.addItem("180°", 180)
         self.combo_rotation.addItem("270°", 270)
-        grid_conn.addWidget(self.combo_rotation, 2, 1, 1, 2)
+        grid_conn.addWidget(self.combo_rotation, 0, 1, 1, 2)
 
         hbox_axes = QHBoxLayout()
         hbox_axes.setSpacing(6)
@@ -241,11 +265,12 @@ class PlotDockWidget(QDockWidget):
         hbox_axes.addWidget(self.chk_swap_xy)
         hbox_axes.addWidget(self.chk_invert_x)
         hbox_axes.addWidget(self.chk_invert_y)
-        grid_conn.addLayout(hbox_axes, 3, 0, 1, 3)
+        grid_conn.addLayout(hbox_axes, 1, 0, 1, 3)
 
         vbox_device.addLayout(grid_conn)
 
-        self.btn_probe = QPushButton("🔍 Plotter prüfen (Inquiry)")
+        self.btn_probe = QPushButton("Plotter prüfen (Inquiry)")
+        self.btn_probe.setIcon(get_icon("search", size=16))
         self.btn_probe.clicked.connect(self.start_probe)
         vbox_device.addWidget(self.btn_probe)
 
@@ -264,20 +289,23 @@ class PlotDockWidget(QDockWidget):
         hbox_ctrl = QHBoxLayout()
         hbox_ctrl.setSpacing(6)
 
-        self.btn_start_plot = QPushButton("🚀 Plot senden")
-        self.btn_start_plot.setStyleSheet("font-weight: bold; background-color: #2e7d32; color: white; padding: 6px;")
+        self.btn_start_plot = QPushButton("Plot senden")
+        self.btn_start_plot.setIcon(get_icon("play", size=16))
+        self.btn_start_plot.setStyleSheet("font-weight: bold; padding: 6px;")
         self.btn_start_plot.setEnabled(False)
         self.btn_start_plot.clicked.connect(self.start_plot)
         hbox_ctrl.addWidget(self.btn_start_plot)
 
-        self.btn_pause_plot = QPushButton("⏸ Pause")
+        self.btn_pause_plot = QPushButton("Pause")
+        self.btn_pause_plot.setIcon(get_icon("pause", size=16))
         self.btn_pause_plot.setEnabled(False)
         self.btn_pause_plot.clicked.connect(self.toggle_pause)
         hbox_ctrl.addWidget(self.btn_pause_plot)
 
-        self.btn_abort_plot = QPushButton("⏹ Abbrechen")
+        self.btn_abort_plot = QPushButton("Abbrechen")
+        self.btn_abort_plot.setIcon(get_icon("stop", size=16))
         self.btn_abort_plot.setEnabled(False)
-        self.btn_abort_plot.setStyleSheet("color: #c62828;")
+        self.btn_abort_plot.setStyleSheet("color: #b91c1c;")
         self.btn_abort_plot.clicked.connect(self.abort_plot)
         hbox_ctrl.addWidget(self.btn_abort_plot)
 
@@ -297,15 +325,17 @@ class PlotDockWidget(QDockWidget):
         layout.addWidget(grp_device)
 
         # 5. Export & Actions
-        grp_export = QGroupBox("💾 Datei-Export", container)
+        grp_export = QGroupBox("Datei-Export", container)
         vbox_export = QVBoxLayout(grp_export)
         vbox_export.setSpacing(6)
 
-        self.btn_export_hpgl = QPushButton("📄 Plotdatei (.hpgl) exportieren...")
+        self.btn_export_hpgl = QPushButton("Plotdatei (.hpgl) exportieren...")
+        self.btn_export_hpgl.setIcon(get_icon("save", size=16))
         self.btn_export_hpgl.clicked.connect(self.export_hpgl_requested.emit)
         vbox_export.addWidget(self.btn_export_hpgl)
 
-        self.btn_export_svg = QPushButton("🎨 Plot-Vektoren (.svg) exportieren...")
+        self.btn_export_svg = QPushButton("Plot-Vektoren (.svg) exportieren...")
+        self.btn_export_svg.setIcon(get_icon("save", size=16))
         self.btn_export_svg.clicked.connect(self.export_svg_requested.emit)
         vbox_export.addWidget(self.btn_export_svg)
 
@@ -332,11 +362,45 @@ class PlotDockWidget(QDockWidget):
         elif ports:
             self.combo_port.setCurrentIndex(0)
 
+    def set_device_manager(self, manager: DeviceManager):
+        self.device_manager = manager
+        dev = manager.get_active_device()
+        if dev:
+            self.apply_configured_device(dev)
+
+    def apply_configured_device(self, dev: ConfiguredDevice):
+        idx = self.combo_port.findText(dev.port)
+        if idx >= 0:
+            self.combo_port.setCurrentIndex(idx)
+        else:
+            self.combo_port.setEditText(dev.port)
+
+        m_idx = self.combo_margins.findData(dev.margin_profile)
+        if m_idx >= 0:
+            self.combo_margins.setCurrentIndex(m_idx)
+
+        r_idx = self.combo_rotation.findData(dev.rotation)
+        if r_idx >= 0:
+            self.combo_rotation.setCurrentIndex(r_idx)
+
+        self.chk_swap_xy.setChecked(dev.swap_xy)
+        self.chk_invert_x.setChecked(dev.invert_x)
+        self.chk_invert_y.setChecked(dev.invert_y)
+
+        self.lbl_active_device_info.setText(
+            f"Gerät: <b>{dev.name}</b><br>"
+            f"Schnittstelle: <code>{dev.port}</code>"
+        )
+
     def start_probe(self):
         """Inquire connected plotter (OI/OF/OH) in background thread."""
         port = self.combo_port.currentText().strip()
+        if not port and self.device_manager:
+            dev = self.device_manager.get_active_device()
+            if dev:
+                port = dev.port
         if not port:
-            self.lbl_probe_status.setText("⚠️ Kein Port ausgewählt")
+            self.lbl_probe_status.setText("Kein Port ausgewählt")
             return
 
         self.btn_probe.setEnabled(False)
@@ -351,7 +415,7 @@ class PlotDockWidget(QDockWidget):
         """)
 
         def _probe_worker():
-            res = probe_plotter(port, timeout=1.5)
+            res = probe_plotter(port, timeout=0.6)
             self._bridge.probe_done.emit(res)
 
         self._probe_thread = threading.Thread(target=_probe_worker, daemon=True, name="PlotterProbeThread")
@@ -391,7 +455,7 @@ class PlotDockWidget(QDockWidget):
     def _on_pipeline_param_changed(self, *args):
         """Called when any pipeline optimization parameter is modified by the user."""
         self._pipeline_dirty = True
-        self.btn_recompute.setText("⚠️ Pipeline neu berechnen (geändert)")
+        self.btn_recompute.setText("Pipeline neu berechnen (geändert)")
         self.btn_recompute.setStyleSheet("""
             QPushButton {
                 font-weight: bold;
@@ -546,7 +610,7 @@ class PlotDockWidget(QDockWidget):
     def set_job(self, job: Optional[PlotJob]):
         self.job = job
         self._pipeline_dirty = False
-        self.btn_recompute.setText("🔄 Pipeline neu berechnen")
+        self.btn_recompute.setText("Pipeline neu berechnen")
         self.btn_recompute.setStyleSheet("")
 
         if not (self._streamer and self._streamer.is_active()):

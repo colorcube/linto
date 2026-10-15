@@ -13,13 +13,6 @@ from plotter_studio.gui.commands import (
 import numpy as np
 
 
-@pytest.fixture(scope="session")
-def qapp():
-    os.environ["QT_QPA_PLATFORM"] = "offscreen"
-    app = QApplication.instance()
-    if app is None:
-        app = QApplication([])
-    return app
 
 
 def test_transform_undo_redo(qapp):

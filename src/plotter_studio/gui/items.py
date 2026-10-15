@@ -38,7 +38,7 @@ class GraphicsImportItem(QGraphicsItem):
         self.sync_from_transform()
 
     def boundingRect(self) -> QRectF:
-        if self.item.original_bounds is None:
+        if not self.item.visible or self.item.original_bounds is None:
             return QRectF()
         b = self.item.original_bounds
         scale_x = math.hypot(self.item.transform.a, self.item.transform.b)
@@ -52,7 +52,7 @@ class GraphicsImportItem(QGraphicsItem):
 
     def _handle_at(self, local_pos: QPointF) -> Optional[str]:
         """Returns handle identifier ('tl', 'tr', 'bl', 'br') if local_pos is near a corner."""
-        if not self.isSelected() or self.item.original_bounds is None:
+        if not self.isSelected() or self.item.locked or not self.item.visible or self.item.original_bounds is None:
             return None
         b = self.item.original_bounds
         scale = max(0.0001, (math.hypot(self.item.transform.a, self.item.transform.b) + math.hypot(self.item.transform.c, self.item.transform.d)) / 2.0)
@@ -202,6 +202,8 @@ class GraphicsImportItem(QGraphicsItem):
         super().mouseReleaseEvent(event)
 
     def paint(self, painter: QPainter, option, widget=None):
+        if not self.item.visible:
+            return
         painter.setRenderHint(QPainter.Antialiasing, True)
 
         pens_dict = {p.pen_id: p for p in self.doc.pens}
@@ -274,6 +276,8 @@ class GraphicsImportItem(QGraphicsItem):
     def sync_from_transform(self):
         """Update QGraphicsItem position and scale transform from model."""
         self.prepareGeometryChange()
+        self.setVisible(self.item.visible)
+        self.setFlag(QGraphicsItem.ItemIsMovable, not self.item.locked)
         self.setPos(self.item.transform.tx, self.item.transform.ty)
         self.setTransform(
             QTransform(

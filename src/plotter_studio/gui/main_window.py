@@ -5,11 +5,12 @@ import os
 import copy
 import math
 from typing import Optional
-from PySide6.QtCore import Qt, QPointF
+from PySide6.QtCore import Qt, QPointF, QTimer
 from PySide6.QtGui import QAction, QKeySequence, QIcon, QUndoStack, QActionGroup
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QGridLayout, QToolBar,
-    QStatusBar, QLabel, QFileDialog, QMessageBox, QTabWidget
+    QStatusBar, QLabel, QFileDialog, QMessageBox, QTabWidget,
+    QSizePolicy, QComboBox, QToolButton
 )
 from ..core.document import Document, ImportItem
 from ..core.geometry import AffineTransform
@@ -25,8 +26,12 @@ from .paper_dock import PaperDockWidget
 from .transform_dock import TransformDockWidget
 from .layout_dock import LayoutDockWidget
 from .plot_dock import PlotDockWidget
+from .object_dock import ObjectDockWidget
 from .simulation_bar import PlotSimulationBar
-from ..device import get_default_profile, HPGLEmitter
+from .icons import get_icon
+from ..device import get_default_profile, HPGLEmitter, DeviceManager, ConfiguredDevice
+from .device_dialog import DeviceSettingsDialog
+from .page_dialog import PageSetupDialog
 from .commands import (
     TransformItemCommand, AssignPenCommand,
     AddItemCommand, DeleteItemsCommand
@@ -35,12 +40,13 @@ from .commands import (
 
 class MainWindow(QMainWindow):
     """
-    Main Window integrating Canvas, Rulers, Pen Dock and Layout Dock.
+    Main Window integrating Canvas, Rulers, Object Dock, Transform Dock, Pen Dock and Plot Dock.
     """
     def __init__(self, doc: Optional[Document] = None, parent=None):
         super().__init__(parent)
         self.doc = doc or Document()
         self.undo_stack = QUndoStack(self)
+        self.device_manager = DeviceManager()
 
         self.setWindowTitle("Plotter Studio")
         self.resize(1280, 850)
@@ -99,30 +105,39 @@ class MainWindow(QMainWindow):
         )
         self.setTabPosition(Qt.DockWidgetArea.AllDockWidgetAreas, QTabWidget.TabPosition.North)
 
-        # Panel 1: Papier & Gerät
-        self.paper_dock = PaperDockWidget(self.doc, self)
-        self.paper_dock.set_undo_stack(self.undo_stack)
-        self.addDockWidget(Qt.RightDockWidgetArea, self.paper_dock)
+        # Panel 1: Objekte & Ebenen (Top Right)
+        self.object_dock = ObjectDockWidget(self.doc, self.canvas, self)
+        self.addDockWidget(Qt.RightDockWidgetArea, self.object_dock)
 
-        # Panel 2: Skalieren & Platzieren
+        # Panel 2: Skalieren & Platzieren (Bottom Right)
         self.transform_dock = TransformDockWidget(self.doc, self)
         self.transform_dock.set_undo_stack(self.undo_stack)
         self.addDockWidget(Qt.RightDockWidgetArea, self.transform_dock)
         self.layout_dock = self.transform_dock  # compatibility alias
 
-        # Panel 3: Stifte
+        # Split vertical: Object Dock on top, Transform Dock below
+        self.splitDockWidget(self.object_dock, self.transform_dock, Qt.Vertical)
+
+        # Panel 3: Stifte (Tabified with Transform Dock)
         self.pen_dock = PenDockWidget(self.doc, self)
         self.pen_dock.set_undo_stack(self.undo_stack)
         self.addDockWidget(Qt.RightDockWidgetArea, self.pen_dock)
+        self.tabifyDockWidget(self.transform_dock, self.pen_dock)
+
+        # Paper settings dock kept for compatibility if needed, but hidden by default
+        self.paper_dock = PaperDockWidget(self.doc, self)
+        self.paper_dock.set_undo_stack(self.undo_stack)
+        self.paper_dock.set_device_manager(self.device_manager)
+        self.addDockWidget(Qt.RightDockWidgetArea, self.paper_dock)
+        self.tabifyDockWidget(self.pen_dock, self.paper_dock)
+        self.paper_dock.hide()
+
+        self.transform_dock.raise_()
 
         # Panel 4: Plot-Vorschau & Ausgabe
         self.plot_dock = PlotDockWidget(self.doc, self)
+        self.plot_dock.set_device_manager(self.device_manager)
         self.addDockWidget(Qt.RightDockWidgetArea, self.plot_dock)
-
-        # Group layout docks as tabs: [Papier & Gerät] [Skalieren & Platzieren] [Stifte]
-        self.tabifyDockWidget(self.paper_dock, self.transform_dock)
-        self.tabifyDockWidget(self.transform_dock, self.pen_dock)
-        self.paper_dock.raise_()
 
         # In initial Layout mode, Plot dock is hidden
         self.plot_dock.hide()
@@ -134,21 +149,35 @@ class MainWindow(QMainWindow):
         menu_file = menu_bar.addMenu("&Datei")
 
         self.act_new = QAction("&Neu", self)
+        self.act_new.setIcon(get_icon("plus"))
         self.act_new.setShortcut(QKeySequence.New)
         self.act_new.triggered.connect(self.new_document)
         menu_file.addAction(self.act_new)
 
-        self.act_import_svg = QAction("&SVG Importieren...", self)
+        self.act_import_svg = QAction("&Importieren...", self)
+        self.act_import_svg.setIcon(get_icon("import"))
         self.act_import_svg.setShortcut(QKeySequence("Ctrl+I"))
+        self.act_import_svg.setToolTip("SVG- oder Plotdatei importieren (Strg+I)")
         self.act_import_svg.triggered.connect(self.import_svg_dialog)
         menu_file.addAction(self.act_import_svg)
 
         menu_file.addSeparator()
 
         self.act_save_as = QAction("Projekt &speichern unter...", self)
+        self.act_save_as.setIcon(get_icon("save"))
         self.act_save_as.setShortcut(QKeySequence.SaveAs)
+        self.act_save_as.setToolTip("Projekt als SVG speichern (Strg+Umschalt+S)")
         self.act_save_as.triggered.connect(self.save_project_dialog)
         menu_file.addAction(self.act_save_as)
+
+        menu_file.addSeparator()
+
+        self.act_page_setup = QAction("&Seiteneinrichtung...", self)
+        self.act_page_setup.setIcon(get_icon("page"))
+        self.act_page_setup.setShortcut(QKeySequence("Ctrl+Shift+P"))
+        self.act_page_setup.setToolTip("Seiteneinrichtung & Papierformat bearbeiten (Strg+Umschalt+P)")
+        self.act_page_setup.triggered.connect(self.open_page_setup_dialog)
+        menu_file.addAction(self.act_page_setup)
 
         menu_file.addSeparator()
 
@@ -161,29 +190,44 @@ class MainWindow(QMainWindow):
         menu_edit = menu_bar.addMenu("&Bearbeiten")
 
         self.act_undo = self.undo_stack.createUndoAction(self, "&Rückgängig")
+        self.act_undo.setIcon(get_icon("undo"))
         self.act_undo.setShortcut(QKeySequence.Undo)
         menu_edit.addAction(self.act_undo)
 
         self.act_redo = self.undo_stack.createRedoAction(self, "&Wiederholen")
+        self.act_redo.setIcon(get_icon("redo"))
         self.act_redo.setShortcut(QKeySequence.Redo)
         menu_edit.addAction(self.act_redo)
 
         menu_edit.addSeparator()
 
+        self.act_duplicate = QAction("&Duplizieren", self)
+        self.act_duplicate.setIcon(get_icon("duplicate"))
+        self.act_duplicate.setShortcut(QKeySequence("Ctrl+D"))
+        self.act_duplicate.setToolTip("Ausgewähltes Objekt duplizieren (Strg+D)")
+        self.act_duplicate.triggered.connect(self.duplicate_selected_items)
+        menu_edit.addAction(self.act_duplicate)
+
         self.act_delete = QAction("&Löschen", self)
+        self.act_delete.setIcon(get_icon("delete"))
         self.act_delete.setShortcut(QKeySequence.Delete)
+        self.act_delete.setToolTip("Ausgewählte Objekte löschen (Entf)")
         self.act_delete.triggered.connect(self.delete_selected_items)
         menu_edit.addAction(self.act_delete)
 
         menu_edit.addSeparator()
 
-        self.act_rotate_ccw = QAction("⟲ 90° gegen den Uhrzeigersinn drehen (-90°)", self)
+        self.act_rotate_ccw = QAction("90° gegen Uhrzeigersinn (-90°)", self)
+        self.act_rotate_ccw.setIcon(get_icon("rotate-ccw"))
         self.act_rotate_ccw.setShortcut(QKeySequence("Ctrl+Shift+R"))
+        self.act_rotate_ccw.setToolTip("Auswahl 90° gegen den Uhrzeigersinn drehen (Strg+Umschalt+R)")
         self.act_rotate_ccw.triggered.connect(lambda: self.rotate_selected_items(-90.0))
         menu_edit.addAction(self.act_rotate_ccw)
 
-        self.act_rotate_cw = QAction("⟳ 90° im Uhrzeigersinn drehen (+90°)", self)
+        self.act_rotate_cw = QAction("90° im Uhrzeigersinn (+90°)", self)
+        self.act_rotate_cw.setIcon(get_icon("rotate-cw"))
         self.act_rotate_cw.setShortcut(QKeySequence("Ctrl+R"))
+        self.act_rotate_cw.setToolTip("Auswahl 90° im Uhrzeigersinn drehen (Strg+R)")
         self.act_rotate_cw.triggered.connect(lambda: self.rotate_selected_items(90.0))
         menu_edit.addAction(self.act_rotate_cw)
 
@@ -203,7 +247,8 @@ class MainWindow(QMainWindow):
         self.mode_group = QActionGroup(self)
         self.mode_group.setExclusive(True)
 
-        self.act_mode_layout = QAction("📐 Layout-Modus", self)
+        self.act_mode_layout = QAction("Layout", self)
+        self.act_mode_layout.setIcon(get_icon("mode-layout"))
         self.act_mode_layout.setCheckable(True)
         self.act_mode_layout.setChecked(True)
         self.act_mode_layout.setShortcut(QKeySequence("Ctrl+L"))
@@ -211,7 +256,8 @@ class MainWindow(QMainWindow):
         self.mode_group.addAction(self.act_mode_layout)
         menu_view.addAction(self.act_mode_layout)
 
-        self.act_mode_plot = QAction("🖨️ Plot-Vorschau", self)
+        self.act_mode_plot = QAction("Ausgabe", self)
+        self.act_mode_plot.setIcon(get_icon("mode-plot"))
         self.act_mode_plot.setCheckable(True)
         self.act_mode_plot.setShortcut(QKeySequence("Ctrl+P"))
         self.act_mode_plot.triggered.connect(self.switch_to_plot_mode)
@@ -221,7 +267,9 @@ class MainWindow(QMainWindow):
         menu_view.addSeparator()
 
         self.act_zoom_fit = QAction("Ganzes Blatt anzeigen", self)
+        self.act_zoom_fit.setIcon(get_icon("zoom-fit"))
         self.act_zoom_fit.setShortcut(QKeySequence("Ctrl+0"))
+        self.act_zoom_fit.setToolTip("Ganzes Blatt im Fenster einpassen (Strg+0)")
         self.act_zoom_fit.triggered.connect(self.canvas.zoom_to_fit)
         menu_view.addAction(self.act_zoom_fit)
 
@@ -234,8 +282,9 @@ class MainWindow(QMainWindow):
         menu_view.addAction(self.act_show_nodes)
 
         menu_view.addSeparator()
-        menu_view.addAction(self.paper_dock.toggleViewAction())
+        menu_view.addAction(self.object_dock.toggleViewAction())
         menu_view.addAction(self.transform_dock.toggleViewAction())
+        menu_view.addAction(self.paper_dock.toggleViewAction())
         menu_view.addAction(self.pen_dock.toggleViewAction())
         menu_view.addAction(self.plot_dock.toggleViewAction())
 
@@ -248,11 +297,20 @@ class MainWindow(QMainWindow):
     def _setup_toolbar(self):
         toolbar = QToolBar("Haupt-Werkzeugleiste", self)
         toolbar.setMovable(False)
+        toolbar.setToolButtonStyle(Qt.ToolButtonIconOnly)
         self.addToolBar(Qt.TopToolBarArea, toolbar)
 
-        # Mode switches prominently in toolbar
+        # Mode switches with text beside icon
         toolbar.addAction(self.act_mode_layout)
         toolbar.addAction(self.act_mode_plot)
+
+        btn_layout = toolbar.widgetForAction(self.act_mode_layout)
+        if btn_layout:
+            btn_layout.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        btn_plot = toolbar.widgetForAction(self.act_mode_plot)
+        if btn_plot:
+            btn_plot.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+
         toolbar.addSeparator()
 
         toolbar.addAction(self.act_import_svg)
@@ -263,6 +321,10 @@ class MainWindow(QMainWindow):
         toolbar.addAction(self.act_redo)
         toolbar.addSeparator()
 
+        toolbar.addAction(self.act_duplicate)
+        toolbar.addAction(self.act_delete)
+        toolbar.addSeparator()
+
         toolbar.addAction(self.act_zoom_fit)
         toolbar.addSeparator()
 
@@ -271,13 +333,53 @@ class MainWindow(QMainWindow):
         toolbar.addSeparator()
 
         btn_center = toolbar.addAction("Mittig ausrichten")
+        btn_center.setIcon(get_icon("align-center"))
+        btn_center.setToolTip("Mittig auf Blatt/Plottbereich ausrichten")
         btn_center.triggered.connect(self.transform_dock.align_center_both)
 
         btn_fit = toolbar.addAction("Auf Blatt einpassen")
+        btn_fit.setIcon(get_icon("fit-page"))
+        btn_fit.setToolTip("Auf Blatt einpassen")
         btn_fit.triggered.connect(self.transform_dock.fit_to_page)
 
         btn_orig = toolbar.addAction("1:1 Originalgröße")
+        btn_orig.setIcon(get_icon("original-size"))
+        btn_orig.setToolTip("1:1 Originalgröße (aus Quelldatei)")
         btn_orig.triggered.connect(self.transform_dock.reset_to_original_size)
+
+        # Spacer to push paper setup & device settings to the right
+        spacer = QWidget(toolbar)
+        spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        toolbar.addWidget(spacer)
+
+        # Paper Setup Button in toolbar showing current format
+        self.btn_page_setup = QToolButton(toolbar)
+        self.btn_page_setup.setIcon(get_icon("page", size=18))
+        self.btn_page_setup.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        self.btn_page_setup.setToolTip("Papierformat & Seiteneinrichtung bearbeiten...")
+        self.btn_page_setup.clicked.connect(self.open_page_setup_dialog)
+        toolbar.addWidget(self.btn_page_setup)
+
+        toolbar.addSeparator()
+
+        lbl_device = QLabel(" Gerät: ", toolbar)
+        lbl_device.setStyleSheet("color: #4b5563;")
+        toolbar.addWidget(lbl_device)
+
+        self.combo_active_device = QComboBox(toolbar)
+        self.combo_active_device.setMinimumWidth(220)
+        self.combo_active_device.setToolTip("Aktives Plotter-Gerät für Abfragen und Plottausgabe")
+        self.combo_active_device.currentIndexChanged.connect(self._on_active_device_changed)
+        toolbar.addWidget(self.combo_active_device)
+
+        self.btn_device_settings = QToolButton(toolbar)
+        self.btn_device_settings.setIcon(get_icon("settings", size=18))
+        self.btn_device_settings.setToolTip("Geräte verwalten und konfigurieren...")
+        self.btn_device_settings.clicked.connect(self.open_device_settings_dialog)
+        toolbar.addWidget(self.btn_device_settings)
+
+        self._refresh_device_selector()
+        self._update_paper_display()
 
     def _setup_status_bar(self):
         self.status_bar = QStatusBar(self)
@@ -286,8 +388,11 @@ class MainWindow(QMainWindow):
         self.lbl_coord = QLabel("X: 0.0 mm | Y: 0.0 mm")
         self.lbl_zoom = QLabel("Zoom: 100 %")
         self.lbl_info = QLabel("Bereit")
+        self.lbl_paper_status = QLabel("DIN A3 (420 × 297 mm)")
+        self.lbl_paper_status.setStyleSheet("color: #4b5563; font-size: 11px; padding: 0 4px;")
 
         self.status_bar.addWidget(self.lbl_info, 1)
+        self.status_bar.addPermanentWidget(self.lbl_paper_status)
         self.status_bar.addPermanentWidget(self.lbl_coord)
         self.status_bar.addPermanentWidget(self.lbl_zoom)
 
@@ -324,6 +429,74 @@ class MainWindow(QMainWindow):
         self.plot_dock.stream_step_changed.connect(self.canvas.set_simulation_step)
         self.plot_dock.stream_step_changed.connect(self.simulation_bar.set_step)
 
+        # Object dock
+        self.object_dock.btn_import.clicked.connect(self.import_svg_dialog)
+        self.object_dock.document_modified.connect(self._on_document_modified)
+        self.canvas.selection_changed_signal.connect(self.object_dock.sync_from_canvas_selection)
+
+    def _refresh_device_selector(self):
+        self.combo_active_device.blockSignals(True)
+        self.combo_active_device.clear()
+        active_id = self.device_manager.active_device_id
+        active_idx = 0
+        devices = self.device_manager.list_devices()
+        for i, dev in enumerate(devices):
+            label = f"{dev.name} ({dev.port})"
+            self.combo_active_device.addItem(label, dev.id)
+            if dev.id == active_id:
+                active_idx = i
+        if self.combo_active_device.count() > 0:
+            self.combo_active_device.setCurrentIndex(active_idx)
+        self.combo_active_device.blockSignals(False)
+
+    def _on_active_device_changed(self):
+        dev_id = self.combo_active_device.currentData()
+        if not dev_id:
+            return
+        self.device_manager.set_active_device(dev_id)
+        dev = self.device_manager.get_active_device()
+        if dev:
+            self.paper_dock.apply_configured_device(dev)
+            self.plot_dock.apply_configured_device(dev)
+
+    def open_device_settings_dialog(self):
+        dlg = DeviceSettingsDialog(self.device_manager, parent=self)
+        if dlg.exec():
+            self._refresh_device_selector()
+            dev = self.device_manager.get_active_device()
+            if dev:
+                self.paper_dock.apply_configured_device(dev)
+                self.plot_dock.apply_configured_device(dev)
+
+    def open_page_setup_dialog(self):
+        dlg = PageSetupDialog(self.doc, self.device_manager, self.undo_stack, parent=self)
+        dlg.page_changed.connect(self._on_page_changed)
+        if dlg.exec():
+            self._on_page_changed()
+
+    def _update_paper_display(self):
+        p = self.doc.page
+        if p.preset != "Custom":
+            fmt_str = f"DIN {p.preset}" if p.preset.startswith("A") else p.preset
+            orient_str = "Quer" if p.orientation == "landscape" else "Hoch"
+            summary = f"{fmt_str} {orient_str} ({p.width_mm:.0f} × {p.height_mm:.0f} mm)"
+        else:
+            summary = f"Custom ({p.width_mm:.0f} × {p.height_mm:.0f} mm)"
+        if hasattr(self, "btn_page_setup"):
+            self.btn_page_setup.setText(summary)
+            self.btn_page_setup.setToolTip(f"Seiteneinrichtung: {summary} (Klicken zum Bearbeiten)")
+        if hasattr(self, "lbl_paper_status"):
+            self.lbl_paper_status.setText(f"Blatt: {summary}")
+
+    def _on_document_modified(self):
+        self.canvas.viewport().update()
+        self._on_selection_changed()
+        if self.canvas._mode == CanvasMode.PLOT:
+            self.recompile_plot_job()
+
+    def duplicate_selected_items(self):
+        self.object_dock.duplicate_selected()
+
     def _on_mouse_moved(self, x_mm: float, y_mm: float):
         self.ruler_h.set_cursor_pos(x_mm)
         self.ruler_v.set_cursor_pos(y_mm)
@@ -335,6 +508,7 @@ class MainWindow(QMainWindow):
         self.ruler_v.update()
 
     def _on_page_changed(self):
+        self._update_paper_display()
         self.transform_dock.refresh_item_fields()
         self.canvas.update_scene_rect()
         self.canvas.zoom_to_fit()
@@ -413,9 +587,11 @@ class MainWindow(QMainWindow):
         self.doc.items.clear()
         self.undo_stack.clear()
         self.canvas.rebuild_items()
+        self.object_dock.refresh()
         self.pen_dock.refresh_table()
         self.paper_dock.refresh_page_fields()
         self.transform_dock.set_active_item(None)
+        self._update_paper_display()
         self.lbl_info.setText("Neues Dokument erstellt")
 
     def import_svg_dialog(self):
@@ -469,6 +645,7 @@ class MainWindow(QMainWindow):
 
     def _on_item_structure_changed(self):
         self.canvas.rebuild_items()
+        self.object_dock.refresh()
         if self.doc.items and self.doc.items[-1].item_id in self.canvas._item_map:
             self.canvas._item_map[self.doc.items[-1].item_id].setSelected(True)
         self._on_selection_changed()
@@ -533,6 +710,7 @@ class MainWindow(QMainWindow):
         self.canvas.set_mode(CanvasMode.PLOT)
 
         # Hide layout docks
+        self.object_dock.hide()
         self.paper_dock.hide()
         self.transform_dock.hide()
         self.pen_dock.hide()
@@ -541,7 +719,7 @@ class MainWindow(QMainWindow):
         self.simulation_bar.show()
         self.plot_dock.show()
         self.plot_dock.raise_()
-        self.lbl_info.setText("Plot-Vorschau aktiv")
+        self.lbl_info.setText("Ausgabe aktiv")
 
     def switch_to_layout_mode(self):
         """Switch view and controls back into Layout mode."""
@@ -554,11 +732,13 @@ class MainWindow(QMainWindow):
         self.plot_dock.hide()
 
         # Restore layout docks
-        self.paper_dock.show()
+        self.object_dock.show()
         self.transform_dock.show()
         self.pen_dock.show()
-        self.paper_dock.raise_()
-        self.lbl_info.setText("Layout-Modus aktiv")
+        self.transform_dock.raise_()
+        self.object_dock.refresh()
+        self.transform_dock.refresh_item_fields()
+        self.lbl_info.setText("Layout aktiv")
 
     def recompile_plot_job(self):
         """Compile document paths through pipeline and update preview, scrubber and stats."""
