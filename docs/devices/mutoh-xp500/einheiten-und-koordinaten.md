@@ -72,4 +72,4 @@ $$x_{\text{Blatt}} \in [-h_x - m_{x-},\; h_x + m_{x+}], \qquad y_{\text{Blatt}} 
 
 $h_x, h_y$ = halbe Hard-Clip-Maße in mm. $m_{x\pm}$ kommen aus dem Profil (Fenster laut Handbuch + Kalibrierkorrektur). $m_{y\pm}$ werden symmetrisch angenommen: $(\text{Blatt}_y - 2h_y)/2$.
 
-Nebeneffekt: Format und Einlage lassen sich aus `OH` **automatisch erkennen**, indem man mit Formattabelle + Fensterrändern vergleicht und den nächsten Treffer innerhalb einer Toleranz wählt. Details: [konzept.md §4](../../konzept.md).
+Nebeneffekt: Format und Einlage lassen sich aus `OH` **automatisch erkennen**, indem man mit Formattabelle + Fensterrändern vergleicht und den nächsten Treffer innerhalb einer Toleranz wählt. Details: [konzept.md §4](../../project/konzept.md).

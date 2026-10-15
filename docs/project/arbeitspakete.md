@@ -11,7 +11,7 @@ Aufwand: S ≈ 1–3 Abende, M ≈ 1–2 Wochenenden, L ≈ mehrere Wochenenden.
 | **M1 – CLI-Plot** | AP1–AP4 | SVG → Blatt plotten ohne GUI, mit Blatterkennung, Optimierung, Fortschritt, Abbruch, Resume |
 | **M2 – GUI Phase 1** | AP5–AP6 | Importieren & Anordnen, Stifte, Pre-Flight-Vorschau, Gerätesteuerung |
 | **M3 – GUI Phase 2** | AP7 | Objekte innerhalb von Importen selektieren, verändern, löschen |
-| später | Ideenspeicher (konzept.md §10) | generative Kunst, Text, Schraffur … |
+| später | Ideenspeicher (konzept.md §9) | Text, Schraffur, weitere Treiber … |
 
 ```mermaid
 flowchart LR
@@ -29,7 +29,7 @@ flowchart LR
 ---
 
 ## AP0 – Hardware-Spike Mutoh XP-500 (S) ⚠️ zuerst
-Bereits bekannt (siehe [devices/mutoh-xp500/](devices/mutoh-xp500/README.md)): Schnittstelle, Handshake, `OI`=7585B, `OF`, `OH`-Werte, Ursprung, Achsen, Randsummen. Aus MutohPlot außerdem: Hard-Clip-Fenster, Puffer-Einstellung 1 MB/1000 Zeichen, Achsabbildung, Abbruch über LOCAL/RESET.
+Bereits bekannt (siehe [devices/mutoh-xp500/](../devices/mutoh-xp500/README.md)): Schnittstelle, Handshake, `OI`=7585B, `OF`, `OH`-Werte, Ursprung, Achsen, Randsummen. Aus MutohPlot außerdem: Hard-Clip-Fenster, Puffer-Einstellung 1 MB/1000 Zeichen, Achsabbildung, Abbruch über LOCAL/RESET.
 
 Noch offen. Zuerst Panel und Handbuch, dann mit Skript `tools/xp500_probe.py` (pyserial) prüfen:
 0. **Panel-Einstellungen notieren:** Hard-Clip-Fenster (Norm/Exp/Type 1/Type 3), Empfangspuffer (1 MB/1000 Zeichen), Befehlsmodus/Auflösung (warum `OF` = 40 statt 100 wie bei MutohPlot?), Vektorsortierung.

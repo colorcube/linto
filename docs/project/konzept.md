@@ -1,7 +1,7 @@
 # Plotter Studio – Konzept v2.2
 
 Stand: 2026-10-14 · Status: **Entwurf, Entscheidungen teils offen** (markiert mit ⟨Q-xx⟩, siehe [offene-fragen.md](offene-fragen.md)).
-Gerätedokumentation: [devices/mutoh-xp500/](devices/mutoh-xp500/README.md).
+Gerätedokumentation: [devices/mutoh-xp500/](../devices/mutoh-xp500/README.md).
 
 Änderungen zu v2.1:
 - **Multi-Geräte-Architektur geschärft:** Vollständig getrennter Kern (`core`, `pipeline`, `plotd`), ansteuerbar für beliebige Stiftplotter (HP-GL, MH-GL, HP-GL/2, Roland, G-Code/GRBL wie AxiDraw). Mutoh XP-500 ist Referenz- und Erstzielgerät.
@@ -31,7 +31,7 @@ Großformat-Stiftplotter (A4 bis A0 sowie beliebige Zwischengrößen dank versch
 |---|---|
 | **1 – Importieren & Anordnen** | SVG- (und HP-GL-)Dateien als **ganze Objekte** importieren, auf dem Blatt platzieren (verschieben, skalieren, drehen, zentrieren, einpassen, numerisch), Standard- und freie Formate, Stifte zuordnen, Vorschau mit Leerfahrten, optimieren, plotten |
 | **2 – Objekte bearbeiten** | Einzelne Pfade/Gruppen *innerhalb* von Importen selektieren, verändern (transformieren, anderen Stift zuweisen) und löschen |
-| **später / Ideen** | Zeichenwerkzeuge, Text (Hershey), Schraffur, generative Kunst, Rollenmedien, weitere Gerätetreiber (G-Code, Roland) (§10) |
+| **später / Ideen** | Zeichenwerkzeuge, Text (Hershey), Schraffur, Rollenmedien, weitere Gerätetreiber (G-Code, Roland) (§9) |
 
 Nicht-Ziele: Vollwertiges Vektor-Zeichenprogramm (kein Inkscape-Ersatz), Schneideplotter-Funktionen.
 
@@ -307,7 +307,7 @@ Jeder Schritt ist eine reine Funktion `Lines → Lines`, einzeln konfigurier- un
 | 4 | **Merge** | Endpunkte mit Abstand < `merge_tolerance` verbinden (auch umgekehrte Richtung). |
 | 5 | **Simplify** | Douglas-Peucker mit Toleranz ≤ halbe Stiftbreite, redundante Stützpunkte entfernen. |
 | 6 | **Dedupe** (opt.) | doppelt übereinanderliegende Linien entfernen. |
-| 7 | **Sort** | je Stift: Greedy (KD-Baum) + optional 2-Opt. **Offene Pfade umkehrbar, geschlossene Pfade mit frei wählbarem Startpunkt.**<br>⚠️ **Hardware-Voraussetzung (XP-500):** Am Bedienfeld muss `Sort: Off` eingestellt sein (siehe [konfiguration.md](devices/mutoh-xp500/konfiguration.md)), damit die Firmware die optimierte Reihenfolge nicht überschreibt! |
+| 7 | **Sort** | je Stift: Greedy (KD-Baum) + optional 2-Opt. **Offene Pfade umkehrbar, geschlossene Pfade mit frei wählbarem Startpunkt.**<br>⚠️ **Hardware-Voraussetzung (XP-500):** Am Bedienfeld muss `Sort: Off` eingestellt sein (siehe [konfiguration.md](../devices/mutoh-xp500/konfiguration.md)), damit die Firmware die optimierte Reihenfolge nicht überschreibt! |
 | 8 | **Pen-Order** | Reihenfolge der Stifte (manuell; Default hell → dunkel). |
 | 9 | **Emit** | Überführung in gerätespezifischen Befehlsstrom (`Emitter`-Interface). |
 
@@ -476,20 +476,11 @@ Zwei Betriebsmodi im Hauptfenster (Tabs):
 
 ---
 
-## 9. Generative Kunst → Vorbereitung
-
-Siehe [generative-kunst.md](generative-kunst.md).
-Für die Architektur bedeutet dies:
-- **Dateibasiertes Nachladen (Auto-Reload):** Das Dokumentmodell speichert Quelle und Hash jedes Imports. Wenn externe Skripte (Processing, Python, vsketch, JavaScript) SVGs neu generieren, aktualisiert Plotter Studio die Geometrie unter Beibehaltung aller Layout- und Stiftzuordnungen.
-- **Hohe Vektordichten:** Die Pipeline und der Emitter sind für Plots mit > $10^5$ Stützpunkten ausgelegt (kompakte Kodierung, LOD in der GUI, speichereffiziente Polylinien).
-
----
-
-## 10. Ideenspeicher (Zukunft)
+## 9. Ideenspeicher (Zukunft)
 
 | Idee | Beschreibung / Nutzen |
 |---|---|
-| **Weitere Gerätetreiber** | Emitter & Profile für G-Code (AxiDraw, GRBL-Plotter) und Roland DXY/DPX |
+| **Weitere Gerätetreiber** | Emitter & Profile für G-Code (AxiDraw, GRBL-Plotter), Roland CAMM-GL / DXY / DPX und Houston DMPL |
 | **Hershey-Text** | Parametrische Single-Line-Schriften für Beschriftungen, Metadaten und Signaturen |
 | **Schraffur (Hatching)** | Automatisches Füllen von SVG-Flächen mit Stift-Linienmustern |
 | **DXF-Import** | Technischer CAD-Import (`ezdxf`) |

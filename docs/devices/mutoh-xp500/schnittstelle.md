@@ -91,7 +91,7 @@ cat datei.hpgl > /dev/ttyUSB0
 
 Beispiel: Eine Kurve aus 0,5-mm-Segmenten mit absoluten Ketten ergibt ≈ 150 × 0,5 = **75 mm/s**, weit unter den 900 mm/s der Mechanik. **Bei dichter generativer Grafik ist die serielle Leitung der Engpass.** Der 1-MB-Puffer überbrückt das nur, wenn die Mechanik langsamer zeichnet als die Daten nachkommen.
 
-Konsequenzen für den Emitter (→ [konzept.md](../../konzept.md) §5/§7):
+Konsequenzen für den Emitter (→ [konzept.md](../../project/konzept.md) §5/§7):
 1. Koordinatenketten statt einzelner `PA`-Befehle (Standard).
 2. Option **relative Koordinaten** (`PR`) mit periodischem absolutem Wiederaufsetzen (gegen Rundungsdrift: Deltas aus gerundeten Absolutwerten bilden, dann driftet nichts).
 3. Linienvereinfachung mit Toleranz < halbe Strichbreite (Douglas-Peucker-Algorithmus).
