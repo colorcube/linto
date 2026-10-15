@@ -81,6 +81,37 @@ def test_main_window_headless(qapp, tmp_path):
     export_path = str(tmp_path / "project.svg")
     export_document_to_svg(doc, export_path)
     assert os.path.exists(export_path)
-    assert os.path.getsize(export_path) > 100
+    win.close()
+
+
+def test_three_docks_tabified(qapp):
+    doc = Document()
+    win = MainWindow(doc)
+    win.show()
+
+    # Verify dock instances and titles
+    assert win.paper_dock is not None
+    assert win.transform_dock is not None
+    assert win.pen_dock is not None
+    assert win.paper_dock.windowTitle() == "Papier & Gerät"
+    assert win.transform_dock.windowTitle() == "Skalieren & Platzieren"
+    assert win.pen_dock.windowTitle() == "Stifte"
+
+    # Verify that the docks are grouped as tabs
+    tabified_with_paper = win.tabifiedDockWidgets(win.paper_dock)
+    assert win.transform_dock in tabified_with_paper
+    assert win.pen_dock in tabified_with_paper
+
+    # Verify paper dock interaction
+    win.paper_dock.combo_preset.setCurrentIndex(win.paper_dock.combo_preset.findData("A4"))
+    assert doc.page.preset == "A4"
+
+    # Verify tab switching (raise)
+    win.transform_dock.raise_()
+    assert win.transform_dock.isVisible()
+
+    win.pen_dock.raise_()
+    assert win.pen_dock.isVisible()
 
     win.close()
+

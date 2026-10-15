@@ -71,7 +71,8 @@ class PenDockWidget(QDockWidget):
     assign_selection_to_pen = Signal(int)
 
     def __init__(self, doc: Document, parent=None):
-        super().__init__("Stifte & Werkzeuge", parent)
+        super().__init__("Stifte", parent)
+        self.setObjectName("PenDockWidget")
         self.doc = doc
         self.undo_stack: Optional[QUndoStack] = None
         self.user_presets: List[PenPreset] = []

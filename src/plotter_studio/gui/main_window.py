@@ -8,7 +8,7 @@ from PySide6.QtCore import Qt, QPointF
 from PySide6.QtGui import QAction, QKeySequence, QIcon, QUndoStack
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QGridLayout, QToolBar,
-    QStatusBar, QLabel, QFileDialog, QMessageBox
+    QStatusBar, QLabel, QFileDialog, QMessageBox, QTabWidget
 )
 from ..core.document import Document, ImportItem
 from ..core.geometry import AffineTransform
@@ -17,6 +17,8 @@ from ..core.svg_export import export_document_to_svg
 from .canvas import PlotterCanvas
 from .rulers import RulerWidget, RULER_BREADTH
 from .pen_dock import PenDockWidget
+from .paper_dock import PaperDockWidget
+from .transform_dock import TransformDockWidget
 from .layout_dock import LayoutDockWidget
 from .commands import (
     TransformItemCommand, AssignPenCommand,
@@ -76,13 +78,36 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(container)
 
     def _setup_docks(self):
+        # Enable docking options for intuitive tabbed dragging and animation
+        self.setDockOptions(
+            QMainWindow.DockOption.AnimatedDocks
+            | QMainWindow.DockOption.AllowTabbedDocks
+            | QMainWindow.DockOption.GroupedDragging
+        )
+        self.setTabPosition(Qt.DockWidgetArea.AllDockWidgetAreas, QTabWidget.TabPosition.North)
+
+        # Panel 1: Papier & Gerät
+        self.paper_dock = PaperDockWidget(self.doc, self)
+        self.paper_dock.set_undo_stack(self.undo_stack)
+        self.addDockWidget(Qt.RightDockWidgetArea, self.paper_dock)
+
+        # Panel 2: Skalieren & Platzieren
+        self.transform_dock = TransformDockWidget(self.doc, self)
+        self.transform_dock.set_undo_stack(self.undo_stack)
+        self.addDockWidget(Qt.RightDockWidgetArea, self.transform_dock)
+        self.layout_dock = self.transform_dock  # compatibility alias
+
+        # Panel 3: Stifte
         self.pen_dock = PenDockWidget(self.doc, self)
         self.pen_dock.set_undo_stack(self.undo_stack)
         self.addDockWidget(Qt.RightDockWidgetArea, self.pen_dock)
 
-        self.layout_dock = LayoutDockWidget(self.doc, self)
-        self.layout_dock.set_undo_stack(self.undo_stack)
-        self.addDockWidget(Qt.RightDockWidgetArea, self.layout_dock)
+        # Group as tabs: [Papier & Gerät] [Skalieren & Platzieren] [Stifte]
+        self.tabifyDockWidget(self.paper_dock, self.transform_dock)
+        self.tabifyDockWidget(self.transform_dock, self.pen_dock)
+
+        # Display Papier & Gerät as initial tab
+        self.paper_dock.raise_()
 
     def _setup_actions_and_menus(self):
         menu_bar = self.menuBar()
@@ -151,8 +176,9 @@ class MainWindow(QMainWindow):
 
         # Docks toggle
         menu_view.addSeparator()
+        menu_view.addAction(self.paper_dock.toggleViewAction())
+        menu_view.addAction(self.transform_dock.toggleViewAction())
         menu_view.addAction(self.pen_dock.toggleViewAction())
-        menu_view.addAction(self.layout_dock.toggleViewAction())
 
         # --- Help Menu ---
         menu_help = menu_bar.addMenu("&Hilfe")
@@ -177,13 +203,13 @@ class MainWindow(QMainWindow):
         toolbar.addSeparator()
 
         btn_center = toolbar.addAction("Mittig ausrichten")
-        btn_center.triggered.connect(self.layout_dock.align_center_both)
+        btn_center.triggered.connect(self.transform_dock.align_center_both)
 
         btn_fit = toolbar.addAction("Auf Blatt einpassen")
-        btn_fit.triggered.connect(self.layout_dock.fit_to_page)
+        btn_fit.triggered.connect(self.transform_dock.fit_to_page)
 
         btn_orig = toolbar.addAction("1:1 Originalgröße")
-        btn_orig.triggered.connect(self.layout_dock.reset_to_original_size)
+        btn_orig.triggered.connect(self.transform_dock.reset_to_original_size)
 
     def _setup_status_bar(self):
         self.status_bar = QStatusBar(self)
@@ -209,9 +235,11 @@ class MainWindow(QMainWindow):
         self.pen_dock.pen_changed.connect(self._on_pens_changed)
         self.pen_dock.assign_selection_to_pen.connect(self.assign_selection_to_pen)
 
-        # Layout dock
-        self.layout_dock.page_changed.connect(self._on_page_changed)
-        self.layout_dock.item_transformed.connect(self._on_item_transformed)
+        # Paper dock
+        self.paper_dock.page_changed.connect(self._on_page_changed)
+
+        # Transform dock
+        self.transform_dock.item_transformed.connect(self._on_item_transformed)
 
     def _on_mouse_moved(self, x_mm: float, y_mm: float):
         self.ruler_h.set_cursor_pos(x_mm)
@@ -224,6 +252,7 @@ class MainWindow(QMainWindow):
         self.ruler_v.update()
 
     def _on_page_changed(self):
+        self.transform_dock.refresh_item_fields()
         self.canvas.update_scene_rect()
         self.canvas.zoom_to_fit()
 
@@ -247,7 +276,7 @@ class MainWindow(QMainWindow):
         selected = self.canvas.get_selected_import_items()
         if selected:
             item = selected[0]
-            self.layout_dock.set_active_item(item)
+            self.transform_dock.set_active_item(item)
             b = item.current_bounds
             if b:
                 pb = self.doc.page.plottable_box
@@ -258,7 +287,7 @@ class MainWindow(QMainWindow):
                     f"Ausgewählt: {item.name} ({b.width:.1f} x {b.height:.1f} mm, Skalierung: {scale_pct:.0f}%){warn_text}"
                 )
         else:
-            self.layout_dock.set_active_item(None)
+            self.transform_dock.set_active_item(None)
             self.lbl_info.setText(f"{len(self.doc.items)} Objekt(e) auf dem Blatt")
 
     def new_document(self):
@@ -266,7 +295,8 @@ class MainWindow(QMainWindow):
         self.undo_stack.clear()
         self.canvas.rebuild_items()
         self.pen_dock.refresh_table()
-        self.layout_dock.set_active_item(None)
+        self.paper_dock.refresh_page_fields()
+        self.transform_dock.set_active_item(None)
         self.lbl_info.setText("Neues Dokument erstellt")
 
     def import_svg_dialog(self):
