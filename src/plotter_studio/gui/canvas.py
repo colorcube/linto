@@ -59,6 +59,8 @@ class PlotterCanvas(QGraphicsView):
         self._item_map: Dict[str, GraphicsImportItem] = {}
         self._mode: str = CanvasMode.LAYOUT
         self._plot_preview_item: Optional[GraphicsPlotPreviewItem] = None
+        self._show_nodes: bool = False
+        self._show_travels: bool = True
 
         self.update_scene_rect()
         self.rebuild_items()
@@ -104,7 +106,11 @@ class PlotterCanvas(QGraphicsView):
             for g_item in self._item_map.values():
                 g_item.setVisible(False)
             if self._plot_preview_item is None:
-                self._plot_preview_item = GraphicsPlotPreviewItem(page_rect=self._get_paper_rect())
+                self._plot_preview_item = GraphicsPlotPreviewItem(
+                    page_rect=self._get_paper_rect(),
+                    show_nodes=self._show_nodes,
+                    show_travels=self._show_travels,
+                )
                 self._scene.addItem(self._plot_preview_item)
             self._plot_preview_item.setVisible(True)
             self._scene.clearSelection()
@@ -119,7 +125,12 @@ class PlotterCanvas(QGraphicsView):
     def set_plot_job(self, job: Optional[PlotJob]):
         """Supply compiled PlotJob to preview item."""
         if self._plot_preview_item is None:
-            self._plot_preview_item = GraphicsPlotPreviewItem(job, page_rect=self._get_paper_rect())
+            self._plot_preview_item = GraphicsPlotPreviewItem(
+                job,
+                page_rect=self._get_paper_rect(),
+                show_nodes=self._show_nodes,
+                show_travels=self._show_travels,
+            )
             self._scene.addItem(self._plot_preview_item)
             if self._mode != CanvasMode.PLOT:
                 self._plot_preview_item.setVisible(False)
@@ -135,12 +146,14 @@ class PlotterCanvas(QGraphicsView):
 
     def set_show_travels(self, show: bool):
         """Toggle display of dashed pen-up travel lines."""
+        self._show_travels = show
         if self._plot_preview_item is not None:
             self._plot_preview_item.set_show_travels(show)
             self.viewport().update()
 
     def set_show_nodes(self, show: bool):
         """Toggle display of coordinate vertices (nodes)."""
+        self._show_nodes = show
         if self._plot_preview_item is not None:
             self._plot_preview_item.set_show_nodes(show)
             self.viewport().update()

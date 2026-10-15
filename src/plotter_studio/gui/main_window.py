@@ -118,13 +118,13 @@ class MainWindow(QMainWindow):
         self.plot_dock = PlotDockWidget(self.doc, self)
         self.addDockWidget(Qt.RightDockWidgetArea, self.plot_dock)
 
-        # Group as tabs: [Papier & Gerät] [Skalieren & Platzieren] [Stifte] [Plot-Vorschau & Ausgabe]
+        # Group layout docks as tabs: [Papier & Gerät] [Skalieren & Platzieren] [Stifte]
         self.tabifyDockWidget(self.paper_dock, self.transform_dock)
         self.tabifyDockWidget(self.transform_dock, self.pen_dock)
-        self.tabifyDockWidget(self.pen_dock, self.plot_dock)
-
-        # Display Papier & Gerät as initial tab
         self.paper_dock.raise_()
+
+        # In initial Layout mode, Plot dock is hidden
+        self.plot_dock.hide()
 
     def _setup_actions_and_menus(self):
         menu_bar = self.menuBar()
@@ -488,6 +488,13 @@ class MainWindow(QMainWindow):
         self.act_mode_plot.setChecked(True)
         self.recompile_plot_job()
         self.canvas.set_mode(CanvasMode.PLOT)
+
+        # Hide layout docks
+        self.paper_dock.hide()
+        self.transform_dock.hide()
+        self.pen_dock.hide()
+
+        # Show plot dock and controls
         self.simulation_bar.show()
         self.plot_dock.show()
         self.plot_dock.raise_()
@@ -499,7 +506,14 @@ class MainWindow(QMainWindow):
         self.simulation_bar.pause()
         self.simulation_bar.hide()
         self.canvas.set_mode(CanvasMode.LAYOUT)
+
+        # Hide plot dock
+        self.plot_dock.hide()
+
+        # Restore layout docks
         self.paper_dock.show()
+        self.transform_dock.show()
+        self.pen_dock.show()
         self.paper_dock.raise_()
         self.lbl_info.setText("Layout-Modus aktiv")
 
@@ -513,7 +527,11 @@ class MainWindow(QMainWindow):
 
     def export_hpgl_dialog(self):
         """Export compiled plot job to an HP-GL / PLT file."""
-        if not hasattr(self, "_current_job") or not self._current_job:
+        if (
+            not hasattr(self, "_current_job")
+            or not self._current_job
+            or (hasattr(self, "plot_dock") and self.plot_dock.is_pipeline_dirty())
+        ):
             self.recompile_plot_job()
         if not self._current_job or not self._current_job.layers:
             QMessageBox.information(self, "Export nicht möglich", "Keine Pfade zum Exportieren vorhanden.")
@@ -545,7 +563,11 @@ class MainWindow(QMainWindow):
 
     def export_plot_svg_dialog(self):
         """Export compiled polylines into a clean SVG file grouped by pen."""
-        if not hasattr(self, "_current_job") or not self._current_job:
+        if (
+            not hasattr(self, "_current_job")
+            or not self._current_job
+            or (hasattr(self, "plot_dock") and self.plot_dock.is_pipeline_dirty())
+        ):
             self.recompile_plot_job()
         if not self._current_job or not self._current_job.layers:
             QMessageBox.information(self, "Export nicht möglich", "Keine Pfade zum Exportieren vorhanden.")

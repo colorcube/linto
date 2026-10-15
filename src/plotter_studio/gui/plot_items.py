@@ -18,15 +18,22 @@ class GraphicsPlotPreviewItem(QGraphicsItem):
     - Ghosted future lines during simulation scrubbing
     - Live toolhead indicator
     """
-    def __init__(self, job: Optional[PlotJob] = None, page_rect: Optional[QRectF] = None, parent=None):
+    def __init__(
+        self,
+        job: Optional[PlotJob] = None,
+        page_rect: Optional[QRectF] = None,
+        show_nodes: bool = False,
+        show_travels: bool = True,
+        parent=None,
+    ):
         super().__init__(parent)
         self.job = job
         self.page_rect = page_rect or QRectF(0, 0, 420, 297)
         self.current_step = 0 if job else 0
         if job:
             self.current_step = len(job.steps)
-        self.show_travels = True
-        self.show_nodes = False
+        self.show_travels = show_travels
+        self.show_nodes = show_nodes
         self.visible_pens: Optional[Set[int]] = None  # None means all visible
 
         # Prevent selection/movement
@@ -101,10 +108,13 @@ class GraphicsPlotPreviewItem(QGraphicsItem):
                 painter.drawLine(p0, p1)
 
                 if self.show_nodes:
-                    node_r = max(0.45, width * 1.1)
+                    view_scale = abs(painter.transform().m11())
+                    if view_scale < 1e-4:
+                        view_scale = 1.0
+                    dot_r = max(0.4, 2.2 / view_scale)
                     painter.setPen(Qt.NoPen)
                     painter.setBrush(QBrush(pen_color))
-                    painter.drawEllipse(p1, node_r, node_r)
+                    painter.drawEllipse(p1, dot_r, dot_r)
 
         # 2. Travel lines up to current_step
         if self.show_travels:
@@ -148,22 +158,25 @@ class GraphicsPlotPreviewItem(QGraphicsItem):
                 last_tool_pos = p1
 
                 if self.show_nodes:
-                    node_r = max(0.5, width_mm * 1.2)
                     if s_idx == 0 or self.job.steps[s_idx - 1].action == "TRAVEL":
-                        nodes_to_draw.append((p0, draw_color, node_r))
-                    nodes_to_draw.append((p1, draw_color, node_r))
+                        nodes_to_draw.append((p0, draw_color))
+                    nodes_to_draw.append((p1, draw_color))
 
             elif step.action == "TRAVEL":
                 if len(step.points) > 1:
                     last_tool_pos = QPointF(float(step.points[1, 0]), float(step.points[1, 1]))
 
-        # 4. Draw coordinate nodes (thicker than lines)
+        # 4. Draw coordinate nodes (clean, solid points)
         if self.show_nodes and nodes_to_draw:
-            node_border_pen = QPen(QColor(0, 0, 0, 180), 0.12)
-            painter.setPen(node_border_pen)
-            for pt, color, r in nodes_to_draw:
+            view_scale = abs(painter.transform().m11())
+            if view_scale < 1e-4:
+                view_scale = 1.0
+            dot_r = max(0.4, 2.6 / view_scale)
+
+            painter.setPen(Qt.NoPen)
+            for pt, color in nodes_to_draw:
                 painter.setBrush(QBrush(color))
-                painter.drawEllipse(pt, r, r)
+                painter.drawEllipse(pt, dot_r, dot_r)
 
         # 5. Toolhead indicator at current position
         if last_tool_pos is not None:

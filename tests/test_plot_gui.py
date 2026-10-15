@@ -37,15 +37,20 @@ def test_plot_mode_switching_and_simulation(qapp, tmp_path):
     win.import_svg_file(test_svg_path)
     assert len(doc.items) == 1
 
-    # Initially in Layout mode
+    # Initially in Layout mode: layout docks visible, plot dock hidden
     assert win.canvas._mode == CanvasMode.LAYOUT
     assert win.simulation_bar.isHidden()
+    assert win.plot_dock.isHidden()
+    assert win.paper_dock.isVisible()
 
-    # 1. Switch to Plot mode
+    # 1. Switch to Plot mode: layout docks hidden, plot dock visible
     win.switch_to_plot_mode()
     assert win.canvas._mode == CanvasMode.PLOT
     assert not win.simulation_bar.isHidden()
     assert win.plot_dock.isVisible()
+    assert win.paper_dock.isHidden()
+    assert win.transform_dock.isHidden()
+    assert win.pen_dock.isHidden()
 
     # Check that layout items are hidden and preview item is active
     item = doc.items[0]
@@ -119,6 +124,8 @@ def test_plot_mode_switching_and_simulation(qapp, tmp_path):
     win.switch_to_layout_mode()
     assert win.canvas._mode == CanvasMode.LAYOUT
     assert win.simulation_bar.isHidden()
+    assert win.plot_dock.isHidden()
+    assert win.paper_dock.isVisible()
     assert g_item.isVisible()
     assert not preview_item.isVisible()
 
@@ -262,4 +269,60 @@ def test_plot_dock_device_controls(qapp, tmp_path):
         server.stop()
         win.close()
         win.cleanup()
+
+
+def test_plot_dock_pipeline_dirty_and_nodes(qapp, tmp_path):
+    doc = Document()
+    win = MainWindow(doc)
+    win.show()
+
+    # 1. Test setting show_nodes before plot mode
+    win.plot_dock.chk_show_nodes.setChecked(True)
+    assert win.canvas._show_nodes is True
+
+    svg_content = """<svg width="40mm" height="40mm" viewBox="0 0 40 40">
+      <polyline points="5,5 20,35 35,5" stroke="#000" />
+    </svg>"""
+    test_svg = str(tmp_path / "nodes_dirty.svg")
+    with open(test_svg, "w", encoding="utf-8") as f:
+        f.write(svg_content)
+    win.import_svg_file(test_svg)
+    win.switch_to_plot_mode()
+
+    # Node visibility should have carried over to plot preview item
+    preview = win.canvas._plot_preview_item
+    assert preview is not None
+    assert preview.show_nodes is True
+    assert not win.plot_dock.is_pipeline_dirty()
+
+    # 2. Modify a pipeline setting -> should mark pipeline dirty
+    dock = win.plot_dock
+    dock.spin_simplify.setValue(0.15)
+    assert dock.is_pipeline_dirty() is True
+    assert "geändert" in dock.btn_recompute.text()
+
+    # Recompute clears dirty flag
+    dock.btn_recompute.click()
+    assert dock.is_pipeline_dirty() is False
+    assert "geändert" not in dock.btn_recompute.text()
+
+    # Modify another setting (clip) -> dirty again
+    dock.chk_clip.setChecked(True)
+    assert dock.is_pipeline_dirty() is True
+
+    # 3. Auto-recompute on export
+    hpgl_out = str(tmp_path / "dirty_export.hpgl")
+    from PySide6.QtWidgets import QFileDialog
+    orig_save = QFileDialog.getSaveFileName
+    QFileDialog.getSaveFileName = lambda *args, **kwargs: (hpgl_out, "HP-GL (*.hpgl)")
+    try:
+        win.export_hpgl_dialog()
+        # Export should have auto-recompiled and cleared dirty flag
+        assert dock.is_pipeline_dirty() is False
+    finally:
+        QFileDialog.getSaveFileName = orig_save
+
+    win.close()
+    win.cleanup()
+
 

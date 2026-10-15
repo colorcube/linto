@@ -52,6 +52,7 @@ class PlotDockWidget(QDockWidget):
         self.doc = doc
         self.job: Optional[PlotJob] = None
         self._pen_checkboxes: dict[int, QCheckBox] = {}
+        self._pipeline_dirty = False
 
         self._bridge = StreamerSignalBridge()
         self._bridge.progress.connect(self._on_stream_progress)
@@ -126,6 +127,13 @@ class PlotDockWidget(QDockWidget):
         self.btn_recompute = QPushButton("🔄 Pipeline neu berechnen")
         self.btn_recompute.clicked.connect(self.config_changed.emit)
         grid_pipe.addWidget(self.btn_recompute, 7, 0, 1, 2)
+
+        # Connect parameter modifications to dirty tracking
+        self.spin_flatten.valueChanged.connect(self._on_pipeline_param_changed)
+        self.spin_merge.valueChanged.connect(self._on_pipeline_param_changed)
+        self.spin_simplify.valueChanged.connect(self._on_pipeline_param_changed)
+        self.chk_sort.toggled.connect(self._on_pipeline_param_changed)
+        self.chk_clip.toggled.connect(self._on_pipeline_param_changed)
 
         layout.addWidget(grp_pipeline)
 
@@ -380,6 +388,37 @@ class PlotDockWidget(QDockWidget):
                 font-size: 11px;
             """)
 
+    def _on_pipeline_param_changed(self, *args):
+        """Called when any pipeline optimization parameter is modified by the user."""
+        self._pipeline_dirty = True
+        self.btn_recompute.setText("⚠️ Pipeline neu berechnen (geändert)")
+        self.btn_recompute.setStyleSheet("""
+            QPushButton {
+                font-weight: bold;
+                background-color: #fff3e0;
+                color: #e65100;
+                border: 1px solid #ffb74d;
+                padding: 5px;
+                border-radius: 4px;
+            }
+            QPushButton:hover {
+                background-color: #ffe0b2;
+            }
+        """)
+        self.lbl_warnings.setText("⚠️ Einstellungen geändert – Vorschau noch nicht aktualisiert!")
+        self.lbl_warnings.setStyleSheet("""
+            padding: 6px;
+            background-color: #fff3e0;
+            color: #e65100;
+            border: 1px solid #ffb74d;
+            border-radius: 4px;
+            font-size: 11px;
+        """)
+
+    def is_pipeline_dirty(self) -> bool:
+        """Return True if pipeline parameters have been modified without recomputing."""
+        return self._pipeline_dirty
+
     def get_emitter_options(self) -> dict[str, Any]:
         """Return user-configured axis transformation parameters."""
         return {
@@ -391,6 +430,9 @@ class PlotDockWidget(QDockWidget):
 
     def start_plot(self):
         """Start streaming HP-GL commands to the selected plotter port."""
+        if self._pipeline_dirty:
+            self.config_changed.emit()
+
         if not self.job or not self.job.steps:
             QMessageBox.warning(self, "Plot-Ausgabe", "Es sind keine Vektoren für die Ausgabe vorhanden.")
             return
@@ -503,6 +545,10 @@ class PlotDockWidget(QDockWidget):
 
     def set_job(self, job: Optional[PlotJob]):
         self.job = job
+        self._pipeline_dirty = False
+        self.btn_recompute.setText("🔄 Pipeline neu berechnen")
+        self.btn_recompute.setStyleSheet("")
+
         if not (self._streamer and self._streamer.is_active()):
             self.btn_start_plot.setEnabled(bool(job and job.steps))
 
