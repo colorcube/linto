@@ -33,14 +33,16 @@ PAPER_SIZES: dict[str, tuple[float, float]] = {
     "A0": (1189.0, 841.0),
 }
 
+def _build_margin_profiles() -> dict[str, tuple[float, float, float, float]]:
+    from ..device.profile import get_default_profile
+    prof = get_default_profile()
+    keys = list(prof.margins_mm.keys()) if prof.margins_mm else ["exp", "norm", "type1", "type3"]
+    return {k.upper(): prof.get_margins(k) for k in keys}
+
+
 # Margins according to Mutoh manual Fig. 7.3: (top, bottom, left, right) in mm
-# Note: "top" is leading edge in feed (X) direction
-MARGIN_PROFILES = {
-    "EXP": (25.0, 5.0, 5.0, 5.0),
-    "NORM": (35.0, 15.0, 15.0, 15.0),
-    "TYPE1": (25.0, 5.0, 11.0, 11.0),
-    "TYPE3": (25.0, 10.0, 10.0, 10.0),
-}
+# Loaded from resources/devices/mutoh_xp500.yaml (Single Source of Truth)
+MARGIN_PROFILES = _build_margin_profiles()
 
 
 @dataclass

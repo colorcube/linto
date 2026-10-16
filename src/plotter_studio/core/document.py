@@ -28,13 +28,26 @@ PAPER_PRESETS: Dict[str, Tuple[float, float]] = {
     "Letter": (215.9, 279.4),
 }
 
+def _get_default_exp_margins() -> Dict[str, float]:
+    from ..device.profile import get_default_profile
+    top_m, bottom_m, left_m, right_m = get_default_profile().get_margins("exp")
+    return {
+        "left": left_m,
+        "right": right_m,
+        "top": top_m,       # Vorderkante Vorschub
+        "bottom": bottom_m, # Hinterkante Vorschub
+    }
+
+
+DEFAULT_EXP_MARGINS = _get_default_exp_margins()
+
 DEVICE_PROFILES: Dict[str, Dict[str, Any]] = {
     "mutoh_xp500": {
         "name": "Mutoh XP-500 (Rollenplotter)",
         "type": "roller",
-        "feed_margin_mm": 25.0,
-        "trailing_margin_mm": 5.0,
-        "side_margin_mm": 5.0,
+        "feed_margin_mm": DEFAULT_EXP_MARGINS["top"],
+        "trailing_margin_mm": DEFAULT_EXP_MARGINS["bottom"],
+        "side_margin_mm": DEFAULT_EXP_MARGINS["left"],
     },
     "flatbed_sym": {
         "name": "Flachbettplotter (Symmetrisch 5 mm)",
@@ -50,13 +63,6 @@ DEVICE_PROFILES: Dict[str, Dict[str, Any]] = {
         "name": "Benutzerdefiniert (Custom)",
         "type": "custom",
     },
-}
-
-DEFAULT_EXP_MARGINS = {
-    "left": 5.0,
-    "right": 5.0,
-    "top": 25.0,     # Vorderkante Vorschub
-    "bottom": 5.0,   # Hinterkante Vorschub
 }
 
 
@@ -77,36 +83,60 @@ class Page:
     def __post_init__(self):
         self.apply_preset(self.preset, self.orientation)
 
-    def apply_device_profile(self, profile_key: str, feed_edge: Optional[str] = None):
-        """Configure margins according to plotter hardware characteristics."""
+    def apply_device_profile(
+        self,
+        profile_key: str,
+        feed_edge: Optional[str] = None,
+        margin_profile: str = "",
+    ):
+        """Configure margins according to plotter hardware characteristics (from YAML profile)."""
         self.device_profile = profile_key
         if feed_edge is not None:
             self.feed_edge = feed_edge
 
-        if profile_key == "mutoh_xp500":
-            # 25mm on leading feed edge, 5mm on all other edges
+        if profile_key == "flatbed_sym":
             self.margin_left_mm = 5.0
             self.margin_right_mm = 5.0
             self.margin_top_mm = 5.0
             self.margin_bottom_mm = 5.0
-            if self.feed_edge == "top":
-                self.margin_top_mm = 25.0
-            elif self.feed_edge == "bottom":
-                self.margin_bottom_mm = 25.0
-            elif self.feed_edge == "left":
-                self.margin_left_mm = 25.0
-            elif self.feed_edge == "right":
-                self.margin_right_mm = 25.0
-        elif profile_key == "flatbed_sym":
-            self.margin_left_mm = 5.0
-            self.margin_right_mm = 5.0
-            self.margin_top_mm = 5.0
-            self.margin_bottom_mm = 5.0
-        elif profile_key == "flatbed_borderless":
+            return
+        if profile_key == "flatbed_borderless":
             self.margin_left_mm = 0.0
             self.margin_right_mm = 0.0
             self.margin_top_mm = 0.0
             self.margin_bottom_mm = 0.0
+            return
+        if profile_key == "custom":
+            return
+
+        # Load from YAML device profile (Single Source of Truth)
+        from ..device.profile import load_profile, get_default_profile
+        try:
+            dev_prof = load_profile(profile_key)
+        except Exception:
+            dev_prof = get_default_profile()
+
+        lead_m, trail_m, side_l, side_r = dev_prof.get_margins(margin_profile)
+        if self.feed_edge == "bottom":
+            self.margin_bottom_mm = lead_m
+            self.margin_top_mm = trail_m
+            self.margin_left_mm = side_l
+            self.margin_right_mm = side_r
+        elif self.feed_edge == "left":
+            self.margin_left_mm = lead_m
+            self.margin_right_mm = trail_m
+            self.margin_top_mm = side_l
+            self.margin_bottom_mm = side_r
+        elif self.feed_edge == "right":
+            self.margin_right_mm = lead_m
+            self.margin_left_mm = trail_m
+            self.margin_top_mm = side_l
+            self.margin_bottom_mm = side_r
+        else:  # "top" (default)
+            self.margin_top_mm = lead_m
+            self.margin_bottom_mm = trail_m
+            self.margin_left_mm = side_l
+            self.margin_right_mm = side_r
 
     def apply_preset(self, preset: str, orientation: Optional[str] = None):
         if orientation is not None:

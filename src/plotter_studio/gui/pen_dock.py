@@ -248,13 +248,9 @@ class PenDockWidget(QDockWidget):
                 self.doc.pens[row].enabled = (item.checkState() == Qt.Checked)
                 self.pen_changed.emit()
 
-    def _on_apply_preset_clicked(self):
-        preset: Optional[PenPreset] = self.combo_presets.currentData()
-        if not preset:
-            return
-
+    def _apply_preset_with_dialog(self, preset: PenPreset, always_ask_strategy: bool = False):
         strategy = "slot"
-        if len(self.doc.items) > 0:
+        if always_ask_strategy or len(self.doc.items) > 0:
             dlg = PenPresetDialog(preset.name, self)
             if dlg.exec() != QDialog.Accepted:
                 return
@@ -274,10 +270,15 @@ class PenDockWidget(QDockWidget):
                 self._on_preset_cmd_updated,
                 text=f"Preset '{preset.name}' anwenden",
             )
-            # Push without double execution since remap already executed
             self.undo_stack.push(cmd)
         else:
             self._on_preset_cmd_updated()
+
+    def _on_apply_preset_clicked(self):
+        preset: Optional[PenPreset] = self.combo_presets.currentData()
+        if not preset:
+            return
+        self._apply_preset_with_dialog(preset, always_ask_strategy=False)
 
     def _on_preset_cmd_updated(self):
         self.refresh_table()
@@ -313,20 +314,7 @@ class PenDockWidget(QDockWidget):
         if fpath:
             try:
                 preset = load_preset_json(fpath)
-                # Ask strategy and apply
-                dlg = PenPresetDialog(preset.name, self)
-                if dlg.exec() == QDialog.Accepted:
-                    old_pens = copy.deepcopy(self.doc.pens)
-                    old_assignments = [(p, p.pen_id) for it in self.doc.items for p in it.paths]
-                    remap_document_to_preset(self.doc, preset, strategy=dlg.selected_strategy)
-                    if self.undo_stack:
-                        cmd = ApplyPresetCommand(
-                            self.doc, old_pens, self.doc.pens, old_assignments, self._on_preset_cmd_updated,
-                            text=f"Preset '{preset.name}' anwenden"
-                        )
-                        self.undo_stack.push(cmd)
-                    else:
-                        self._on_preset_cmd_updated()
+                self._apply_preset_with_dialog(preset, always_ask_strategy=True)
             except Exception as e:
                 QMessageBox.critical(self, "Fehler beim Laden", f"Konnte Preset-Datei nicht laden:\n{e}")
 

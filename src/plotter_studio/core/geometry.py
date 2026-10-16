@@ -367,3 +367,44 @@ def compute_segments_bounds(segments: Sequence[PathSegment]) -> Optional[Boundin
         return None
     return BoundingBox(min(xs), min(ys), max(xs), max(ys))
 
+
+def point_segment_distance(
+    px: float,
+    py: float,
+    x1: float,
+    y1: float,
+    x2: float,
+    y2: float,
+) -> float:
+    """Perpendicular distance from point (px, py) to line segment (x1, y1)-(x2, y2)."""
+    dx = x2 - x1
+    dy = y2 - y1
+    line_len_sq = dx * dx + dy * dy
+    if line_len_sq < 1e-12:
+        return math.hypot(px - x1, py - y1)
+    t = ((px - x1) * dx + (py - y1) * dy) / line_len_sq
+    t = max(0.0, min(1.0, t))
+    proj_x = x1 + t * dx
+    proj_y = y1 + t * dy
+    return math.hypot(px - proj_x, py - proj_y)
+
+
+def points_to_segment_distances(
+    points: np.ndarray,
+    start: np.ndarray,
+    end: np.ndarray,
+) -> np.ndarray:
+    """Vectorized distances from an (M, 2) array of points to line segment [start, end]."""
+    if len(points) == 0:
+        return np.empty(0, dtype=np.float64)
+    line_vec = end - start
+    line_len_sq = float(np.dot(line_vec, line_vec))
+    if line_len_sq < 1e-12:
+        return np.linalg.norm(points - start, axis=1)
+    d_vec = points - start
+    t = np.dot(d_vec, line_vec) / line_len_sq
+    t_clamped = np.clip(t, 0.0, 1.0)
+    proj = start + t_clamped[:, np.newaxis] * line_vec
+    return np.linalg.norm(points - proj, axis=1)
+
+

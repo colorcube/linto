@@ -11,22 +11,8 @@ from ..core.geometry import (
     QuadraticBezierSegment,
     CubicBezierSegment,
     ArcSegment,
+    point_segment_distance as point_line_distance,
 )
-
-
-def point_line_distance(px: float, py: float, x1: float, y1: float, x2: float, y2: float) -> float:
-    """Perpendicular distance from point (px, py) to line segment (x1, y1)-(x2, y2)."""
-    dx = x2 - x1
-    dy = y2 - y1
-    line_len_sq = dx * dx + dy * dy
-    if line_len_sq < 1e-12:
-        return math.hypot(px - x1, py - y1)
-    # Projection parameter t
-    t = ((px - x1) * dx + (py - y1) * dy) / line_len_sq
-    t = max(0.0, min(1.0, t))
-    proj_x = x1 + t * dx
-    proj_y = y1 + t * dy
-    return math.hypot(px - proj_x, py - proj_y)
 
 
 def flatten_cubic_bezier(

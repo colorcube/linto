@@ -115,11 +115,10 @@ class DeviceSettingsDialog(QDialog):
         )
         form.addRow("Flusssteuerung:", self.combo_flow)
 
+        from ..device.profile import get_margin_profile_items
         self.combo_margins = QComboBox()
-        self.combo_margins.addItem("EXP (Erweitert: 25 / 5 / 5 / 5 mm)", "exp")
-        self.combo_margins.addItem("NORM (Normal: 25 / 10 / 10 / 10 mm)", "norm")
-        self.combo_margins.addItem("TYPE1 (38 / 10 / 10 / 10 mm)", "type1")
-        self.combo_margins.addItem("TYPE3 (38 / 5 / 5 / 5 mm)", "type3")
+        for label, key in get_margin_profile_items():
+            self.combo_margins.addItem(label, key)
         form.addRow("Randfenster:", self.combo_margins)
 
         self.combo_rotation = QComboBox()

@@ -310,11 +310,10 @@ class PlotDockWidget(QDockWidget):
         self.btn_refresh_ports.setVisible(False)
         self.btn_refresh_ports.clicked.connect(self.refresh_ports)
 
+        from ..device.profile import get_margin_profile_items
         self.combo_margins = QComboBox(self)
-        self.combo_margins.addItem("EXP (Erweitert: 25 / 5 / 5 / 5 mm)", "exp")
-        self.combo_margins.addItem("NORM (Normal: 25 / 10 / 10 / 10 mm)", "norm")
-        self.combo_margins.addItem("TYPE1 (38 / 10 / 10 / 10 mm)", "type1")
-        self.combo_margins.addItem("TYPE3 (38 / 5 / 5 / 5 mm)", "type3")
+        for label, key in get_margin_profile_items():
+            self.combo_margins.addItem(label, key)
         self.combo_margins.setVisible(False)
 
         # Drehung und Achsen in zwei kompakten Zeilen

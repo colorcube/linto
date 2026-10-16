@@ -19,12 +19,10 @@ from ..core.svg_export import export_document_to_svg, load_document_from_svg, is
 from ..pipeline.compiler import (
     PipelineConfig, PlotJob, compile_document_to_plot_job
 )
-from .canvas import PlotterCanvas, CanvasMode
+from .canvas import PlotterCanvas, CanvasMode, extract_droppable_files
 from .rulers import RulerWidget, RULER_BREADTH
 from .pen_dock import PenDockWidget
-from .paper_dock import PaperDockWidget
 from .transform_dock import TransformDockWidget
-from .layout_dock import LayoutDockWidget
 from .plot_dock import PlotDockWidget
 from .object_dock import ObjectDockWidget
 from .simulation_bar import PlotSimulationBar
@@ -113,7 +111,6 @@ class MainWindow(QMainWindow):
         self.transform_dock = TransformDockWidget(self.doc, self)
         self.transform_dock.set_undo_stack(self.undo_stack)
         self.addDockWidget(Qt.RightDockWidgetArea, self.transform_dock)
-        self.layout_dock = self.transform_dock  # compatibility alias
 
         # Split vertical: Object Dock on top, Transform Dock below
         self.splitDockWidget(self.object_dock, self.transform_dock, Qt.Vertical)
@@ -123,14 +120,6 @@ class MainWindow(QMainWindow):
         self.pen_dock.set_undo_stack(self.undo_stack)
         self.addDockWidget(Qt.RightDockWidgetArea, self.pen_dock)
         self.tabifyDockWidget(self.transform_dock, self.pen_dock)
-
-        # Paper settings dock kept for compatibility if needed, but hidden by default
-        self.paper_dock = PaperDockWidget(self.doc, self)
-        self.paper_dock.set_undo_stack(self.undo_stack)
-        self.paper_dock.set_device_manager(self.device_manager)
-        self.addDockWidget(Qt.RightDockWidgetArea, self.paper_dock)
-        self.tabifyDockWidget(self.pen_dock, self.paper_dock)
-        self.paper_dock.hide()
 
         self.transform_dock.raise_()
 
@@ -147,7 +136,6 @@ class MainWindow(QMainWindow):
             self.object_dock,
             self.transform_dock,
             self.pen_dock,
-            self.paper_dock,
             self.plot_dock,
         ]
         for dock in self._all_docks:
@@ -320,7 +308,6 @@ class MainWindow(QMainWindow):
         menu_view.addSeparator()
         menu_view.addAction(self.object_dock.toggleViewAction())
         menu_view.addAction(self.transform_dock.toggleViewAction())
-        menu_view.addAction(self.paper_dock.toggleViewAction())
         menu_view.addAction(self.pen_dock.toggleViewAction())
         menu_view.addAction(self.plot_dock.toggleViewAction())
 
@@ -449,9 +436,6 @@ class MainWindow(QMainWindow):
         self.pen_dock.pen_changed.connect(self._on_pens_changed)
         self.pen_dock.assign_selection_to_pen.connect(self.assign_selection_to_pen)
 
-        # Paper dock
-        self.paper_dock.page_changed.connect(self._on_page_changed)
-
         # Transform dock
         self.transform_dock.item_transformed.connect(self._on_item_transformed)
         self.canvas.item_transformed_live.connect(self._on_item_transformed_live)
@@ -490,6 +474,14 @@ class MainWindow(QMainWindow):
             self.combo_active_device.setCurrentIndex(active_idx)
         self.combo_active_device.blockSignals(False)
 
+    def _apply_active_device_to_page_and_plot_dock(self, dev: ConfiguredDevice):
+        if self.doc.page.device_profile != "custom" and dev.model_id:
+            self.doc.page.apply_device_profile(
+                dev.model_id, self.doc.page.feed_edge, dev.margin_profile
+            )
+            self._on_page_changed()
+        self.plot_dock.apply_configured_device(dev)
+
     def _on_active_device_changed(self):
         dev_id = self.combo_active_device.currentData()
         if not dev_id:
@@ -497,8 +489,7 @@ class MainWindow(QMainWindow):
         self.device_manager.set_active_device(dev_id)
         dev = self.device_manager.get_active_device()
         if dev:
-            self.paper_dock.apply_configured_device(dev)
-            self.plot_dock.apply_configured_device(dev)
+            self._apply_active_device_to_page_and_plot_dock(dev)
 
     def open_device_settings_dialog(self):
         dlg = DeviceSettingsDialog(self.device_manager, parent=self)
@@ -506,8 +497,7 @@ class MainWindow(QMainWindow):
             self._refresh_device_selector()
             dev = self.device_manager.get_active_device()
             if dev:
-                self.paper_dock.apply_configured_device(dev)
-                self.plot_dock.apply_configured_device(dev)
+                self._apply_active_device_to_page_and_plot_dock(dev)
 
     def open_page_setup_dialog(self):
         dlg = PageSetupDialog(self.doc, self.device_manager, self.undo_stack, parent=self)
@@ -630,7 +620,6 @@ class MainWindow(QMainWindow):
         self.canvas.rebuild_items()
         self.object_dock.refresh()
         self.pen_dock.refresh_table()
-        self.paper_dock.refresh_page_fields()
         self.transform_dock.set_active_item(None)
         self._update_paper_display()
         self.lbl_info.setText("Neues Dokument erstellt")
@@ -657,7 +646,6 @@ class MainWindow(QMainWindow):
             self.canvas.zoom_to_fit()
             self.object_dock.refresh()
             self.pen_dock.refresh_table()
-            self.paper_dock.refresh_page_fields()
             self.transform_dock.set_active_item(None)
             self._on_selection_changed()
             if self.canvas._mode == CanvasMode.PLOT:
@@ -782,7 +770,6 @@ class MainWindow(QMainWindow):
                 getattr(self, "object_dock", None),
                 getattr(self, "transform_dock", None),
                 getattr(self, "pen_dock", None),
-                getattr(self, "paper_dock", None),
                 getattr(self, "plot_dock", None),
             ]
             all_docks = [d for d in all_docks if d is not None]
@@ -809,30 +796,25 @@ class MainWindow(QMainWindow):
                     dock.setTitleBarWidget(None)
 
     def dragEnterEvent(self, event):
-        if event.mimeData().hasUrls():
-            for url in event.mimeData().urls():
-                if url.toLocalFile().lower().endswith((".svg", ".hpgl", ".plt")):
-                    event.acceptProposedAction()
-                    return
-        event.ignore()
+        if extract_droppable_files(event.mimeData()):
+            event.acceptProposedAction()
+        else:
+            event.ignore()
 
     def dragMoveEvent(self, event):
-        if event.mimeData().hasUrls():
-            for url in event.mimeData().urls():
-                if url.toLocalFile().lower().endswith((".svg", ".hpgl", ".plt")):
-                    event.acceptProposedAction()
-                    return
-        event.ignore()
+        if extract_droppable_files(event.mimeData()):
+            event.acceptProposedAction()
+        else:
+            event.ignore()
 
     def dropEvent(self, event):
-        if event.mimeData().hasUrls():
-            for url in event.mimeData().urls():
-                fpath = url.toLocalFile()
-                if fpath.lower().endswith((".svg", ".hpgl", ".plt")):
-                    self.import_svg_file(fpath)
-                    event.acceptProposedAction()
-                    return
-        event.ignore()
+        files = extract_droppable_files(event.mimeData())
+        if files:
+            for fpath in files:
+                self.import_svg_file(fpath)
+            event.acceptProposedAction()
+        else:
+            event.ignore()
 
     def switch_to_plot_mode(self):
         """Switch view and controls into Plot/Slice mode."""
@@ -842,7 +824,6 @@ class MainWindow(QMainWindow):
 
         # Hide layout docks
         self.object_dock.hide()
-        self.paper_dock.hide()
         self.transform_dock.hide()
         self.pen_dock.hide()
 

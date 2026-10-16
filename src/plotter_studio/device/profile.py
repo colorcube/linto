@@ -146,8 +146,37 @@ def get_default_profile() -> DeviceProfile:
             margins_mm={
                 "exp": {"top": 25.0, "bottom": 5.0, "left": 5.0, "right": 5.0},
                 "norm": {"top": 35.0, "bottom": 15.0, "left": 15.0, "right": 15.0},
+                "type1": {"top": 25.0, "bottom": 5.0, "left": 11.0, "right": 11.0},
+                "type3": {"top": 25.0, "bottom": 10.0, "left": 10.0, "right": 10.0},
             },
         )
+
+
+_MARGIN_PROFILE_LABELS: dict[str, str] = {
+    "exp": "EXP (Erweitert",
+    "norm": "NORM (Normal",
+    "type1": "TYPE1 (",
+    "type3": "TYPE3 (",
+}
+
+
+def get_margin_profile_items(profile: Optional[DeviceProfile] = None) -> list[tuple[str, str]]:
+    """Return list of (display_label, profile_key) derived from the DeviceProfile YAML."""
+    prof = profile or get_default_profile()
+    keys = list(prof.margins_mm.keys()) if prof.margins_mm else ["exp", "norm", "type1", "type3"]
+    items: list[tuple[str, str]] = []
+    for key in keys:
+        k_low = key.lower()
+        top_m, bottom_m, left_m, right_m = prof.get_margins(k_low)
+        dims = f"{top_m:.0f} / {bottom_m:.0f} / {left_m:.0f} / {right_m:.0f} mm"
+        prefix = _MARGIN_PROFILE_LABELS.get(k_low)
+        if prefix:
+            sep = ": " if not prefix.endswith("(") else ""
+            label = f"{prefix}{sep}{dims})"
+        else:
+            label = f"{k_low.upper()} ({dims})"
+        items.append((label, k_low))
+    return items
 
 
 def list_available_profiles() -> list[DeviceProfile]:

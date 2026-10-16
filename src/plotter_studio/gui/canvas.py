@@ -353,27 +353,37 @@ class PlotterCanvas(QGraphicsView):
         return selected
 
     def dragEnterEvent(self, event: QDragEnterEvent):
-        if event.mimeData().hasUrls():
-            for url in event.mimeData().urls():
-                if url.toLocalFile().lower().endswith((".svg", ".hpgl", ".plt")):
-                    event.acceptProposedAction()
-                    return
-        event.ignore()
+        if extract_droppable_files(event.mimeData()):
+            event.acceptProposedAction()
+        else:
+            event.ignore()
 
     def dragMoveEvent(self, event: QDragMoveEvent):
-        if event.mimeData().hasUrls():
-            for url in event.mimeData().urls():
-                if url.toLocalFile().lower().endswith((".svg", ".hpgl", ".plt")):
-                    event.acceptProposedAction()
-                    return
-        event.ignore()
+        if extract_droppable_files(event.mimeData()):
+            event.acceptProposedAction()
+        else:
+            event.ignore()
 
     def dropEvent(self, event: QDropEvent):
-        if event.mimeData().hasUrls():
-            for url in event.mimeData().urls():
-                fpath = url.toLocalFile()
-                if fpath.lower().endswith((".svg", ".hpgl", ".plt")):
-                    self.file_dropped.emit(fpath)
-                    event.acceptProposedAction()
-                    return
-        event.ignore()
+        files = extract_droppable_files(event.mimeData())
+        if files:
+            for fpath in files:
+                self.file_dropped.emit(fpath)
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+
+DROPPABLE_EXTENSIONS = (".svg", ".hpgl", ".plt")
+
+
+def extract_droppable_files(mime_data) -> List[str]:
+    """Return all local file paths from QMimeData that match DROPPABLE_EXTENSIONS."""
+    if not mime_data or not mime_data.hasUrls():
+        return []
+    files: List[str] = []
+    for url in mime_data.urls():
+        fpath = url.toLocalFile()
+        if fpath and fpath.lower().endswith(DROPPABLE_EXTENSIONS):
+            files.append(fpath)
+    return files

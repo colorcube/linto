@@ -35,8 +35,8 @@ def test_main_window_headless(qapp, tmp_path):
     assert abs(init_rect.height() - 66.0) < 1.0
 
     # Check item centered
-    win.layout_dock.set_active_item(item)
-    win.layout_dock.align_center_both()
+    win.transform_dock.set_active_item(item)
+    win.transform_dock.align_center_both()
     b = item.current_bounds
     assert b is not None
     page_center = doc.page.sheet_box.center
@@ -44,7 +44,7 @@ def test_main_window_headless(qapp, tmp_path):
     assert abs(b.center.y - page_center.y) < 1.0
 
     # Fit to page: verify model and graphical item BOTH scale
-    win.layout_dock.fit_to_page(margin_mm=20.0)
+    win.transform_dock.fit_to_page(margin_mm=20.0)
     b_fit = item.current_bounds
     assert b_fit is not None
     assert b_fit.height > 200.0
@@ -55,18 +55,18 @@ def test_main_window_headless(qapp, tmp_path):
 
     # Test scale relative (-10%)
     h_before = fit_rect.height()
-    win.layout_dock.scale_relative(0.9)
+    win.transform_dock.scale_relative(0.9)
     rect_scaled = g_item.sceneBoundingRect()
     assert rect_scaled.height() < h_before
 
     # Test direct width edit via dock spinbox
-    win.layout_dock._on_obj_w_changed(150.0)
+    win.transform_dock._on_obj_w_changed(150.0)
     w_edited = item.current_bounds.width
     assert abs(w_edited - 150.0) < 0.5
     assert abs(g_item.sceneBoundingRect().width() - 156.0) < 1.0
 
     # Test 1:1 reset
-    win.layout_dock.reset_to_original_size()
+    win.transform_dock.reset_to_original_size()
     assert abs(item.transform.a - 1.0) < 1e-4
     assert abs(g_item.sceneBoundingRect().height() - 66.0) < 1.0
 
@@ -211,19 +211,21 @@ def test_drag_and_drop_import_and_initial_zoom(qapp, tmp_path):
     # Verify initial zoom flag is set by showEvent
     assert getattr(win, "_initial_zoom_done", False) is True
 
-    # Create test SVG file
+    # Create two test SVG files to test multi-file drop
     svg_content = """<svg width="40mm" height="40mm" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
       <rect x="0" y="0" width="40" height="40" stroke="#ff0000" fill="none"/>
     </svg>"""
-    test_svg_path = str(tmp_path / "drop_test.svg")
-    with open(test_svg_path, "w", encoding="utf-8") as f:
-        f.write(svg_content)
+    test_svg_path1 = str(tmp_path / "drop_test_1.svg")
+    test_svg_path2 = str(tmp_path / "drop_test_2.svg")
+    for p in (test_svg_path1, test_svg_path2):
+        with open(p, "w", encoding="utf-8") as f:
+            f.write(svg_content)
 
-    # Simulate DropEvent with QMimeData containing url
+    # Simulate DropEvent with QMimeData containing two URLs
     from PySide6.QtCore import QMimeData, QUrl, QPointF, Qt
     from PySide6.QtGui import QDropEvent
     mime = QMimeData()
-    mime.setUrls([QUrl.fromLocalFile(test_svg_path)])
+    mime.setUrls([QUrl.fromLocalFile(test_svg_path1), QUrl.fromLocalFile(test_svg_path2)])
 
     drop_event = QDropEvent(
         QPointF(200.0, 200.0),
@@ -234,9 +236,10 @@ def test_drag_and_drop_import_and_initial_zoom(qapp, tmp_path):
     )
     win.dropEvent(drop_event)
 
-    # Document should now contain the dropped item
-    assert len(doc.items) == 1
-    assert "drop_test" in doc.items[0].name
+    # Document should now contain both dropped items
+    assert len(doc.items) == 2
+    assert "drop_test_1" in doc.items[0].name
+    assert "drop_test_2" in doc.items[1].name
 
     win.close()
 
@@ -371,9 +374,8 @@ def test_main_window_open_project(qapp, tmp_path):
         assert win.canvas._item_map is not None
         assert win.object_dock.tree.topLevelItemCount() == 1
         assert win.doc.page.preset == "Custom"
-        assert win.paper_dock.combo_preset.currentData() == "Custom"
-        assert win.paper_dock.spin_width.value() == 100.0
-        assert win.paper_dock.spin_height.value() == 100.0
+        assert win.doc.page.width_mm == 100.0
+        assert win.doc.page.height_mm == 100.0
 
     win.close()
 

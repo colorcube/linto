@@ -57,3 +57,30 @@ def test_printable_area_respects_margins():
     assert box.max_x == 415.0
     assert box.min_y == 25.0
     assert box.max_y == 292.0
+
+
+def test_margin_profiles_single_source_of_truth():
+    """Verify emulator MARGIN_PROFILES, UI combo items, and Page.apply_device_profile all match mutoh_xp500.yaml."""
+    from plotter_studio.device.profile import get_default_profile, get_margin_profile_items
+    from plotter_studio.emulator.virtual_plotter import MARGIN_PROFILES
+
+    prof = get_default_profile()
+    items = dict((k, lbl) for lbl, k in get_margin_profile_items(prof))
+
+    assert "exp" in items and "25 / 5 / 5 / 5 mm" in items["exp"]
+    assert "norm" in items and "35 / 15 / 15 / 15 mm" in items["norm"]
+    assert "type1" in items and "25 / 5 / 11 / 11 mm" in items["type1"]
+    assert "type3" in items and "25 / 10 / 10 / 10 mm" in items["type3"]
+
+    for key in ("exp", "norm", "type1", "type3"):
+        expected = prof.get_margins(key)
+        assert MARGIN_PROFILES[key.upper()] == expected
+        page = Page(preset="A3", orientation="landscape")
+        page.apply_device_profile("mutoh_xp500", feed_edge="top", margin_profile=key)
+        assert (
+            page.margin_top_mm,
+            page.margin_bottom_mm,
+            page.margin_left_mm,
+            page.margin_right_mm,
+        ) == expected
+
