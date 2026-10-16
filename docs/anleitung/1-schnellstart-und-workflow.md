@@ -49,13 +49,13 @@ Klicken Sie in der oberen Leiste auf **[ Seiteneinrichtung... ]**:
 
 ### Schritt 2: Vektorgrafik importieren und ausrichten
 
-1. Ziehen Sie eine beliebige `.svg`-Datei per **Drag & Drop** aus Ihrem Dateimanager direkt in das Canvas (oder drücken Sie `Strg+O`).
+1. Ziehen Sie eine beliebige `.svg`-Datei per **Drag & Drop** aus Ihrem Dateimanager direkt in das Canvas (oder drücken Sie `Strg+O` bzw. `Strg+I`).
 2. Das Dokument wird geladen. Beim Import analysiert Plotter Studio alle Strichfarben und teilt sie automatisch den Stiften 1 bis 8 zu.
 3. Wechseln Sie in das rechte Dock **Transformation**:
-   * Klicken Sie auf **[ Auf Blatt einpassen ]**, um die Grafik maximal vergrößert auf dem Blatt zu platzieren.
-   * Oder klicken Sie auf **[ Auf Blatt zentrieren ]**, um das Motiv exakt in der Mitte auszurichten.
-   * Mit den Schnelltasten **[ 50 % ]**, **[ 100 % ]** und **[ 200 % ]** oder den numerischen Feldern können Sie die Größe millimetergenau anpassen.
-   * Das aktivierte Schloss-Symbol sorgt dafür, dass das Seitenverhältnis beim Skalieren proportional erhalten bleibt.
+   * Klicken Sie in der Gruppe *Platzieren* auf **[ Zentrieren ]** (Fadenkreuz), um das Motiv exakt in der Blattmitte auszurichten.
+   * Klicken Sie in der Gruppe *Skalierung* auf **[ Einpassen ]**, um die Grafik maximal vergrößert auf der Fläche zu platzieren (der gewünschte Randabstand kann direkt daneben in mm gewählt werden).
+   * Mit den Tasten **[ + ]** und **[ - ]** (10 %-Schritte), dem **Zoom**-Eingabefeld oder **[ Original ]** passen Sie die Größe schnell und präzise an.
+   * Das aktivierte Schloss-Symbol sorgt dafür, dass das Seitenverhältnis beim Skalieren stets proportional erhalten bleibt.
 
 *(Ausführliche Details: [Kapitel 2: Transformation & Objektverwaltung](2-layout-und-objektverwaltung.md#5-dock-transformation))*
 

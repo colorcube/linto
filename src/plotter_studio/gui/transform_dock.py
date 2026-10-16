@@ -21,34 +21,64 @@ from .icons import get_icon
 class SectionGroup(QGroupBox):
     """Clean group container with a header label and horizontal line instead of a box border."""
 
-    def __init__(self, title: str, parent=None):
+    toggled_collapse = Signal(bool)
+
+    def __init__(self, title: str, parent=None, collapsible: bool = False, collapsed: bool = False):
         super().__init__("", parent)
         self._section_title = title
+        self._collapsible = collapsible
+        self._collapsed = False
         self.setStyleSheet("QGroupBox { border: none; margin: 0; padding: 0; background: transparent; }")
 
-        self.content_layout = QVBoxLayout(self)
-        self.content_layout.setContentsMargins(0, 6, 0, 4)
-        self.content_layout.setSpacing(6)
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(0, 4, 0, 2)
+        main_layout.setSpacing(4)
 
         # Header with prominent title and visible dividing line
-        header = QVBoxLayout()
-        header.setContentsMargins(0, 4, 0, 4)
-        header.setSpacing(4)
+        header_vbox = QVBoxLayout()
+        header_vbox.setContentsMargins(0, 2, 0, 2)
+        header_vbox.setSpacing(3)
+
+        header_hbox = QHBoxLayout()
+        header_hbox.setContentsMargins(0, 0, 0, 0)
+        header_hbox.setSpacing(6)
+
+        if collapsible:
+            self.btn_toggle = QToolButton(self)
+            self.btn_toggle.setIcon(get_icon("chevron-down" if not collapsed else "chevron-right", size=12))
+            self.btn_toggle.setFixedSize(16, 16)
+            self.btn_toggle.setStyleSheet("QToolButton { border: none; background: transparent; }")
+            self.btn_toggle.clicked.connect(self.toggle_collapsed)
+            header_hbox.addWidget(self.btn_toggle)
 
         self.lbl_title = QLabel(title)
         self.lbl_title.setStyleSheet(
             "QLabel { font-weight: bold; color: #1e293b; font-size: 13px; } "
             "QLabel:disabled { color: #94a3b8; }"
         )
-        header.addWidget(self.lbl_title)
+        if collapsible:
+            self.lbl_title.setCursor(Qt.PointingHandCursor)
+            self.lbl_title.mousePressEvent = lambda e: self.toggle_collapsed()
+        header_hbox.addWidget(self.lbl_title)
+        header_hbox.addStretch()
+        header_vbox.addLayout(header_hbox)
 
         line = QFrame()
         line.setFrameShape(QFrame.HLine)
         line.setFixedHeight(1)
         line.setStyleSheet("background-color: #cbd5e1; border: none;")
-        header.addWidget(line)
+        header_vbox.addWidget(line)
 
-        self.content_layout.addLayout(header)
+        main_layout.addLayout(header_vbox)
+
+        self._body_widget = QWidget(self)
+        self.content_layout = QVBoxLayout(self._body_widget)
+        self.content_layout.setContentsMargins(0, 4, 0, 2)
+        self.content_layout.setSpacing(6)
+        main_layout.addWidget(self._body_widget)
+
+        if collapsed:
+            self.set_collapsed(True)
 
     def addWidget(self, widget: QWidget, *args):
         self.content_layout.addWidget(widget, *args)
@@ -62,6 +92,20 @@ class SectionGroup(QGroupBox):
     def setTitle(self, title: str):
         self._section_title = title
         self.lbl_title.setText(title)
+
+    def is_collapsed(self) -> bool:
+        return self._collapsed
+
+    def toggle_collapsed(self):
+        self.set_collapsed(not self._collapsed)
+
+    def set_collapsed(self, collapsed: bool):
+        self._collapsed = collapsed
+        self._body_widget.setVisible(not collapsed)
+        if self._collapsible and hasattr(self, 'btn_toggle'):
+            icon_name = "chevron-right" if collapsed else "chevron-down"
+            self.btn_toggle.setIcon(get_icon(icon_name, size=12))
+        self.toggled_collapse.emit(collapsed)
 
 
 class TransformDockWidget(QDockWidget):

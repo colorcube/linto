@@ -850,6 +850,8 @@ class MainWindow(QMainWindow):
         self.simulation_bar.show()
         self.plot_dock.show()
         self.plot_dock.raise_()
+        target_w = max(self.plot_dock.minimum_content_width(), self.plot_dock.width(), 380)
+        self.resizeDocks([self.plot_dock], [target_w], Qt.Horizontal)
         self._schedule_dock_title_update()
         self.lbl_info.setText("Ausgabe aktiv")
 
@@ -868,6 +870,8 @@ class MainWindow(QMainWindow):
         self.transform_dock.show()
         self.pen_dock.show()
         self.transform_dock.raise_()
+        target_w = max(self.transform_dock.minimumSizeHint().width(), self.transform_dock.width(), 380)
+        self.resizeDocks([self.transform_dock], [target_w], Qt.Horizontal)
         self._schedule_dock_title_update()
         self.object_dock.refresh()
         self.transform_dock.refresh_item_fields()

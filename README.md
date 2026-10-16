@@ -34,7 +34,7 @@ Wenn Sie mit einem **physischen Stiftplotter** zeichnen (egal ob Oldtimer wie Mu
 ### Was kann die Software heute schon?
 * **Vektor-Import:** Schneller Import von SVG-Vektordateien per Drag & Drop oder Dateidialog.
 * **Automatisches Farb-Clustering:** Grafikelemente werden anhand ihrer Strichfarbe automatisch auf die Stifte 1 bis 8 gruppiert.
-* **Layout & Transformation:** Numerische Positionierung, Skalierung mit Proportions-Sperre, 50%/100%/200%-Schnelltasten, Einpassen auf das Papier, Zentrieren, Drehen und Spiegeln.
+* **Layout & Transformation:** Numerische Positionierung mit Bezugswahl (Blatt/Plottbereich), proportionale Skalierung mit Zoom-Schritten (+/- 10%), 1:1-Originalgröße, Einpassen mit Randabstand, Zentrieren, Drehen und Spiegeln.
 * **Objekt- & Ebenenverwaltung:** Z-Order (Zeichenreihenfolge per Drag & Drop ändern), Sichtbarkeit umschalten und Bearbeitung sperren.
 * **Slicer-Pipeline & 2-Opt Pfadoptimierung:** Drastische Verkürzung der Plotzeiten durch Verbinden von Linienenden und Eliminierung unnötiger Eilgangswege.
 * **Interaktive Simulation:** Zeitstrahl-Scrubber mit Play/Pause, 1x–10x Geschwindigkeit, türkisfarbener Visualisierung aller Leerfahrten (`Pen Up`) und Aufsetzpunkte.
@@ -72,7 +72,7 @@ Sie müssen nicht warten, bis Ihre serielle Verkabelung steht: Mit dem integrier
      -> Siehe **[Kapitel 2: Blatt- & Seiteneinrichtung](docs/anleitung/2-layout-und-objektverwaltung.md#2-blatt--seiteneinrichtung)**
 3. **Zeichnung importieren und ausrichten:**
    * Ziehen Sie eine beliebige `.svg`-Datei per Drag & Drop in das Fenster.
-   * Nutzen Sie im Dock *Transformation* die Schnelltasten **[ Auf Blatt einpassen ]** oder **[ Auf Blatt zentrieren ]**.  
+   * Nutzen Sie im Dock *Transformation* die Schnelltasten **[ Einpassen ]** oder **[ Zentrieren ]**.  
      -> Siehe **[Kapitel 2: Transformation & Objektverwaltung](docs/anleitung/2-layout-und-objektverwaltung.md#5-dock-transformation)**
 4. **Plot simulieren und Fahrwege prüfen:**
    * Wechseln Sie oben in den Reiter **Ausgabe**.

@@ -19,15 +19,19 @@ Die Arbeitsumgebung ist übersichtlich in funktionale Bereiche unterteilt:
      * **Mittlere Maustaste gedrückt halten:** Verschiebt den Bildausschnitt (Pan).
      * **Linke Maustaste:** Selektiert Objekte und ermöglicht direktes Verschieben per Drag & Drop.
 
-2. **Geräte- & Statusleiste (oben):**
-   * Schnellauswahl des aktiven Plotters (z.B. *Mutoh XP-500 (Seriell)*, *Roland Stika*, *Graphtec CE5000* oder *Generic HP-GL*).
-   * Verbindungsstatus und Schnelltasten für **Seiteneinrichtung** und **Geräte-Einstellungen**.
+2. **Werkzeug- & Geräteleiste (oben):**
    * Modus-Umschaltung zwischen **Layout-Modus** und **Ausgabe-Modus** (Plot-Vorschau).
+   * Datei-Aktionen: **Öffnen** (`Strg+O`), **Speichern** (`Strg+S`), **Importieren** (`Strg+I`).
+   * Ansichtssteuerung: **Blatt im Fenster einpassen** (`Strg+0`), **Hineinzoomen** (`+`), **Herauszoomen** (`-`).
+   * Bearbeitung & Anordnung: Rückgängig (`Strg+Z`), Wiederholen (`Strg+Y`), Duplizieren (`Strg+D`), Löschen (`Entf`), Drehen (90° links/rechts), Mittig ausrichten, Auf Auswahl zoomen, 1:1 Originalgröße.
+   * Schnelltaste für die **Seiteneinrichtung** (zeigt das aktive Format, z. B. `DIN A3 Quer`).
+   * Schnellauswahl des aktiven Plotters (z. B. *Mutoh XP-500 (Seriell)*) und Schnelltaste für **Geräte-Einstellungen**.
 
 3. **Rechte Werkzeug-Docks:**
    * **Dock "Objekte & Ebenen":** Baumansicht aller geladenen Dokumente, Gruppen und Pfade.
-   * **Dock "Transformation":** Numerische Steuerung für Position, Größe, Drehung und Skalierung.
+   * **Dock "Transformation":** Numerische Steuerung für Position (Bezug Blatt/Plottbereich), Drehung, Ausrichtung und Skalierung (Zoom, Original, Einpassen).
    * **Dock "Stifte & Farben":** Verwaltung der Stiftpalette und Zuordnung der Zeichenwerkzeuge.
+   *(Tipp: Wenn Docks als Tabs gruppiert sind, dient der Tab-Reiter direkt als platzsparende Titelleiste.)*
 
 ---
 
@@ -59,7 +63,8 @@ Plotter Studio verwendet standardmäßig **SVG (Scalable Vector Graphics)** als 
 
 ### Import-Möglichkeiten:
 1. **Drag & Drop:** Ziehen Sie eine `.svg`-Datei direkt aus dem Dateimanager in das Canvas-Fenster.
-2. **Menü:** Wählen Sie **Datei -> Öffnen...** (`Strg+O`) oder **Datei -> Importieren...** (`Strg+I`).
+2. **Datei öffnen (`Strg+O`):** Öffnet ein bestehendes Projekt oder eine reguläre SVG-Datei direkt als neues Dokument. Entsprechen die Abmessungen der SVG-Datei keinem Standard-DIN-Format (z. B. 10×10 cm), wird das Blattformat automatisch als passendes benutzerdefiniertes Format eingerichtet.
+3. **Importieren (`Strg+I`):** Lädt weitere Vektorgrafiken in das bereits geöffnete Layout hinzu.
 
 ### Automatisches Farb-Clustering
 Beim Import analysiert Plotter Studio alle Strichfarben (Strokes) in der Datei und ordnet sie über einen Farbabstands-Algorithmus (Delta-E im Lab-Farbraum) automatisch den verfügbaren Stiften (1–8) zu. Pfade gleicher Farbe werden logisch gruppiert.
@@ -87,28 +92,32 @@ Das Dock **Objekte & Ebenen** listet alle geladenen Zeichnungselemente hierarchi
 
 ## 5. Dock "Transformation"
 
-Das Dock **Transformation** erlaubt die millimetergenaue Positionierung und Skalierung von Objekten.
+Das Dock **Transformation** erlaubt die millimetergenaue Positionierung, Drehung, Ausrichtung und Skalierung von Objekten. Wenn Docks als Reiter (Tabs) gruppiert sind, wird die interne Titelleiste automatisch ausgeblendet und der Tab-Reiter dient als platzsparende Beschriftung.
 
 ![Dock Transformation](../images/dock_transformation.png)
 
-### Koordinaten & Abmessungen:
-* **X / Y (mm):** Legt die Position des Ankerpunkts (oben links) auf dem Blatt fest.
-* **Breite / Höhe (mm):** Exakte Zielgröße des Objekts.
-* **Skalierungsfaktor (%):** Relative Größenänderung in Prozent.
-* **Seitenverhältnis sperren (Schloss-Symbol):**
-  * *Aktiviert (geschlossen):* Änderungen an Breite oder X-Skalierung passen Höhe und Y-Skalierung automatisch proportional an.
-  * *Deaktiviert (geöffnet):* Erlaubt verzerrtes Skalieren in nur eine Achsenrichtung.
+### 1. Gruppe "Position":
+* **Bezug:** Auswahl zwischen **Blatt** (gesamtes Papierformat) und **Plottbereich** (physisches Hard-Clip-Fenster des Plotters). Alle Koordinaten und Ausrichtungen orientieren sich an diesem gewählten Rahmen.
+* **X / Y (mm):** Exakte Position der oberen linken Ecke des ausgewählten Objekts.
+* **B / H (mm):** Exakte Breite und Höhe des Objekts in Millimetern.
+* **Proportions-Sperre (Schloss-Symbol):**
+  * *Aktiviert (geschlossen):* Änderungen an Breite oder Höhe passen die jeweils andere Achse proportional an.
+  * *Deaktiviert (geöffnet):* Erlaubt unproportionales Skalieren / Verzerren.
 
-### Schnelltasten & Ausrichtung:
-* **[ 50 % ] / [ 100 % ] / [ 200 % ]:** Schnelle Skalierung auf halbe, originale oder doppelte Größe mit einem einzigen Klick.
-* **[ Auf Blatt einpassen ]:** Skaliert das gewählte Objekt proportional so groß wie möglich, sodass es die plottbare Fläche (Hard-Clip-Fenster) optimal ausnutzt.
-* **[ Auf Blatt zentrieren ]:** Verschiebt das Objekt exakt in die geometrische Mitte des Papiers.
+### 2. Gruppe "Rotation":
+* **[ -90° ] / [ +90° ]:** Schnelle Drehung des Objekts um 90 Grad gegen den bzw. im Uhrzeigersinn.
 
-### Drehung & Spiegelung:
-* **Winkel (°):** Schnelltasten für **0°**, **90°**, **180°**, **270°** sowie freie Eingabe.
-* **Spiegeln:**
-  * **[ Horizontal spiegeln ]:** Spiegelt das Objekt an der vertikalen Mittelachse.
-  * **[ Vertikal spiegeln ]:** Spiegelt das Objekt an der horizontalen Mittelachse.
+### 3. Gruppe "Platzieren":
+* **[ Horiz. Mittig ]:** Zentriert das Objekt horizontal auf dem gewählten Bezugsrahmen (Blatt oder Plottbereich).
+* **[ Vert. Mittig ]:** Zentriert das Objekt vertikal auf dem gewählten Bezugsrahmen.
+* **[ Zentrieren ] (Fadenkreuz):** Setzt das Objekt exakt in die geometrische Mitte des Bezugsrahmens.
+
+### 4. Gruppe "Skalierung":
+* **Zoom (%):** Stufenlose numerische Skalierung in Prozent (100,0 % = Originalgröße).
+* **[ + ] / [ - ]:** Schnelles Vergrößern bzw. Verkleinern in 10 %-Schritten (+10 % / -10 %).
+* **[ Original ]:** Setzt die Abmessungen des Objekts sofort auf die 1:1 Originalgröße (100 %) der Quelldatei zurück.
+* **[ Einpassen ]:** Skaliert das gewählte Objekt proportional so groß wie möglich in den gewählten Bezugsrahmen (Blatt oder Plottbereich).
+* **Rand (mm):** Einstellbarer Sicherheitsabstand beim Einpassen, um automatisch Randabstände zu wahren.
 
 ---
 

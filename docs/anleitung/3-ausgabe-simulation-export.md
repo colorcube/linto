@@ -8,7 +8,7 @@ Im **Ausgabe-Modus** (Plot-Modus) wird die Zeichnung für die physikalische Hard
 
 ## 1. Die Optimierungs-Pipeline (Tuning)
 
-Im oberen Bereich des Docks **Ausgabe** konfigurieren Sie die Algorithmen, die aus Rohvektoren effiziente Maschinenbewegungen machen:
+Im oberen Bereich des Docks **Ausgabe** konfigurieren Sie die Algorithmen, die aus Rohvektoren effiziente Maschinenbewegungen machen (per Klick auf den Pfeil bzw. die Überschrift ein- und ausklappbar, standardmäßig für eine kompakte Ansicht eingeklappt):
 
 ![Dock Ausgabe](../images/dock_ausgabe.png)
 
@@ -65,9 +65,9 @@ Unterhalb des Haupt-Canvas befindet sich die interaktive **Simulationsleiste**:
 
 ---
 
-## 4. Selektives Plotten (Stift-Filter)
+## 4. Selektives Plotten (Stifte)
 
-In der Stiftliste des Ausgabe-Docks verfügt jeder der 8 Stifte über eine eigene Checkbox:
+In der Sektion **Stifte** des Ausgabe-Docks verfügt jeder Stift über eine eigene Checkbox:
 
 * **Stift aktivieren / deaktivieren:**
   * Ist das Häkchen entfernt, werden alle Linien dieses Stifts aus dem aktuellen Plot-Auftrag ausgeschlossen.
