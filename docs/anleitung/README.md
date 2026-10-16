@@ -65,5 +65,9 @@ Plotter Studio ist ein spezialisierter **Slicer und Arbeitsbereich für Vektor-S
 
 ---
 
-## Weiterführende Gerätedokumentation
+## Weiterführende Gerätedokumentation & Community-Ressourcen
 * **[Mutoh XP-500 Gerätedokumentation](../devices/mutoh-xp500/README.md):** Umfassende Transkription des Original-Handbuchs, MH-GL-Befehlssatz, Escape-Sequenzen und Register.
+* **[Awesome Plotters (GitHub)](https://github.com/beardicus/awesome-plotters):** Die zentrale, kuratierte Linksammlung für Stiftplotter, Zeichenroboter, Software und Kunst.
+* **[Drawingbots.net](https://drawingbots.net/):** Globale Community, News, Guides und Discord für Plotter-Künstler.
+* **[Leitfaden Vektorformate & Werkzeuge](2-layout-und-objektverwaltung.md#7-leitfaden-vektorformate-quellen--workflows):** Detaillierte Tool-Tipps (Inkscape, Blender, vpype, vsketch, Turtletoy, ln u.v.m.).
+
