@@ -160,102 +160,102 @@ class MainWindow(QMainWindow):
         menu_bar = self.menuBar()
 
         # --- File Menu ---
-        menu_file = menu_bar.addMenu("&Datei")
+        menu_file = menu_bar.addMenu(self.tr("&File"))
 
-        self.act_new = QAction("&Neu", self)
+        self.act_new = QAction(self.tr("&New Project"), self)
         self.act_new.setIcon(get_icon("plus"))
         self.act_new.setShortcut(QKeySequence.New)
         self.act_new.triggered.connect(self.new_document)
         menu_file.addAction(self.act_new)
 
-        self.act_open_project = QAction("Projekt &öffnen...", self)
+        self.act_open_project = QAction(self.tr("&Open Project..."), self)
         self.act_open_project.setIcon(get_icon("open"))
         self.act_open_project.setShortcut(QKeySequence.Open)
-        self.act_open_project.setToolTip("Projekt oder SVG-Datei öffnen (Strg+O)")
+        self.act_open_project.setToolTip(self.tr("Open project or vector file (Ctrl+O)"))
         self.act_open_project.triggered.connect(self.open_project_dialog)
         menu_file.addAction(self.act_open_project)
 
-        self.act_save = QAction("Projekt &speichern", self)
+        self.act_save = QAction(self.tr("&Save Project"), self)
         self.act_save.setIcon(get_icon("save"))
         self.act_save.setShortcut(QKeySequence.Save)
-        self.act_save.setToolTip("Projekt speichern (Strg+S)")
+        self.act_save.setToolTip(self.tr("Save project (Ctrl+S)"))
         self.act_save.triggered.connect(self.save_project)
         menu_file.addAction(self.act_save)
 
-        self.act_save_as = QAction("Projekt speichern &unter...", self)
+        self.act_save_as = QAction(self.tr("Save Project &As..."), self)
         self.act_save_as.setIcon(get_icon("save"))
         self.act_save_as.setShortcut(QKeySequence.SaveAs)
-        self.act_save_as.setToolTip("Projekt als SVG speichern unter (Strg+Umschalt+S)")
+        self.act_save_as.setToolTip(self.tr("Save project as SVG (Ctrl+Shift+S)"))
         self.act_save_as.triggered.connect(self.save_project_dialog)
         menu_file.addAction(self.act_save_as)
 
         menu_file.addSeparator()
 
-        self.act_import_svg = QAction("&Importieren...", self)
+        self.act_import_svg = QAction(self.tr("&Import..."), self)
         self.act_import_svg.setIcon(get_icon("import"))
         self.act_import_svg.setShortcut(QKeySequence("Ctrl+I"))
-        self.act_import_svg.setToolTip("SVG- oder Plotdatei importieren (Strg+I)")
+        self.act_import_svg.setToolTip(self.tr("Import SVG or plot file (Ctrl+I)"))
         self.act_import_svg.triggered.connect(self.import_svg_dialog)
         menu_file.addAction(self.act_import_svg)
 
         menu_file.addSeparator()
 
-        self.act_page_setup = QAction("&Seiteneinrichtung...", self)
+        self.act_page_setup = QAction(self.tr("&Page Setup..."), self)
         self.act_page_setup.setIcon(get_icon("page"))
         self.act_page_setup.setShortcut(QKeySequence("Ctrl+Shift+P"))
-        self.act_page_setup.setToolTip("Seiteneinrichtung & Papierformat bearbeiten (Strg+Umschalt+P)")
+        self.act_page_setup.setToolTip(self.tr("Edit page setup & paper format (Ctrl+Shift+P)"))
         self.act_page_setup.triggered.connect(self.open_page_setup_dialog)
         menu_file.addAction(self.act_page_setup)
 
         menu_file.addSeparator()
 
-        self.act_exit = QAction("&Beenden", self)
+        self.act_exit = QAction(self.tr("E&xit"), self)
         self.act_exit.setShortcut(QKeySequence.Quit)
         self.act_exit.triggered.connect(self.close)
         menu_file.addAction(self.act_exit)
 
         # --- Edit Menu ---
-        menu_edit = menu_bar.addMenu("&Bearbeiten")
+        menu_edit = menu_bar.addMenu(self.tr("&Edit"))
 
-        self.act_undo = self.undo_stack.createUndoAction(self, "&Rückgängig")
+        self.act_undo = self.undo_stack.createUndoAction(self, self.tr("&Undo"))
         self.act_undo.setIcon(get_icon("undo"))
         self.act_undo.setShortcut(QKeySequence.Undo)
         menu_edit.addAction(self.act_undo)
 
-        self.act_redo = self.undo_stack.createRedoAction(self, "&Wiederholen")
+        self.act_redo = self.undo_stack.createRedoAction(self, self.tr("&Redo"))
         self.act_redo.setIcon(get_icon("redo"))
         self.act_redo.setShortcut(QKeySequence.Redo)
         menu_edit.addAction(self.act_redo)
 
         menu_edit.addSeparator()
 
-        self.act_duplicate = QAction("&Duplizieren", self)
+        self.act_duplicate = QAction(self.tr("&Duplicate"), self)
         self.act_duplicate.setIcon(get_icon("duplicate"))
         self.act_duplicate.setShortcut(QKeySequence("Ctrl+D"))
-        self.act_duplicate.setToolTip("Ausgewähltes Objekt duplizieren (Strg+D)")
+        self.act_duplicate.setToolTip(self.tr("Duplicate selected object (Ctrl+D)"))
         self.act_duplicate.triggered.connect(self.duplicate_selected_items)
         menu_edit.addAction(self.act_duplicate)
 
-        self.act_delete = QAction("&Löschen", self)
+        self.act_delete = QAction(self.tr("&Delete"), self)
         self.act_delete.setIcon(get_icon("delete"))
         self.act_delete.setShortcut(QKeySequence.Delete)
-        self.act_delete.setToolTip("Ausgewählte Objekte löschen (Entf)")
+        self.act_delete.setToolTip(self.tr("Delete selected objects (Del)"))
         self.act_delete.triggered.connect(self.delete_selected_items)
         menu_edit.addAction(self.act_delete)
 
         menu_edit.addSeparator()
 
-        self.act_rotate_ccw = QAction("90° gegen Uhrzeigersinn (-90°)", self)
+        self.act_rotate_ccw = QAction(self.tr("Rotate 90° CCW (-90°)"), self)
         self.act_rotate_ccw.setIcon(get_icon("rotate-ccw"))
         self.act_rotate_ccw.setShortcut(QKeySequence("Ctrl+Shift+R"))
-        self.act_rotate_ccw.setToolTip("Auswahl 90° gegen den Uhrzeigersinn drehen (Strg+Umschalt+R)")
+        self.act_rotate_ccw.setToolTip(self.tr("Rotate selection 90° counter-clockwise (Ctrl+Shift+R)"))
         self.act_rotate_ccw.triggered.connect(lambda: self.rotate_selected_items(-90.0))
         menu_edit.addAction(self.act_rotate_ccw)
 
-        self.act_rotate_cw = QAction("90° im Uhrzeigersinn (+90°)", self)
+        self.act_rotate_cw = QAction(self.tr("Rotate 90° CW (+90°)"), self)
         self.act_rotate_cw.setIcon(get_icon("rotate-cw"))
         self.act_rotate_cw.setShortcut(QKeySequence("Ctrl+R"))
-        self.act_rotate_cw.setToolTip("Auswahl 90° im Uhrzeigersinn drehen (Strg+R)")
+        self.act_rotate_cw.setToolTip(self.tr("Rotate selection 90° clockwise (Ctrl+R)"))
         self.act_rotate_cw.triggered.connect(lambda: self.rotate_selected_items(90.0))
         menu_edit.addAction(self.act_rotate_cw)
 
@@ -263,19 +263,19 @@ class MainWindow(QMainWindow):
 
         # Assign pen 1..8 shortcuts
         for pen_id in range(1, 9):
-            act = QAction(f"Auswahl Stift {pen_id} zuweisen", self)
+            act = QAction(self.tr(f"Assign to Pen {pen_id}"), self)
             act.setShortcut(QKeySequence(str(pen_id)))
             act.triggered.connect(lambda checked=False, pid=pen_id: self.assign_selection_to_pen(pid))
             menu_edit.addAction(act)
 
         # --- View Menu ---
-        menu_view = menu_bar.addMenu("&Ansicht")
+        menu_view = menu_bar.addMenu(self.tr("&View"))
 
         # Mode switching group
         self.mode_group = QActionGroup(self)
         self.mode_group.setExclusive(True)
 
-        self.act_mode_layout = QAction("Layout", self)
+        self.act_mode_layout = QAction(self.tr("Layout"), self)
         self.act_mode_layout.setIcon(get_icon("mode-layout"))
         self.act_mode_layout.setCheckable(True)
         self.act_mode_layout.setChecked(True)
@@ -284,7 +284,7 @@ class MainWindow(QMainWindow):
         self.mode_group.addAction(self.act_mode_layout)
         menu_view.addAction(self.act_mode_layout)
 
-        self.act_mode_plot = QAction("Ausgabe", self)
+        self.act_mode_plot = QAction(self.tr("Output"), self)
         self.act_mode_plot.setIcon(get_icon("mode-plot"))
         self.act_mode_plot.setCheckable(True)
         self.act_mode_plot.setShortcut(QKeySequence("Ctrl+P"))
@@ -294,30 +294,30 @@ class MainWindow(QMainWindow):
 
         menu_view.addSeparator()
 
-        self.act_zoom_fit = QAction("Blatt im Fenster einpassen", self)
+        self.act_zoom_fit = QAction(self.tr("Fit Sheet to Window"), self)
         self.act_zoom_fit.setIcon(get_icon("zoom-fit"))
         self.act_zoom_fit.setShortcut(QKeySequence("Ctrl+0"))
-        self.act_zoom_fit.setToolTip("Blatt im Fenster einpassen (Strg+0)")
+        self.act_zoom_fit.setToolTip(self.tr("Fit sheet to window (Ctrl+0)"))
         self.act_zoom_fit.triggered.connect(self.canvas.zoom_to_fit)
         menu_view.addAction(self.act_zoom_fit)
 
-        self.act_zoom_in = QAction("Vergrößern", self)
+        self.act_zoom_in = QAction(self.tr("Zoom In"), self)
         self.act_zoom_in.setIcon(get_icon("zoom-in"))
         self.act_zoom_in.setShortcut(QKeySequence.ZoomIn)
-        self.act_zoom_in.setToolTip("Vergrößern (Strg++)")
+        self.act_zoom_in.setToolTip(self.tr("Zoom In (Ctrl++)"))
         self.act_zoom_in.triggered.connect(lambda checked=False: self.canvas.zoom_in())
         menu_view.addAction(self.act_zoom_in)
 
-        self.act_zoom_out = QAction("Verkleinern", self)
+        self.act_zoom_out = QAction(self.tr("Zoom Out"), self)
         self.act_zoom_out.setIcon(get_icon("zoom-out"))
         self.act_zoom_out.setShortcut(QKeySequence.ZoomOut)
-        self.act_zoom_out.setToolTip("Verkleinern (Strg+-)")
+        self.act_zoom_out.setToolTip(self.tr("Zoom Out (Ctrl+-)"))
         self.act_zoom_out.triggered.connect(lambda checked=False: self.canvas.zoom_out())
         menu_view.addAction(self.act_zoom_out)
 
         # Docks toggle & Display options
         menu_view.addSeparator()
-        self.act_show_nodes = QAction("Stützpunkte (Koordinaten) anzeigen", self)
+        self.act_show_nodes = QAction(self.tr("Show Vertices (Nodes)"), self)
         self.act_show_nodes.setCheckable(True)
         self.act_show_nodes.setChecked(False)
         self.act_show_nodes.toggled.connect(self.plot_dock.chk_show_nodes.setChecked)
@@ -330,13 +330,13 @@ class MainWindow(QMainWindow):
         menu_view.addAction(self.plot_dock.toggleViewAction())
 
         # --- Help Menu ---
-        menu_help = menu_bar.addMenu("&Hilfe")
-        act_about = QAction("Über &Plotter Studio", self)
+        menu_help = menu_bar.addMenu(self.tr("&Help"))
+        act_about = QAction(self.tr("&About Plotter Studio"), self)
         act_about.triggered.connect(self.show_about)
         menu_help.addAction(act_about)
 
     def _setup_toolbar(self):
-        toolbar = QToolBar("Haupt-Werkzeugleiste", self)
+        toolbar = QToolBar(self.tr("Main Toolbar"), self)
         toolbar.setMovable(False)
         toolbar.setToolButtonStyle(Qt.ToolButtonIconOnly)
         self.addToolBar(Qt.TopToolBarArea, toolbar)
@@ -378,19 +378,19 @@ class MainWindow(QMainWindow):
         toolbar.addAction(self.act_rotate_cw)
         toolbar.addSeparator()
 
-        btn_center = toolbar.addAction("Mittig ausrichten")
+        btn_center = toolbar.addAction(self.tr("Center on Sheet"))
         btn_center.setIcon(get_icon("align-center"))
-        btn_center.setToolTip("Mittig auf Blatt/Plottbereich ausrichten")
+        btn_center.setToolTip(self.tr("Center on sheet or printable area"))
         btn_center.triggered.connect(self.transform_dock.align_center_both)
 
-        btn_fit = toolbar.addAction("Auf Blatt einpassen")
+        btn_fit = toolbar.addAction(self.tr("Fit to Sheet"))
         btn_fit.setIcon(get_icon("fit-page"))
-        btn_fit.setToolTip("Auf Blatt einpassen")
+        btn_fit.setToolTip(self.tr("Fit artwork to sheet"))
         btn_fit.triggered.connect(self.transform_dock.fit_to_page)
 
-        btn_orig = toolbar.addAction("1:1 Originalgröße")
+        btn_orig = toolbar.addAction(self.tr("Original Size (1:1)"))
         btn_orig.setIcon(get_icon("original-size"))
-        btn_orig.setToolTip("1:1 Originalgröße (aus Quelldatei)")
+        btn_orig.setToolTip(self.tr("Reset to 1:1 original size"))
         btn_orig.triggered.connect(self.transform_dock.reset_to_original_size)
 
         # Spacer to push paper setup & device settings to the right
@@ -402,19 +402,19 @@ class MainWindow(QMainWindow):
         self.btn_page_setup = QToolButton(toolbar)
         self.btn_page_setup.setIcon(get_icon("page", size=18))
         self.btn_page_setup.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
-        self.btn_page_setup.setToolTip("Papierformat & Seiteneinrichtung bearbeiten...")
+        self.btn_page_setup.setToolTip(self.tr("Edit page setup and margins..."))
         self.btn_page_setup.clicked.connect(self.open_page_setup_dialog)
         toolbar.addWidget(self.btn_page_setup)
 
         toolbar.addSeparator()
 
-        lbl_device = QLabel(" Gerät: ", toolbar)
+        lbl_device = QLabel(self.tr(" Device: "), toolbar)
         lbl_device.setStyleSheet("color: #4b5563;")
         toolbar.addWidget(lbl_device)
 
         self.combo_active_device = QComboBox(toolbar)
         self.combo_active_device.setMinimumWidth(220)
-        self.combo_active_device.setToolTip("Aktives Plotter-Gerät für Abfragen und Plottausgabe")
+        self.combo_active_device.setToolTip(self.tr("Active plotter device for inquiry and plotting"))
         self.combo_active_device.currentIndexChanged.connect(self._on_active_device_changed)
         toolbar.addWidget(self.combo_active_device)
 
