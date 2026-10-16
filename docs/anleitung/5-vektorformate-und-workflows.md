@@ -101,20 +101,6 @@ Blender eignet sich hervorragend für algorithmische 3D-Geometrie, Architektur-D
 
 ---
 
-## 6. Empfohlene Ressourcen, Tools & Community-Sammlungen
+> [!TIP]
+> Weiterführende Werkzeuge (z. B. `vpype`, `vsketch`, `ln`), Single-Line-Schriften sowie die zentralen Community-Hubs (**Awesome Plotters**, Drawingbots.net, Reddit) finden Sie in **[Kapitel 7: Empfohlene Ressourcen, Tools & Community-Sammlungen](7-ressourcen-tools-und-community.md)**.
 
-Für kreatives Arbeiten, generative Kunst und den Austausch mit anderen Plotter-Enthusiasten gibt es eine lebendige Open-Source- und Maker-Community. Folgende Anlaufstellen sind besonders empfehlenswert:
-
-* **[Awesome Plotters (GitHub)](https://github.com/beardicus/awesome-plotters):**
-  *Die* zentrale, kuratierte Linksammlung auf GitHub für computergesteuerte Zeichenmaschinen, Plotter-Art, Software, Firmware, mathematische Bibliotheken und Hardware-Projekte. Ein idealer Startpunkt für Recherchen.
-* **[Drawingbots.net](https://drawingbots.net/):**
-  Der zentrale internationale Community-Hub für Plotter-Künstler und Zeichenroboter-Bauer. Bietet Software- und Hardware-Verzeichnisse, Tutorials, Interviews und einen sehr aktiven **Discord-Server** zum Erfahrungsaustausch über Stifte, Papiere und Mechanik.
-* **[vpype](https://github.com/abey79/vpype) & [vsketch](https://github.com/abey79/vsketch):**
-  * *vpype:* Das „Schweizer Taschenmesser" auf der Kommandozeile für Plotter-Vektoren (automatisches Erzeugen von Schraffuren (*Hatching*), Skalieren, Filtern und Transformieren von SVG-Dateien).
-  * *vsketch:* Ein auf *vpype* und Python aufbauendes Entwicklungs-Framework, das speziell für generative Plotter-Kunst mit bequemer Vorschau und automatischem SVG-Export geschaffen wurde.
-* **[Turtletoy](https://turtletoy.net/):**
-  Eine faszinierende Online-Plattform für generative Kunst im Browser. Skripte werden mit einer an Python-Turtle angelehnten API geschrieben und können direkt als saubere, optimierte SVG-Dateien für den Plotter heruntergeladen werden.
-* **[ln (3D Line Art Engine)](https://github.com/fogleman/ln):**
-  Eine blitzschnelle 3D-zu-Vektor-Engine in Go (auch als Python-Bindings verfügbar), die 3D-Modelle (`.obj`, `.stl`) und mathematische Funktionen in 2D-Vektorzeichnungen umrechnet und verdeckte Linien (*Hidden Line Removal*) meisterhaft handhabt.
-* **[Reddit r/PlotterArt](https://www.reddit.com/r/PlotterArt/):**
-  Eine sehr aktive Reddit-Community mit Inspirationen, Praxistests verschiedener Stiftarten (Fineliner, Gelschreiber, Tusche, Marker) und Papiersorten sowie Hilfestellungen bei kniffligen Plotter-Problemen.

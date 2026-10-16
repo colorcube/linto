@@ -144,7 +144,10 @@ Durch Rechtsklick auf ein Objekt im Canvas oder Auswahl im Stifte-Dock kann jede
 ---
 
 > [!TIP]
-> Ausführliche Anleitungen zur optimalen Vorbereitung eigener SVG-Skripte (Maßeinheiten, Farbcodes für Stifte), dem Einsatz von Inkscape und Blender als Vektorgeneratoren sowie Tipps zu HP-GL, DXF und empfohlenen Community-Tools (Awesome Plotters, Drawingbots, vpype) finden Sie im eigenständigen **[Kapitel 5: Leitfaden: Vektorformate, Quellen & Workflows](5-vektorformate-und-workflows.md)**.
+> Ausführliche Anleitungen zur optimalen Vorbereitung eigener SVG-Skripte (Maßeinheiten, Farbcodes für Stifte), dem Einsatz von Inkscape und Blender als Vektorgeneratoren sowie Tipps zu HP-GL und DXF finden Sie im eigenständigen **[Kapitel 5: Leitfaden: Vektorformate, Quellen & Workflows](5-vektorformate-und-workflows.md)**.
+> 
+> Eine kuratierte Sammlung empfohlener Community-Tools (Awesome Plotters, Drawingbots, vpype, vsketch, Single-Line-Schriften) bietet **[Kapitel 7: Empfohlene Ressourcen, Tools & Community-Sammlungen](7-ressourcen-tools-und-community.md)**.
+
 
 
 

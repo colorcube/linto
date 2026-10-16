@@ -64,16 +64,10 @@ Plotter Studio ist ein spezialisierter **Slicer und Arbeitsbereich für Vektor-S
    * Blender (3D-Szenen als 2D-SVG mit Freestyle & Grease Pencil Line Art).
    * HP-GL (`.hpgl` / `.plt`) Direktimport & externe Konverter (`vpype`, `hp2xx`).
    * DXF (CAD-Zeichnungen und Layer-Besonderheiten).
-   * Empfohlene Ressourcen, Tools & Community (Awesome Plotters, Drawingbots, vpype, vsketch, Turtletoy, ln, Reddit r/PlotterArt).
 6. **[6. Hintergrund: Konzepte, Algorithmen & Architektur (Deep-Dive)](6-konzepte-und-architektur.md)**
    * Ausführliche mathematische und technische Hintergründe für Entwickler und Power-User.
    * Details zu 2-Opt TSP, Ramer-Douglas-Peucker, Koordinatentransformationen und der Streaming-Architektur.
-
----
-
-## Weiterführende Gerätedokumentation & Community-Ressourcen
-* **[Mutoh XP-500 Gerätedokumentation](../devices/mutoh-xp500/README.md):** Umfassende Transkription des Original-Handbuchs, MH-GL-Befehlssatz, Escape-Sequenzen und Register.
-* **[Awesome Plotters (GitHub)](https://github.com/beardicus/awesome-plotters):** Die zentrale, kuratierte Linksammlung für Stiftplotter, Zeichenroboter, Software und Kunst.
-* **[Drawingbots.net](https://drawingbots.net/):** Globale Community, News, Guides und Discord für Plotter-Künstler.
-* **[Leitfaden Vektorformate & Werkzeuge](5-vektorformate-und-workflows.md):** Detaillierte Tool-Tipps (Inkscape, Blender, vpype, vsketch, Turtletoy, ln u.v.m.).
-
+7. **[7. Empfohlene Ressourcen, Tools & Community-Sammlungen](7-ressourcen-tools-und-community.md)**
+   * Zentrale Sammlungen & Community-Hubs: Awesome Plotters, Drawingbots.net & Discord, Reddit r/PlotterArt.
+   * Spezialisierte Vektor-Werkzeuge: vpype, vsketch, Turtletoy, ln (3D Line Art).
+   * Einlinien-Schriften (Single-Stroke / Hershey Fonts).
