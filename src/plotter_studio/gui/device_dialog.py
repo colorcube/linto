@@ -27,7 +27,7 @@ class DeviceSettingsDialog(QDialog):
 
     def __init__(self, device_manager: DeviceManager, parent: Optional[QWidget] = None):
         super().__init__(parent)
-        self.setWindowTitle("Plotter-Geräte konfigurieren")
+        self.setWindowTitle(self.tr("Configure Plotter Devices"))
         self.setMinimumSize(680, 480)
         self.manager = device_manager
         self._current_device: Optional[ConfiguredDevice] = None
@@ -46,18 +46,18 @@ class DeviceSettingsDialog(QDialog):
 
         # Left column: Device list & actions
         left_layout = QVBoxLayout()
-        left_layout.addWidget(QLabel("<b>Eingerichtete Geräte:</b>"))
+        left_layout.addWidget(QLabel(self.tr("<b>Configured Devices:</b>")))
 
         self.list_devices = QListWidget()
         self.list_devices.currentItemChanged.connect(self._on_device_selected)
         left_layout.addWidget(self.list_devices)
 
         btn_row = QHBoxLayout()
-        self.btn_add = QPushButton("Hinzufügen")
+        self.btn_add = QPushButton(self.tr("Add"))
         self.btn_add.setIcon(get_icon("plus"))
         self.btn_add.clicked.connect(self._on_add_device)
 
-        self.btn_delete = QPushButton("Löschen")
+        self.btn_delete = QPushButton(self.tr("Delete"))
         self.btn_delete.setIcon(get_icon("delete"))
         self.btn_delete.clicked.connect(self._on_delete_device)
 
@@ -68,13 +68,13 @@ class DeviceSettingsDialog(QDialog):
         content_layout.addLayout(left_layout, 1)
 
         # Right column: Editor fields
-        self.grp_editor = QGroupBox("Geräteeinstellungen")
+        self.grp_editor = QGroupBox(self.tr("Device Settings"))
         e_layout = QVBoxLayout(self.grp_editor)
 
         form = QFormLayout()
 
         self.txt_name = QLineEdit()
-        form.addRow("Bezeichnung:", self.txt_name)
+        form.addRow(self.tr("Name:"), self.txt_name)
 
         self.combo_model = QComboBox()
         avail_profiles = list_available_profiles()
@@ -82,85 +82,87 @@ class DeviceSettingsDialog(QDialog):
             self.combo_model.addItem(f"{p.name} ({p.manufacturer})", p.model_id)
         if not avail_profiles:
             self.combo_model.addItem("Mutoh XP-500", "mutoh_xp500")
-        form.addRow("Modellprofil:", self.combo_model)
+        form.addRow(self.tr("Model Profile:"), self.combo_model)
 
         port_row = QHBoxLayout()
         self.combo_port = QComboBox()
         self.combo_port.setEditable(True)
-        self.combo_port.setToolTip("Serieller Port (z.B. /dev/ttyUSB0) oder TCP (tcp://127.0.0.1:9999)")
+        self.combo_port.setToolTip(self.tr("Serial port (e.g. /dev/ttyUSB0) or TCP (tcp://127.0.0.1:9999)"))
         self.btn_refresh_ports = QPushButton()
         self.btn_refresh_ports.setIcon(get_icon("refresh"))
-        self.btn_refresh_ports.setToolTip("Ports aktualisieren")
+        self.btn_refresh_ports.setToolTip(self.tr("Refresh ports"))
         self.btn_refresh_ports.setFixedWidth(32)
         self.btn_refresh_ports.clicked.connect(self._refresh_ports)
 
         port_row.addWidget(self.combo_port)
         port_row.addWidget(self.btn_refresh_ports)
-        form.addRow("Schnittstelle:", port_row)
+        form.addRow(self.tr("Port / Address:"), port_row)
 
         self.combo_baud = QComboBox()
         for b in [300, 600, 1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200]:
             self.combo_baud.addItem(str(b), b)
         self.combo_baud.setEditable(True)
         self.combo_baud.setCurrentText("19200")
-        form.addRow("Baudrate:", self.combo_baud)
+        form.addRow(self.tr("Baud Rate:"), self.combo_baud)
 
         self.combo_flow = QComboBox()
-        self.combo_flow.addItem("Hardware (RTS / CTS)", "rtscts")
-        self.combo_flow.addItem("Hardware (DTR / DSR)", "dsrdtr")
-        self.combo_flow.addItem("Software (XON / XOFF)", "xonxoff")
-        self.combo_flow.addItem("Keine (None)", "none")
+        self.combo_flow.addItem(self.tr("Hardware (RTS / CTS)"), "rtscts")
+        self.combo_flow.addItem(self.tr("Hardware (DTR / DSR)"), "dsrdtr")
+        self.combo_flow.addItem(self.tr("Software (XON / XOFF)"), "xonxoff")
+        self.combo_flow.addItem(self.tr("None"), "none")
         self.combo_flow.setToolTip(
-            "Flusssteuerung (Handshake):\n"
-            "• RTS/CTS: Standard bei 7/8-adrigen RS-232-Kabeln (Mutoh, HP, Roland)\n"
-            "• DTR/DSR: Hardware-Handshake über Pin 20 (DTR)\n"
-            "• XON/XOFF: Software-Handshake (3-adrige Kabel & TCP-Simulator)\n"
-            "• Keine: Ohne Handshake"
+            self.tr(
+                "Flow control (Handshake):\n"
+                "• RTS/CTS: Standard for 7/8-wire RS-232 cables (Mutoh, HP, Roland)\n"
+                "• DTR/DSR: Hardware handshake via pin 20 (DTR)\n"
+                "• XON/XOFF: Software handshake (3-wire cables & TCP simulator)\n"
+                "• None: No handshake"
+            )
         )
-        form.addRow("Flusssteuerung:", self.combo_flow)
+        form.addRow(self.tr("Flow Control:"), self.combo_flow)
 
         from ..device.profile import get_margin_profile_items
         self.combo_margins = QComboBox()
         for label, key in get_margin_profile_items():
             self.combo_margins.addItem(label, key)
-        form.addRow("Randfenster:", self.combo_margins)
+        form.addRow(self.tr("Margin Profile:"), self.combo_margins)
 
         self.combo_rotation = QComboBox()
-        self.combo_rotation.addItem("0° (Standard)", 0)
-        self.combo_rotation.addItem("90° (Vorschubachse)", 90)
+        self.combo_rotation.addItem("0° (" + self.tr("Default") + ")", 0)
+        self.combo_rotation.addItem("90° (" + self.tr("Feed axis") + ")", 90)
         self.combo_rotation.addItem("180°", 180)
         self.combo_rotation.addItem("270°", 270)
-        form.addRow("Gerätedrehung:", self.combo_rotation)
+        form.addRow(self.tr("Rotation:"), self.combo_rotation)
 
         axes_layout = QHBoxLayout()
-        self.chk_swap_xy = QCheckBox("X↔Y tauschen")
-        self.chk_invert_x = QCheckBox("X spiegeln")
-        self.chk_invert_y = QCheckBox("Y spiegeln")
+        self.chk_swap_xy = QCheckBox(self.tr("Swap X↔Y"))
+        self.chk_invert_x = QCheckBox(self.tr("Mirror X"))
+        self.chk_invert_y = QCheckBox(self.tr("Mirror Y"))
         axes_layout.addWidget(self.chk_swap_xy)
         axes_layout.addWidget(self.chk_invert_x)
         axes_layout.addWidget(self.chk_invert_y)
-        form.addRow("Achsen:", axes_layout)
+        form.addRow(self.tr("Axes:"), axes_layout)
 
         e_layout.addLayout(form)
 
         # Test / Probe button & status
-        test_group = QGroupBox("Verbindungstest")
+        test_group = QGroupBox(self.tr("Connection Test"))
         t_layout = QVBoxLayout(test_group)
-        self.btn_test = QPushButton("Plotter prüfen (Inquiry)")
+        self.btn_test = QPushButton(self.tr("Probe Plotter (Inquiry)"))
         self.btn_test.setIcon(get_icon("search"))
         self.btn_test.clicked.connect(self._on_test_device)
         t_layout.addWidget(self.btn_test)
 
-        self.lbl_test_result = QLabel("Noch nicht getestet")
+        self.lbl_test_result = QLabel(self.tr("Not tested yet"))
         self.lbl_test_result.setWordWrap(True)
         self.lbl_test_result.setStyleSheet("padding: 4px; background: #f3f4f6; border-radius: 4px; font-size: 11px;")
         t_layout.addWidget(self.lbl_test_result)
         e_layout.addWidget(test_group)
 
         # Save changes button
-        self.btn_save_item = QPushButton("Speichern")
+        self.btn_save_item = QPushButton(self.tr("Save"))
         self.btn_save_item.setIcon(get_icon("save", size=16))
-        self.btn_save_item.setToolTip("Geräteeinstellungen speichern")
+        self.btn_save_item.setToolTip(self.tr("Save device settings"))
         self.btn_save_item.clicked.connect(self._on_save_current_device)
         e_layout.addWidget(self.btn_save_item)
         e_layout.addStretch()
@@ -193,7 +195,7 @@ class DeviceSettingsDialog(QDialog):
             item = QListWidgetItem(dev.name)
             item.setData(Qt.UserRole, dev.id)
             if dev.id == self.manager.active_device_id:
-                item.setText(f"{dev.name} (Aktiv)")
+                item.setText(f"{dev.name} (" + self.tr("Active") + ")")
                 font = item.font()
                 font.setBold(True)
                 item.setFont(font)
@@ -239,7 +241,7 @@ class DeviceSettingsDialog(QDialog):
         self.chk_swap_xy.setChecked(dev.swap_xy)
         self.chk_invert_x.setChecked(dev.invert_x)
         self.chk_invert_y.setChecked(dev.invert_y)
-        self.lbl_test_result.setText("Noch nicht getestet")
+        self.lbl_test_result.setText(self.tr("Not tested yet"))
 
     def _on_add_device(self):
         new_id = f"device_{uuid.uuid4().hex[:6]}"
@@ -247,7 +249,7 @@ class DeviceSettingsDialog(QDialog):
         default_flow = "xonxoff" if (port.startswith("tcp://") or "virtual_plotter" in port) else (self.combo_flow.currentData() or "rtscts")
         new_dev = ConfiguredDevice(
             id=new_id,
-            name="Neuer Plotter",
+            name=self.tr("New Plotter"),
             model_id=self.combo_model.currentData() or "mutoh_xp500",
             port=port,
             baudrate=19200,
@@ -261,13 +263,14 @@ class DeviceSettingsDialog(QDialog):
         if not self._current_device:
             return
         if len(self.manager.devices) <= 1:
-            QMessageBox.warning(self, "Löschen nicht möglich", "Mindestens ein Gerät muss eingerichtet bleiben.")
+            QMessageBox.warning(self, self.tr("Cannot Delete"), self.tr("At least one device must remain configured."))
             return
 
+        del_msg = self.tr("Do you really want to delete device '%1'?").replace("%1", self._current_device.name)
         reply = QMessageBox.question(
             self,
-            "Gerät löschen",
-            f"Möchtest du das Gerät '{self._current_device.name}' wirklich löschen?",
+            self.tr("Delete Device"),
+            del_msg,
             QMessageBox.Yes | QMessageBox.No,
         )
         if reply == QMessageBox.Yes:
@@ -295,20 +298,20 @@ class DeviceSettingsDialog(QDialog):
         saved_id = self._current_device.id
         self.manager.update_device(self._current_device)
         self._load_devices_list(select_id=saved_id)
-        self.btn_save_item.setText("✓ Gespeichert")
-        QTimer.singleShot(1500, lambda: self.btn_save_item.setText("Speichern"))
+        self.btn_save_item.setText(self.tr("✓ Saved"))
+        QTimer.singleShot(1500, lambda: self.btn_save_item.setText(self.tr("Save")))
 
     def _on_test_device(self):
         port = self.combo_port.currentText().strip()
         if not port:
-            self.lbl_test_result.setText("Keine Schnittstelle ausgewählt")
+            self.lbl_test_result.setText(self.tr("No port selected"))
             return
         try:
             baudrate = int(self.combo_baud.currentText().strip())
         except ValueError:
             baudrate = 19200
         self.btn_test.setEnabled(False)
-        self.lbl_test_result.setText(f"Prüfe {port} mit {baudrate} Baud...")
+        self.lbl_test_result.setText(self.tr("Probing %1 at %2 baud...").replace("%1", port).replace("%2", str(baudrate)))
         self.lbl_test_result.setStyleSheet("padding: 4px; background: #fff9c4; color: #f57f17; border-radius: 4px; font-size: 11px;")
 
         def _worker():
@@ -325,27 +328,31 @@ class DeviceSettingsDialog(QDialog):
             dim_str = (
                 f"{res.hard_clip_mm[0]:.0f} × {res.hard_clip_mm[1]:.0f} mm ({res.detected_format})"
                 if res.hard_clip_mm
-                else "Kein Bogen gemessen"
+                else self.tr("No sheet measured")
             )
             pin_parts = []
             if res.cts is not None:
-                pin_parts.append(f"CTS: {'High (Bereit)' if res.cts else 'Low'}")
+                pin_parts.append(f"CTS: {self.tr('High (Ready)') if res.cts else 'Low'}")
             if res.dsr is not None:
-                pin_parts.append(f"DSR: {'High (Bereit)' if res.dsr else 'Low'}")
+                pin_parts.append(f"DSR: {self.tr('High (Ready)') if res.dsr else 'Low'}")
             pin_info = f"<br>Pins: {' • '.join(pin_parts)}" if pin_parts else ""
             self.lbl_test_result.setStyleSheet("padding: 4px; background: #e8f5e9; color: #2e7d32; border-radius: 4px; font-size: 11px;")
             self.lbl_test_result.setText(
-                f"✓ <b>Erfolgreich!</b><br/>"
-                f"Modell: {res.model or 'Unbekannt'}<br/>"
-                f"Auflösung: {res.units_per_mm:.0f} U/mm{pin_info}<br/>"
-                f"Bogen: {dim_str}"
+                self.tr("✓ <b>Success!</b><br/>Model: %1<br/>Resolution: %2 U/mm%3<br/>Sheet: %4")
+                .replace("%1", str(res.model or self.tr("Unknown")))
+                .replace("%2", f"{res.units_per_mm:.0f}")
+                .replace("%3", pin_info)
+                .replace("%4", dim_str)
             )
         else:
             pin_parts = []
             if res.cts is not None:
-                pin_parts.append(f"CTS: {'High' if res.cts else 'Low'}")
+                pin_parts.append(f"CTS: {self.tr('High (Ready)') if res.cts else 'Low'}")
             if res.dsr is not None:
-                pin_parts.append(f"DSR: {'High' if res.dsr else 'Low'}")
+                pin_parts.append(f"DSR: {self.tr('High (Ready)') if res.dsr else 'Low'}")
             pin_hint = f"<br>Pins: {' • '.join(pin_parts)}" if pin_parts else ""
             self.lbl_test_result.setStyleSheet("padding: 4px; background: #ffebee; color: #c62828; border-radius: 4px; font-size: 11px;")
-            self.lbl_test_result.setText(f"Fehlgeschlagen: {res.error_message or 'Keine Antwort vom Plotter (Timeout)'}{pin_hint}")
+            err_msg = res.error_message or self.tr("No response from plotter (timeout)")
+            self.lbl_test_result.setText(
+                self.tr("Failed: %1%2").replace("%1", err_msg).replace("%2", pin_hint)
+            )

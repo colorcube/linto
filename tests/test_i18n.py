@@ -70,3 +70,15 @@ def test_setup_i18n_german_translation(qapp):
     assert lbl.tr("&Open Project...") == "Projekt &öffnen..."
     assert lbl.tr("Center on Sheet") == "Mittig ausrichten"
 
+    # Docks & Dialogs translations
+    assert lbl.tr("Objects & Layers") == "Objekte & Ebenen"
+    assert lbl.tr("Position & Dimensions") == "Position & Maße"
+    assert lbl.tr("Pens") == "Stifte"
+    assert lbl.tr("Pipeline Optimization") == "Pipeline-Optimierung"
+    assert lbl.tr("Pre-Flight Inspection") == "Pre-Flight-Inspektion"
+    assert lbl.tr("Plotter Control") == "Plotter-Steuerung"
+    assert lbl.tr("File Export") == "Datei-Export"
+    assert lbl.tr("Page Setup & Paper Format") == "Seiteneinrichtung & Papierformat"
+    assert lbl.tr("Configure Plotter Devices") == "Plotter-Geräte konfigurieren"
+    assert lbl.tr("Apply Pen Preset") == "Stift-Preset anwenden"
+

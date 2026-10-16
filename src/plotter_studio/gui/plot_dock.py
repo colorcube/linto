@@ -77,7 +77,7 @@ class PlotDockWidget(QDockWidget):
     stream_step_changed = Signal(int)
 
     def __init__(self, doc: Document, parent=None):
-        super().__init__("Ausgabe", parent)
+        super().__init__(self.tr("Output"), parent)
         self.doc = doc
         self.job: Optional[PlotJob] = None
         self._pen_checkboxes: dict[int, QCheckBox] = {}
@@ -135,8 +135,8 @@ class PlotDockWidget(QDockWidget):
         layout.setContentsMargins(6, 4, 6, 6)
         layout.setSpacing(6)
 
-        # 1. Pipeline Settings (Einklappbar, per Klick erweiterbar)
-        self.grp_pipeline = SectionGroup("Pipeline-Optimierung", self._container, collapsible=True, collapsed=False)
+        # 1. Pipeline Settings (Collapsible)
+        self.grp_pipeline = SectionGroup(self.tr("Pipeline Optimization"), self._container, collapsible=True, collapsed=False)
         grid_pipe = QGridLayout()
         grid_pipe.setContentsMargins(0, 0, 0, 0)
         grid_pipe.setHorizontalSpacing(8)
@@ -145,7 +145,7 @@ class PlotDockWidget(QDockWidget):
         grid_pipe.setColumnStretch(1, 0)
         grid_pipe.setColumnStretch(2, 1)
 
-        lbl_flat = QLabel("Kurvenglättung:")
+        lbl_flat = QLabel(self.tr("Curve flattening:"))
         lbl_flat.setStyleSheet("font-weight: 500; color: #374151;")
         self.spin_flatten = QDoubleSpinBox()
         self.spin_flatten.setAlignment(Qt.AlignLeft)
@@ -156,7 +156,7 @@ class PlotDockWidget(QDockWidget):
         grid_pipe.addWidget(lbl_flat, 0, 0)
         grid_pipe.addWidget(self.spin_flatten, 0, 1)
 
-        lbl_merge = QLabel("Endpunkte verbinden:")
+        lbl_merge = QLabel(self.tr("Connect endpoints:"))
         lbl_merge.setStyleSheet("font-weight: 500; color: #374151;")
         self.spin_merge = QDoubleSpinBox()
         self.spin_merge.setAlignment(Qt.AlignLeft)
@@ -167,7 +167,7 @@ class PlotDockWidget(QDockWidget):
         grid_pipe.addWidget(lbl_merge, 1, 0)
         grid_pipe.addWidget(self.spin_merge, 1, 1)
 
-        lbl_simp = QLabel("Vereinfachen:")
+        lbl_simp = QLabel(self.tr("Simplify:"))
         lbl_simp.setStyleSheet("font-weight: 500; color: #374151;")
         self.spin_simplify = QDoubleSpinBox()
         self.spin_simplify.setAlignment(Qt.AlignLeft)
@@ -180,34 +180,34 @@ class PlotDockWidget(QDockWidget):
 
         self.grp_pipeline.addLayout(grid_pipe)
 
-        # Checkboxen untereinander
-        self.chk_sort = QCheckBox("Leerwege optimieren (Sortierung)")
-        self.chk_sort.setToolTip("Leerwege optimieren (TSP 2-Opt Sortierung)")
+        # Checkboxes
+        self.chk_sort = QCheckBox(self.tr("Optimize travel moves (Sort)"))
+        self.chk_sort.setToolTip(self.tr("Optimize travel moves (TSP 2-Opt sorting)"))
         self.chk_sort.setChecked(True)
         self.grp_pipeline.addWidget(self.chk_sort)
 
-        self.chk_clip = QCheckBox("Am Plottbereich beschneiden")
-        self.chk_clip.setToolTip("Pfade am hardware- oder seitenspezifischen Plottbereich beschneiden (Clip)")
+        self.chk_clip = QCheckBox(self.tr("Clip to printable area"))
+        self.chk_clip.setToolTip(self.tr("Clip paths to hardware or page-specific printable area"))
         self.chk_clip.setChecked(False)
         self.grp_pipeline.addWidget(self.chk_clip)
 
-        self.chk_show_travels = QCheckBox("Leerfahrten anzeigen")
-        self.chk_show_travels.setToolTip("Leerfahrten (Pen-Up-Bewegungen) auf der Zeichenfläche anzeigen")
+        self.chk_show_travels = QCheckBox(self.tr("Show rapid moves"))
+        self.chk_show_travels.setToolTip(self.tr("Show pen-up travel moves on canvas"))
         self.chk_show_travels.setChecked(True)
         self.chk_show_travels.toggled.connect(self.toggle_travels.emit)
         self.grp_pipeline.addWidget(self.chk_show_travels)
 
-        self.chk_show_nodes = QCheckBox("Stützpunkte anzeigen")
-        self.chk_show_nodes.setToolTip("Stützpunkte (Koordinatenknoten) auf der Zeichenfläche anzeigen")
+        self.chk_show_nodes = QCheckBox(self.tr("Show vertices"))
+        self.chk_show_nodes.setToolTip(self.tr("Show coordinate vertices on canvas"))
         self.chk_show_nodes.setChecked(False)
         self.chk_show_nodes.toggled.connect(self.toggle_nodes.emit)
         self.grp_pipeline.addWidget(self.chk_show_nodes)
 
-        self.btn_recompute = QPushButton("Pipeline neu berechnen")
+        self.btn_recompute = QPushButton(self.tr("Recompute Pipeline"))
         self.btn_recompute.clicked.connect(self.config_changed.emit)
         self.grp_pipeline.addWidget(self.btn_recompute)
 
-        # Parameter-Änderungen verbinden
+        # Parameter change connections
         self.spin_flatten.valueChanged.connect(self._on_pipeline_param_changed)
         self.spin_merge.valueChanged.connect(self._on_pipeline_param_changed)
         self.spin_simplify.valueChanged.connect(self._on_pipeline_param_changed)
@@ -216,8 +216,8 @@ class PlotDockWidget(QDockWidget):
 
         layout.addWidget(self.grp_pipeline)
 
-        # 2. Pre-Flight Inspection Statistics (sauber untereinander)
-        self.grp_stats = SectionGroup("Pre-Flight-Inspektion", self._container, collapsible=True, collapsed=False)
+        # 2. Pre-Flight Inspection Statistics
+        self.grp_stats = SectionGroup(self.tr("Pre-Flight Inspection"), self._container, collapsible=True, collapsed=False)
         grid_stat_values = QGridLayout()
         grid_stat_values.setContentsMargins(0, 0, 0, 0)
         grid_stat_values.setSpacing(4)
@@ -239,29 +239,29 @@ class PlotDockWidget(QDockWidget):
 
         self.lbl_draw = QLabel("0.00 m")
         self.lbl_draw.setStyleSheet("font-weight: bold;")
-        _add_stat_row(0, "pencil", "Zeichenweg:", self.lbl_draw)
+        _add_stat_row(0, "pencil", self.tr("Draw distance:"), self.lbl_draw)
 
         self.lbl_travel = QLabel("0.00 m")
         self.lbl_travel.setStyleSheet("font-weight: bold; color: #00838f;")
-        _add_stat_row(1, "travel", "Leerweg:", self.lbl_travel)
+        _add_stat_row(1, "travel", self.tr("Air travel:"), self.lbl_travel)
 
         self.lbl_savings = QLabel("0 %")
-        _add_stat_row(2, "percent", "Ersparnis:", self.lbl_savings)
+        _add_stat_row(2, "percent", self.tr("Savings:"), self.lbl_savings)
 
         self.lbl_pen_changes = QLabel("0")
-        _add_stat_row(3, "refresh", "Stiftwechsel:", self.lbl_pen_changes)
+        _add_stat_row(3, "refresh", self.tr("Pen changes:"), self.lbl_pen_changes)
 
         self.lbl_duration = QLabel("00m 00s")
         self.lbl_duration.setStyleSheet("font-weight: bold; color: #2e7d32;")
-        _add_stat_row(4, "clock", "Geschätzte Zeit:", self.lbl_duration)
+        _add_stat_row(4, "clock", self.tr("Estimated time:"), self.lbl_duration)
 
         self.lbl_points = QLabel("0")
-        _add_stat_row(5, "node", "Stützpunkte:", self.lbl_points)
+        _add_stat_row(5, "node", self.tr("Vertices:"), self.lbl_points)
 
         self.grp_stats.addLayout(grid_stat_values)
 
         # Warning / Info box
-        self.lbl_warnings = QLabel("✓ Alle Pfade im plottbaren Bereich")
+        self.lbl_warnings = QLabel(self.tr("✓ All paths within printable area"))
         self.lbl_warnings.setWordWrap(True)
         self.lbl_warnings.setStyleSheet("""
             padding: 6px 8px;
@@ -274,22 +274,22 @@ class PlotDockWidget(QDockWidget):
         layout.addWidget(self.grp_stats)
 
         # 3. Pen Visibility Filters
-        self.grp_pens = SectionGroup("Stifte", self._container, collapsible=True, collapsed=True)
+        self.grp_pens = SectionGroup(self.tr("Pens"), self._container, collapsible=True, collapsed=True)
         self.vbox_pens = QVBoxLayout()
         self.vbox_pens.setContentsMargins(0, 0, 0, 0)
         self.vbox_pens.setSpacing(2)
 
-        lbl_pens_placeholder = QLabel("Wird nach Pipeline-Berechnung angezeigt")
+        lbl_pens_placeholder = QLabel(self.tr("Displayed after pipeline computation"))
         lbl_pens_placeholder.setStyleSheet("color: #94a3b8; font-style: italic; padding: 2px 0;")
         self.vbox_pens.addWidget(lbl_pens_placeholder)
         self.grp_pens.addLayout(self.vbox_pens)
         layout.addWidget(self.grp_pens)
 
         # 4. Device Connection & Live Plot Control
-        self.grp_device = SectionGroup("Plotter-Steuerung", self._container, collapsible=True, collapsed=False)
+        self.grp_device = SectionGroup(self.tr("Plotter Control"), self._container, collapsible=True, collapsed=False)
 
         # Active Device Info Display
-        self.lbl_active_device_info = QLabel("Kein Gerät ausgewählt<br><span style='color: #64748b;'>In oberer Leiste wählen</span>")
+        self.lbl_active_device_info = QLabel(self.tr("No device selected<br><span style='color: #64748b;'>Select in top toolbar</span>"))
         self.lbl_active_device_info.setWordWrap(True)
         self.lbl_active_device_info.setStyleSheet("""
             padding: 6px 8px;
@@ -321,13 +321,13 @@ class PlotDockWidget(QDockWidget):
         hbox_rot.setContentsMargins(0, 0, 0, 0)
         hbox_rot.setSpacing(6)
 
-        lbl_rot = QLabel("Drehung:")
+        lbl_rot = QLabel(self.tr("Rotation:"))
         lbl_rot.setStyleSheet("font-weight: 500; color: #374151;")
         hbox_rot.addWidget(lbl_rot)
 
         self.combo_rotation = QComboBox()
-        self.combo_rotation.addItem("0° (Standard)", 0)
-        self.combo_rotation.addItem("90° (Quer/Vorschub)", 90)
+        self.combo_rotation.addItem("0° (" + self.tr("Default") + ")", 0)
+        self.combo_rotation.addItem("90° (" + self.tr("Feed axis") + ")", 90)
         self.combo_rotation.addItem("180°", 180)
         self.combo_rotation.addItem("270°", 270)
         hbox_rot.addWidget(self.combo_rotation)
@@ -338,28 +338,28 @@ class PlotDockWidget(QDockWidget):
         hbox_axes.setContentsMargins(0, 0, 0, 0)
         hbox_axes.setSpacing(8)
 
-        lbl_axes = QLabel("Achsen:")
+        lbl_axes = QLabel(self.tr("Axes:"))
         lbl_axes.setStyleSheet("font-weight: 500; color: #374151;")
         hbox_axes.addWidget(lbl_axes)
 
         self.chk_swap_xy = QCheckBox("X↔Y")
-        self.chk_swap_xy.setToolTip("Achsentausch: X- und Y-Achsen vertauschen (z.B. Rollenvorschub ↔ Wagen)")
+        self.chk_swap_xy.setToolTip(self.tr("Swap X and Y axes (e.g. roll feed ↔ carriage)"))
         self.chk_invert_x = QCheckBox("X inv.")
-        self.chk_invert_x.setToolTip("X-Achse spiegeln")
+        self.chk_invert_x.setToolTip(self.tr("Mirror X axis"))
         self.chk_invert_y = QCheckBox("Y inv.")
-        self.chk_invert_y.setToolTip("Y-Achse spiegeln")
+        self.chk_invert_y.setToolTip(self.tr("Mirror Y axis"))
         hbox_axes.addWidget(self.chk_swap_xy)
         hbox_axes.addWidget(self.chk_invert_x)
         hbox_axes.addWidget(self.chk_invert_y)
         hbox_axes.addStretch()
         self.grp_device.addLayout(hbox_axes)
 
-        self.btn_probe = QPushButton("Plotter prüfen (Inquiry)")
+        self.btn_probe = QPushButton(self.tr("Probe Plotter (Inquiry)"))
         self.btn_probe.setIcon(get_icon("search", size=15))
         self.btn_probe.clicked.connect(self.start_probe)
         self.grp_device.addWidget(self.btn_probe)
 
-        self.lbl_probe_status = QLabel("Kein Plotter geprüft")
+        self.lbl_probe_status = QLabel(self.tr("No plotter probed"))
         self.lbl_probe_status.setWordWrap(True)
         self.lbl_probe_status.setStyleSheet("""
             padding: 6px 8px;
@@ -370,14 +370,13 @@ class PlotDockWidget(QDockWidget):
         """)
         self.grp_device.addWidget(self.lbl_probe_status)
 
-        self.chk_pause_pen_change = QCheckBox("Bei Stiftwechsel automatisch pausieren")
+        self.chk_pause_pen_change = QCheckBox(self.tr("Auto-pause on pen change"))
         self.chk_pause_pen_change.setToolTip(
-            "Pausiert den Plot automatisch vor jedem Stiftwechsel (SPn;),\n"
-            "z.B. für manuelle Stiftwechsel oder Spezialstifte"
+            self.tr("Pauses the plot automatically before each pen change (SPn;),\ne.g. for manual pen swaps or specialty pens")
         )
         self.grp_device.addWidget(self.chk_pause_pen_change)
 
-        self.btn_start_plot = QPushButton("Plot senden")
+        self.btn_start_plot = QPushButton(self.tr("Send Plot"))
         self.btn_start_plot.setIcon(get_icon("play", size=16))
         self.btn_start_plot.setStyleSheet("font-weight: 600; padding: 5px;")
         self.btn_start_plot.setEnabled(False)
@@ -388,13 +387,13 @@ class PlotDockWidget(QDockWidget):
         hbox_ctrl.setContentsMargins(0, 0, 0, 0)
         hbox_ctrl.setSpacing(6)
 
-        self.btn_pause_plot = QPushButton("Pause")
+        self.btn_pause_plot = QPushButton(self.tr("Pause"))
         self.btn_pause_plot.setIcon(get_icon("pause", size=15))
         self.btn_pause_plot.setEnabled(False)
         self.btn_pause_plot.clicked.connect(self.toggle_pause)
         hbox_ctrl.addWidget(self.btn_pause_plot)
 
-        self.btn_abort_plot = QPushButton("Abbrechen")
+        self.btn_abort_plot = QPushButton(self.tr("Cancel"))
         self.btn_abort_plot.setIcon(get_icon("stop", size=15))
         self.btn_abort_plot.setEnabled(False)
         self.btn_abort_plot.setStyleSheet("color: #b91c1c;")
@@ -410,7 +409,7 @@ class PlotDockWidget(QDockWidget):
         self.progress_bar.setFixedHeight(14)
         self.grp_device.addWidget(self.progress_bar)
 
-        self.lbl_stream_status = QLabel("Bereit")
+        self.lbl_stream_status = QLabel(self.tr("Ready"))
         self.lbl_stream_status.setStyleSheet("color: #64748b;")
         self.lbl_stream_status.setWordWrap(True)
         self.grp_device.addWidget(self.lbl_stream_status)
@@ -418,20 +417,20 @@ class PlotDockWidget(QDockWidget):
         layout.addWidget(self.grp_device)
 
         # 5. Export & Actions (Side-by-side)
-        self.grp_export = SectionGroup("Datei-Export", self._container, collapsible=True, collapsed=False)
+        self.grp_export = SectionGroup(self.tr("File Export"), self._container, collapsible=True, collapsed=False)
         hbox_export = QHBoxLayout()
         hbox_export.setContentsMargins(0, 0, 0, 0)
         hbox_export.setSpacing(6)
 
         self.btn_export_hpgl = QPushButton("HP-GL (.hpgl)")
         self.btn_export_hpgl.setIcon(get_icon("save", size=15))
-        self.btn_export_hpgl.setToolTip("Berechnete HP-GL Plotbefehle als Datei speichern")
+        self.btn_export_hpgl.setToolTip(self.tr("Save computed HP-GL plot commands to file"))
         self.btn_export_hpgl.clicked.connect(self.export_hpgl_requested.emit)
         hbox_export.addWidget(self.btn_export_hpgl)
 
-        self.btn_export_svg = QPushButton("Vektoren (.svg)")
+        self.btn_export_svg = QPushButton("SVG (.svg)")
         self.btn_export_svg.setIcon(get_icon("save", size=15))
-        self.btn_export_svg.setToolTip("Optimierte Plot-Vektoren als SVG exportieren")
+        self.btn_export_svg.setToolTip(self.tr("Export optimized plot vectors as SVG"))
         self.btn_export_svg.clicked.connect(self.export_svg_requested.emit)
         hbox_export.addWidget(self.btn_export_svg)
 
@@ -508,14 +507,12 @@ class PlotDockWidget(QDockWidget):
             "rtscts": "RTS/CTS",
             "dsrdtr": "DTR/DSR",
             "xonxoff": "XON/XOFF",
-            "none": "Keine",
+            "none": self.tr("None"),
         }
         flow_str = flow_names.get(getattr(dev, "flow_control", "rtscts"), "RTS/CTS")
         baud_info = f" ({dev.baudrate} Baud, {flow_str})" if not dev.port.startswith("tcp://") else f" ({flow_str})"
-        self.lbl_active_device_info.setText(
-            f"Gerät: <b>{dev.name}</b><br>"
-            f"Schnittstelle: <code>{dev.port}</code>{baud_info}"
-        )
+        dev_info_html = self.tr("Device: <b>%1</b><br>Port: <code>%2</code>%3").replace("%1", dev.name).replace("%2", dev.port).replace("%3", baud_info)
+        self.lbl_active_device_info.setText(dev_info_html)
 
     def start_probe(self):
         """Inquire connected plotter (OI/OF/OH) in background thread."""
@@ -528,11 +525,11 @@ class PlotDockWidget(QDockWidget):
                     port = dev.port
                 baud = dev.baudrate
         if not port:
-            self.lbl_probe_status.setText("Kein Port ausgewählt")
+            self.lbl_probe_status.setText(self.tr("No port selected"))
             return
 
         self.btn_probe.setEnabled(False)
-        self.lbl_probe_status.setText(f"Prüfe {port} mit {baud} Baud...")
+        self.lbl_probe_status.setText(self.tr("Probing %1 at %2 baud...").replace("%1", port).replace("%2", str(baud)))
         self.lbl_probe_status.setStyleSheet("""
             padding: 6px 8px;
             background-color: #fff9c4;
@@ -556,9 +553,9 @@ class PlotDockWidget(QDockWidget):
                 clip_info = f" • Hard-Clip: {result.hard_clip_mm[0]:.0f}×{result.hard_clip_mm[1]:.0f} mm"
             pin_parts = []
             if result.cts is not None:
-                pin_parts.append("CTS: Bereit" if result.cts else "⚠️ CTS: Low")
+                pin_parts.append(self.tr("CTS: Ready") if result.cts else self.tr("⚠️ CTS: Low"))
             if result.dsr is not None:
-                pin_parts.append("DSR: Bereit" if result.dsr else "⚠️ DSR: Low")
+                pin_parts.append(self.tr("DSR: Ready") if result.dsr else self.tr("⚠️ DSR: Low"))
             pin_info = f" • {' / '.join(pin_parts)}" if pin_parts else ""
             self.lbl_probe_status.setText(
                 f"✓ {result.model} ({result.detected_format}, {result.units_per_mm:.0f} U/mm){clip_info}{pin_info}"
@@ -583,7 +580,7 @@ class PlotDockWidget(QDockWidget):
     def _on_pipeline_param_changed(self, *args):
         """Called when any pipeline optimization parameter is modified by the user."""
         self._pipeline_dirty = True
-        self.btn_recompute.setText("Pipeline neu berechnen (geändert)")
+        self.btn_recompute.setText(self.tr("Recompute Pipeline (Modified)"))
         self.btn_recompute.setStyleSheet("""
             QPushButton {
                 font-weight: bold;
@@ -597,7 +594,7 @@ class PlotDockWidget(QDockWidget):
                 background-color: #ffe0b2;
             }
         """)
-        self.lbl_warnings.setText("⚠️ Einstellungen geändert – Vorschau noch nicht aktualisiert!")
+        self.lbl_warnings.setText(self.tr("⚠️ Settings changed – preview not updated yet!"))
         self.lbl_warnings.setStyleSheet("""
             padding: 6px 8px;
             background-color: #fff3e0;
@@ -625,7 +622,7 @@ class PlotDockWidget(QDockWidget):
             self.config_changed.emit()
 
         if not self.job or not self.job.steps:
-            QMessageBox.warning(self, "Plot-Ausgabe", "Es sind keine Vektoren für die Ausgabe vorhanden.")
+            QMessageBox.warning(self, self.tr("Plot Output"), self.tr("No vectors available for output."))
             return
 
         port = self.combo_port.currentText().strip()
@@ -644,7 +641,7 @@ class PlotDockWidget(QDockWidget):
                 flow_ctrl = getattr(dev, "flow_control", flow_ctrl)
 
         if not port:
-            QMessageBox.warning(self, "Plot-Ausgabe", "Bitte wählen Sie eine Schnittstelle oder Adresse aus.")
+            QMessageBox.warning(self, self.tr("Plot Output"), self.tr("Please select an interface or address."))
             return
 
         emitter = HPGLEmitter(
@@ -655,7 +652,7 @@ class PlotDockWidget(QDockWidget):
         commands = emitter.emit_commands(self.job, self.doc)
 
         if not commands:
-            QMessageBox.warning(self, "Plot-Ausgabe", "Keine HP-GL Befehle generiert.")
+            QMessageBox.warning(self, self.tr("Plot Output"), self.tr("No HP-GL commands generated."))
             return
 
         self._streamer = SerialStreamer(
@@ -666,7 +663,7 @@ class PlotDockWidget(QDockWidget):
 
         self.btn_start_plot.setEnabled(False)
         self.btn_pause_plot.setEnabled(True)
-        self.btn_pause_plot.setText("⏸ Pause")
+        self.btn_pause_plot.setText(self.tr("⏸ Pause"))
         self.btn_abort_plot.setEnabled(True)
         self.combo_port.setEnabled(False)
         self.combo_margins.setEnabled(False)
@@ -675,7 +672,7 @@ class PlotDockWidget(QDockWidget):
         self.chk_invert_x.setEnabled(False)
         self.chk_invert_y.setEnabled(False)
         self.progress_bar.setValue(0)
-        self.lbl_stream_status.setText("Starte Übertragung...")
+        self.lbl_stream_status.setText(self.tr("Starting transmission..."))
 
         started = self._streamer.start_stream(
             port,
@@ -685,7 +682,7 @@ class PlotDockWidget(QDockWidget):
             pause_on_pen_change=self.chk_pause_pen_change.isChecked(),
         )
         if not started:
-            self._on_stream_finished(False, "Streamer konnte nicht gestartet werden.")
+            self._on_stream_finished(False, self.tr("Could not start streamer."))
 
     def toggle_pause(self):
         """Toggle pause/resume during streaming."""
@@ -693,10 +690,10 @@ class PlotDockWidget(QDockWidget):
             return
         if self._streamer.is_user_paused():
             self._streamer.resume()
-            self.btn_pause_plot.setText("⏸ Pause")
+            self.btn_pause_plot.setText(self.tr("⏸ Pause"))
         elif self._streamer.is_active():
             self._streamer.pause()
-            self.btn_pause_plot.setText("▶️ Fortsetzen")
+            self.btn_pause_plot.setText(self.tr("▶️ Resume"))
 
     def abort_plot(self):
         """Abort active plot and lift pen immediately."""
@@ -704,27 +701,33 @@ class PlotDockWidget(QDockWidget):
             return
         self.btn_pause_plot.setEnabled(False)
         self.btn_abort_plot.setEnabled(False)
-        self.lbl_stream_status.setText("Abbruch eingeleitet (ESC.K & Pen-Up)...")
+        self.lbl_stream_status.setText(self.tr("Abort initiated (ESC.K & Pen-Up)..."))
         self._streamer.abort()
 
     def _on_stream_progress(self, step_idx: int, total_cmds: int, pct: float, pen: int, drawn_m: float):
         self.progress_bar.setValue(int(round(pct)))
-        self.lbl_stream_status.setText(
-            f"Befehl {step_idx}/{total_cmds} ({pct:.1f}%) • Stift {pen} • {drawn_m:.2f} m"
+        status_msg = (
+            self.tr("Command %1/%2 (%3%) • Pen %4 • %5 m")
+            .replace("%1", str(step_idx))
+            .replace("%2", str(total_cmds))
+            .replace("%3", f"{pct:.1f}")
+            .replace("%4", str(pen))
+            .replace("%5", f"{drawn_m:.2f}")
         )
+        self.lbl_stream_status.setText(status_msg)
         self.stream_step_changed.emit(step_idx)
 
     def _on_stream_status(self, state_str: str, msg: str):
         self.lbl_stream_status.setText(msg)
         if self._streamer and self._streamer.is_user_paused():
-            self.btn_pause_plot.setText("▶️ Fortsetzen")
+            self.btn_pause_plot.setText(self.tr("▶️ Resume"))
         elif state_str == "STREAMING":
-            self.btn_pause_plot.setText("⏸ Pause")
+            self.btn_pause_plot.setText(self.tr("⏸ Pause"))
 
     def _on_stream_finished(self, success: bool, msg: str):
         self.btn_start_plot.setEnabled(bool(self.job and self.job.steps))
         self.btn_pause_plot.setEnabled(False)
-        self.btn_pause_plot.setText("⏸ Pause")
+        self.btn_pause_plot.setText(self.tr("⏸ Pause"))
         self.btn_abort_plot.setEnabled(False)
         self.combo_port.setEnabled(True)
         self.combo_margins.setEnabled(True)
@@ -758,7 +761,7 @@ class PlotDockWidget(QDockWidget):
     def set_job(self, job: Optional[PlotJob]):
         self.job = job
         self._pipeline_dirty = False
-        self.btn_recompute.setText("Pipeline neu berechnen")
+        self.btn_recompute.setText(self.tr("Recompute Pipeline"))
         self.btn_recompute.setStyleSheet("")
 
         if not (self._streamer and self._streamer.is_active()):
@@ -771,7 +774,7 @@ class PlotDockWidget(QDockWidget):
             self.lbl_pen_changes.setText("0")
             self.lbl_duration.setText("00m 00s")
             self.lbl_points.setText("0")
-            self.lbl_warnings.setText("Keine Pfade vorhanden")
+            self.lbl_warnings.setText(self.tr("No paths available"))
             self.lbl_warnings.setStyleSheet("padding: 6px 8px; color: #64748b;")
             return
 
@@ -779,7 +782,7 @@ class PlotDockWidget(QDockWidget):
         travel_m = job.total_travel_mm / 1000.0
         self.lbl_draw.setText(f"{draw_m:.2f} m")
         self.lbl_travel.setText(f"{travel_m:.2f} m")
-        self.lbl_savings.setText(f"{job.travel_savings_pct:.1f} % durch Sortierung")
+        self.lbl_savings.setText(self.tr("%1 % by sorting").replace("%1", f"{job.travel_savings_pct:.1f}"))
         self.lbl_pen_changes.setText(str(job.pen_changes))
         self.lbl_duration.setText(job.formatted_duration)
         self.lbl_points.setText(f"{job.total_points:,}".replace(",", "."))
@@ -796,7 +799,7 @@ class PlotDockWidget(QDockWidget):
                 border-radius: 4px;
             """)
         else:
-            self.lbl_warnings.setText("✓ Alle Pfade im plottbaren Bereich")
+            self.lbl_warnings.setText(self.tr("✓ All paths within printable area"))
             self.lbl_warnings.setStyleSheet("""
                 padding: 6px 8px;
                 background-color: #e8f5e9;
@@ -816,7 +819,7 @@ class PlotDockWidget(QDockWidget):
         self._pen_checkboxes.clear()
 
         if not job.layers:
-            lbl = QLabel("Keine Stifte verwendet")
+            lbl = QLabel(self.tr("No pens used"))
             lbl.setStyleSheet("color: #94a3b8; font-style: italic; padding: 2px 0;")
             self.vbox_pens.addWidget(lbl)
             return
@@ -827,7 +830,8 @@ class PlotDockWidget(QDockWidget):
             line_count = len(layer.lines)
             draw_m = layer.draw_distance_mm / 1000.0
 
-            chk = QCheckBox(f"{name} ({line_count} Pfade, {draw_m:.2f} m)")
+            path_str = self.tr("(1 path, %1 m)").replace("%1", f"{draw_m:.2f}") if line_count == 1 else self.tr("(%1 paths, %2 m)").replace("%1", str(line_count)).replace("%2", f"{draw_m:.2f}")
+            chk = QCheckBox(f"{name} {path_str}")
             chk.setChecked(True)
             chk.setStyleSheet(f"""
                 QCheckBox::indicator:checked {{

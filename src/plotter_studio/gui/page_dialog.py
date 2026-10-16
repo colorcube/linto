@@ -33,7 +33,7 @@ class PageSetupDialog(QDialog):
 
     def __init__(self, doc: Document, device_manager: Optional[DeviceManager] = None, undo_stack: Optional[QUndoStack] = None, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Seiteneinrichtung & Papierformat")
+        self.setWindowTitle(self.tr("Page Setup & Paper Format"))
         self.setWindowIcon(get_icon("page"))
         self.setMinimumWidth(440)
 
@@ -69,9 +69,10 @@ class PageSetupDialog(QDialog):
         main_layout.setSpacing(12)
 
         # Active Device Info Header
-        dev_name = self._active_dev.name if self._active_dev else "Standard-Plotter"
+        dev_name = self._active_dev.name if self._active_dev else self.tr("Default Plotter")
         dev_port = self._active_dev.port if self._active_dev else "/dev/ttyUSB0"
-        self.lbl_device_info = QLabel(f"Aktives Gerät: <b>{dev_name}</b> ({dev_port})")
+        info_text = self.tr("Active device: <b>%1</b> (%2)").replace("%1", dev_name).replace("%2", dev_port)
+        self.lbl_device_info = QLabel(info_text)
         self.lbl_device_info.setStyleSheet("""
             padding: 8px 10px;
             background-color: #f3f4f6;
@@ -83,7 +84,7 @@ class PageSetupDialog(QDialog):
         main_layout.addWidget(self.lbl_device_info)
 
         # --- Group: Paper Format & Orientation ---
-        grp_format = QGroupBox("Papierformat && Ausrichtung")
+        grp_format = QGroupBox(self.tr("Paper Format && Orientation"))
         f_layout = QFormLayout(grp_format)
         f_layout.setSpacing(8)
 
@@ -91,16 +92,16 @@ class PageSetupDialog(QDialog):
         self.combo_preset = QComboBox()
         for p_name in PAPER_PRESETS.keys():
             self.combo_preset.addItem(f"DIN {p_name}" if p_name.startswith("A") else p_name, p_name)
-        self.combo_preset.addItem("Benutzerdefiniert (Custom)", "Custom")
+        self.combo_preset.addItem(self.tr("Custom"), "Custom")
         self.combo_preset.currentIndexChanged.connect(self._on_preset_changed)
-        f_layout.addRow("Format:", self.combo_preset)
+        f_layout.addRow(self.tr("Format:"), self.combo_preset)
 
         # Orientation
         self.combo_orient = QComboBox()
-        self.combo_orient.addItem("Querformat (Landscape)", "landscape")
-        self.combo_orient.addItem("Hochformat (Portrait)", "portrait")
+        self.combo_orient.addItem(self.tr("Landscape"), "landscape")
+        self.combo_orient.addItem(self.tr("Portrait"), "portrait")
         self.combo_orient.currentIndexChanged.connect(self._on_orient_changed)
-        f_layout.addRow("Ausrichtung:", self.combo_orient)
+        f_layout.addRow(self.tr("Orientation:"), self.combo_orient)
 
         # Dimensions
         dim_layout = QHBoxLayout()
@@ -121,23 +122,23 @@ class PageSetupDialog(QDialog):
         dim_layout.addWidget(self.spin_width)
         dim_layout.addWidget(QLabel("×"))
         dim_layout.addWidget(self.spin_height)
-        f_layout.addRow("Abmessungen:", dim_layout)
+        f_layout.addRow(self.tr("Dimensions:"), dim_layout)
 
         main_layout.addWidget(grp_format)
 
-        # --- Group: Ränder & Vorschub ---
-        grp_margins = QGroupBox("Ränder && Vorschubkante")
+        # --- Group: Margins & Feed ---
+        grp_margins = QGroupBox(self.tr("Margins && Feed Edge"))
         m_layout = QFormLayout(grp_margins)
         m_layout.setSpacing(8)
 
         # Feed edge (only relevant for roller plotters like mutoh_xp500)
         self.combo_feed = QComboBox()
-        self.combo_feed.addItem("Vorschub: Oben (Standard)", "top")
-        self.combo_feed.addItem("Vorschub: Unten", "bottom")
-        self.combo_feed.addItem("Vorschub: Links", "left")
-        self.combo_feed.addItem("Vorschub: Rechts", "right")
+        self.combo_feed.addItem(self.tr("Feed: Top (Default)"), "top")
+        self.combo_feed.addItem(self.tr("Feed: Bottom"), "bottom")
+        self.combo_feed.addItem(self.tr("Feed: Left"), "left")
+        self.combo_feed.addItem(self.tr("Feed: Right"), "right")
         self.combo_feed.currentIndexChanged.connect(self._on_feed_edge_changed)
-        m_layout.addRow("Vorschubkante:", self.combo_feed)
+        m_layout.addRow(self.tr("Feed edge:"), self.combo_feed)
 
         # Margins (4 individual edges to preserve asymmetric margins)
         margin_h_layout = QHBoxLayout()
@@ -155,11 +156,11 @@ class PageSetupDialog(QDialog):
         self.spin_margin_right.setValue(self.doc.page.margin_right_mm)
         self.spin_margin_right.valueChanged.connect(self._on_margins_changed)
 
-        margin_h_layout.addWidget(QLabel("Links:"))
+        margin_h_layout.addWidget(QLabel(self.tr("Left:")))
         margin_h_layout.addWidget(self.spin_margin_left)
-        margin_h_layout.addWidget(QLabel("Rechts:"))
+        margin_h_layout.addWidget(QLabel(self.tr("Right:")))
         margin_h_layout.addWidget(self.spin_margin_right)
-        m_layout.addRow("Ränder X:", margin_h_layout)
+        m_layout.addRow(self.tr("Margins X:"), margin_h_layout)
 
         margin_v_layout = QHBoxLayout()
         self.spin_margin_top = QDoubleSpinBox()
@@ -176,11 +177,11 @@ class PageSetupDialog(QDialog):
         self.spin_margin_bottom.setValue(self.doc.page.margin_bottom_mm)
         self.spin_margin_bottom.valueChanged.connect(self._on_margins_changed)
 
-        margin_v_layout.addWidget(QLabel("Oben:"))
+        margin_v_layout.addWidget(QLabel(self.tr("Top:")))
         margin_v_layout.addWidget(self.spin_margin_top)
-        margin_v_layout.addWidget(QLabel("Unten:"))
+        margin_v_layout.addWidget(QLabel(self.tr("Bottom:")))
         margin_v_layout.addWidget(self.spin_margin_bottom)
-        m_layout.addRow("Ränder Y:", margin_v_layout)
+        m_layout.addRow(self.tr("Margins Y:"), margin_v_layout)
 
         # Backwards-compatible aliases
         self.spin_margin_x = self.spin_margin_left
@@ -188,10 +189,10 @@ class PageSetupDialog(QDialog):
 
         main_layout.addWidget(grp_margins)
 
-        # Hardware Probe Button (unter beiden Boxen)
-        self.btn_fetch_device = QPushButton("Papiergröße vom Plotter abfragen")
+        # Hardware Probe Button
+        self.btn_fetch_device = QPushButton(self.tr("Query paper size from plotter"))
         self.btn_fetch_device.setIcon(get_icon("search", size=16))
-        self.btn_fetch_device.setToolTip("Liest die Papier- und Andruckrollen-Grenzen via OH; vom aktiven Plotter aus")
+        self.btn_fetch_device.setToolTip(self.tr("Queries paper and pinch roller bounds via OH; from active plotter"))
         self.btn_fetch_device.clicked.connect(self._on_fetch_device_size)
         main_layout.addWidget(self.btn_fetch_device)
 
@@ -285,7 +286,7 @@ class PageSetupDialog(QDialog):
         target = self._active_dev.port if self._active_dev else "/dev/ttyUSB0"
         baud = self._active_dev.baudrate if self._active_dev else 19200
         self.btn_fetch_device.setEnabled(False)
-        self.btn_fetch_device.setText(f"Frage '{target}' ab...")
+        self.btn_fetch_device.setText(self.tr("Querying '%1'...").replace("%1", target))
 
         def _worker():
             res = probe_plotter(target, baudrate=baud, timeout=0.6)
@@ -296,7 +297,7 @@ class PageSetupDialog(QDialog):
 
     def _handle_probe_result(self, target: str, res):
         self.btn_fetch_device.setEnabled(True)
-        self.btn_fetch_device.setText("Papiergröße vom Plotter abfragen")
+        self.btn_fetch_device.setText(self.tr("Query paper size from plotter"))
 
         if res.success:
             if res.detected_format and res.detected_format in PAPER_PRESETS:
@@ -309,16 +310,26 @@ class PageSetupDialog(QDialog):
                 sheet_h = h + self.doc.page.margin_top_mm + self.doc.page.margin_bottom_mm
                 self.doc.page.set_custom_size(sheet_w, sheet_h)
             self._sync_from_page()
+            msg = (
+                self.tr("Plotter at '%1' reports:\nModel: %2\nFormat: %3 (%4 × %5 mm)")
+                .replace("%1", target)
+                .replace("%2", str(res.model or ""))
+                .replace("%3", str(res.detected_format or ""))
+                .replace("%4", f"{self.doc.page.width_mm:.1f}")
+                .replace("%5", f"{self.doc.page.height_mm:.1f}")
+            )
             QMessageBox.information(
                 self,
-                "Papiergröße erkannt",
-                f"Plotter an '{target}' meldet:\nModell: {res.model}\nFormat: {res.detected_format} ({self.doc.page.width_mm:.1f} × {self.doc.page.height_mm:.1f} mm)"
+                self.tr("Paper Size Detected"),
+                msg
             )
         else:
+            err_detail = res.error_message or self.tr("No response from device")
+            msg = self.tr("Could not query paper size from '%1':\n%2").replace("%1", target).replace("%2", err_detail)
             QMessageBox.warning(
                 self,
-                "Geräteabfrage fehlgeschlagen",
-                f"Konnte Papiergröße von '{target}' nicht abfragen:\n{res.error_message or 'Keine Antwort vom Gerät'}"
+                self.tr("Device Query Failed"),
+                msg
             )
 
     def accept(self):
@@ -339,7 +350,7 @@ class PageSetupDialog(QDialog):
             # Revert page to initial state first, then push command so redo applies it
             self._apply_dict(self._initial_state)
             cmd = PageConfigCommand(
-                self.doc.page, self._initial_state, new_state, self._on_undo_redo, text="Seiteneinrichtung ändern"
+                self.doc.page, self._initial_state, new_state, self._on_undo_redo, text=self.tr("Change page setup")
             )
             self.undo_stack.push(cmd)
         else:

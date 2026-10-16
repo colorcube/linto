@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from .canvas import PlotterCanvas
 
 
-_PATH_SUFFIX_RE = re.compile(r"\s*\(\d+\s+Pfade?\)$")
+_PATH_SUFFIX_RE = re.compile(r"\s*\(\d+\s+(?:Pfade?|paths?)\)$")
 
 
 class ObjectDockWidget(QDockWidget):
@@ -41,7 +41,7 @@ class ObjectDockWidget(QDockWidget):
     document_modified = Signal()
 
     def __init__(self, doc: Document, canvas: PlotterCanvas, parent: Optional[QWidget] = None):
-        super().__init__("Objekte & Ebenen", parent)
+        super().__init__(self.tr("Objects & Layers"), parent)
         self.doc = doc
         self.canvas = canvas
         self.undo_stack: Optional[QUndoStack] = None
@@ -58,7 +58,7 @@ class ObjectDockWidget(QDockWidget):
         # Tree Widget for Objects/Layers
         self.tree = QTreeWidget(self)
         self.tree.setColumnCount(3)
-        self.tree.setHeaderLabels(["", "", "Objekt"])
+        self.tree.setHeaderLabels(["", "", self.tr("Object")])
         self.tree.setRootIsDecorated(False)
         self.tree.setSelectionMode(QAbstractItemView.SingleSelection)
         self.tree.setEditTriggers(QAbstractItemView.DoubleClicked | QAbstractItemView.EditKeyPressed)
@@ -75,9 +75,9 @@ class ObjectDockWidget(QDockWidget):
 
         h_item = self.tree.headerItem()
         h_item.setIcon(0, get_icon("eye", size=14))
-        h_item.setToolTip(0, "Sichtbarkeit umschalten")
+        h_item.setToolTip(0, self.tr("Toggle visibility"))
         h_item.setIcon(1, get_icon("lock", size=14))
-        h_item.setToolTip(1, "Sperren umschalten")
+        h_item.setToolTip(1, self.tr("Toggle lock"))
 
         layout.addWidget(self.tree)
 
@@ -88,27 +88,27 @@ class ObjectDockWidget(QDockWidget):
 
         self.btn_import = QToolButton(self)
         self.btn_import.setIcon(get_icon("import", size=18))
-        self.btn_import.setToolTip("Datei importieren (SVG, HP-GL)")
+        self.btn_import.setToolTip(self.tr("Import file (SVG, HP-GL)"))
         self.btn_import.setAutoRaise(True)
 
         self.btn_dup = QToolButton(self)
         self.btn_dup.setIcon(get_icon("duplicate", size=18))
-        self.btn_dup.setToolTip("Ausgewähltes Objekt duplizieren (Strg+D)")
+        self.btn_dup.setToolTip(self.tr("Duplicate selected object (Ctrl+D)"))
         self.btn_dup.setAutoRaise(True)
 
         self.btn_del = QToolButton(self)
         self.btn_del.setIcon(get_icon("delete", size=18))
-        self.btn_del.setToolTip("Ausgewähltes Objekt entfernen (Entf)")
+        self.btn_del.setToolTip(self.tr("Delete selected object (Del)"))
         self.btn_del.setAutoRaise(True)
 
         self.btn_up = QToolButton(self)
         self.btn_up.setIcon(get_icon("arrow-up", size=18))
-        self.btn_up.setToolTip("Ebene nach oben verschieben (Vordergrund)")
+        self.btn_up.setToolTip(self.tr("Move layer up (Bring Forward)"))
         self.btn_up.setAutoRaise(True)
 
         self.btn_down = QToolButton(self)
         self.btn_down.setIcon(get_icon("arrow-down", size=18))
-        self.btn_down.setToolTip("Ebene nach unten verschieben (Hintergrund)")
+        self.btn_down.setToolTip(self.tr("Move layer down (Send Backward)"))
         self.btn_down.setAutoRaise(True)
 
         btn_bar.addWidget(self.btn_import)
@@ -151,16 +151,17 @@ class ObjectDockWidget(QDockWidget):
         # Col 0: Visibility
         vis_icon = get_icon("eye" if item.visible else "eye-off", size=16)
         node.setIcon(0, vis_icon)
-        node.setToolTip(0, "Sichtbarkeit umschalten" if item.visible else "Ausgeblendet (klicken zum Einblenden)")
+        node.setToolTip(0, self.tr("Toggle visibility") if item.visible else self.tr("Hidden (click to show)"))
 
         # Col 1: Lock
         lock_icon = get_icon("lock" if item.locked else "lock-open", size=16)
         node.setIcon(1, lock_icon)
-        node.setToolTip(1, "Gesperrt (klicken zum Entsperren)" if item.locked else "Entsperrt (klicken zum Sperren)")
+        node.setToolTip(1, self.tr("Locked (click to unlock)") if item.locked else self.tr("Unlocked (click to lock)"))
 
         # Col 2: Name + Path count
         path_count = len(item.paths)
-        label = f"{item.name} ({path_count} Pfade)" if path_count != 1 else f"{item.name} (1 Pfad)"
+        suffix = self.tr("(1 path)") if path_count == 1 else self.tr("(%1 paths)").replace("%1", str(path_count))
+        label = f"{item.name} {suffix}"
         node.setText(2, label)
         node.setData(2, Qt.UserRole, item.name)  # Raw name for renaming
         node.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable)

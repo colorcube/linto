@@ -116,7 +116,7 @@ class TransformDockWidget(QDockWidget):
     item_transformed = Signal()
 
     def __init__(self, doc: Document, parent=None):
-        super().__init__("Transformation", parent)
+        super().__init__(self.tr("Transform"), parent)
         self.setObjectName("TransformDockWidget")
         self.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
         self.doc = doc
@@ -141,7 +141,7 @@ class TransformDockWidget(QDockWidget):
         header_box = QHBoxLayout()
         header_box.setSpacing(4)
         self.lbl_item_icon = QLabel()
-        self.lbl_item_name = QLabel("Kein Objekt ausgewählt")
+        self.lbl_item_name = QLabel(self.tr("No object selected"))
         self.lbl_item_name.setStyleSheet("font-weight: bold; color: #374151;")
         self.lbl_locked_badge = QLabel()
         self.lbl_locked_badge.setStyleSheet("color: #b91c1c; font-size: 11px; font-weight: bold;")
@@ -153,19 +153,19 @@ class TransformDockWidget(QDockWidget):
         header_box.addWidget(self.lbl_locked_badge)
         self.main_layout.addLayout(header_box)
 
-        # 2. Gruppe "Position" (Numerische Maße und Position)
-        self.grp_transform = SectionGroup("Position")
+        # 2. Group "Position"
+        self.grp_transform = SectionGroup(self.tr("Position"))
         self.grp_position = self.grp_transform
 
         # Position Section (X / Y with Reference Mode)
         pos_header = QHBoxLayout()
         pos_header.setSpacing(6)
-        lbl_pos = QLabel("Bezug:")
+        lbl_pos = QLabel(self.tr("Reference:"))
         lbl_pos.setStyleSheet("font-weight: 500; color: #4b5563;")
         pos_header.addWidget(lbl_pos)
 
-        self.rb_ref_page = QRadioButton("Blatt")
-        self.rb_ref_clip = QRadioButton("Plottbereich")
+        self.rb_ref_page = QRadioButton(self.tr("Sheet"))
+        self.rb_ref_clip = QRadioButton(self.tr("Printable Area"))
         self.rb_ref_page.setChecked(True)
         self.ref_group = QButtonGroup(self)
         self.ref_group.addButton(self.rb_ref_page)
@@ -176,12 +176,12 @@ class TransformDockWidget(QDockWidget):
         pos_header.addStretch()
         self.grp_transform.addLayout(pos_header)
 
-        # Position & Dimensionen (X / Y und B / 🔒 / H) in einem dynamischen Grid
+        # Position & Dimensionen (X / Y und W / 🔒 / H) in einem dynamischen Grid
         grid_pos_dim = QGridLayout()
         grid_pos_dim.setContentsMargins(0, 0, 0, 0)
         grid_pos_dim.setSpacing(6)
 
-        lbl_x = QLabel("X:")
+        lbl_x = QLabel(self.tr("X:"))
         lbl_x.setStyleSheet("font-weight: 500; color: #4b5563;")
         self.spin_pos_x = QDoubleSpinBox()
         self.spin_pos_x.setAlignment(Qt.AlignLeft)
@@ -190,7 +190,7 @@ class TransformDockWidget(QDockWidget):
         self.spin_pos_x.setSuffix(" mm")
         self.spin_pos_x.valueChanged.connect(self._on_pos_mm_changed)
 
-        lbl_y = QLabel("Y:")
+        lbl_y = QLabel(self.tr("Y:"))
         lbl_y.setStyleSheet("font-weight: 500; color: #4b5563;")
         self.spin_pos_y = QDoubleSpinBox()
         self.spin_pos_y.setAlignment(Qt.AlignLeft)
@@ -199,7 +199,7 @@ class TransformDockWidget(QDockWidget):
         self.spin_pos_y.setSuffix(" mm")
         self.spin_pos_y.valueChanged.connect(self._on_pos_mm_changed)
 
-        lbl_w = QLabel("B:")
+        lbl_w = QLabel(self.tr("W:"))
         lbl_w.setStyleSheet("font-weight: 500; color: #4b5563;")
         self.spin_obj_w = QDoubleSpinBox()
         self.spin_obj_w.setAlignment(Qt.AlignLeft)
@@ -215,7 +215,7 @@ class TransformDockWidget(QDockWidget):
         self._update_chain_icon()
         self.btn_chain.toggled.connect(self._on_chain_toggled)
 
-        lbl_h = QLabel("H:")
+        lbl_h = QLabel(self.tr("H:"))
         lbl_h.setStyleSheet("font-weight: 500; color: #4b5563;")
         self.spin_obj_h = QDoubleSpinBox()
         self.spin_obj_h.setAlignment(Qt.AlignLeft)
@@ -235,17 +235,16 @@ class TransformDockWidget(QDockWidget):
         grid_pos_dim.addWidget(lbl_h, 1, 3)
         grid_pos_dim.addWidget(self.spin_obj_h, 1, 4)
 
-        # Spalte 5 nimmt restlichen horizontalen Freiraum auf
         grid_pos_dim.setColumnStretch(5, 1)
         self.grp_transform.addLayout(grid_pos_dim)
         self.main_layout.addWidget(self.grp_transform)
 
-        # 3. Gruppe "Rotation"
-        self.grp_rotation = SectionGroup("Rotation")
+        # 3. Group "Rotation"
+        self.grp_rotation = SectionGroup(self.tr("Rotation"))
         r_layout = QHBoxLayout()
         r_layout.setSpacing(6)
 
-        lbl_angle = QLabel("Winkel:")
+        lbl_angle = QLabel(self.tr("Angle:"))
         lbl_angle.setStyleSheet("font-weight: 500; color: #4b5563;")
         r_layout.addWidget(lbl_angle)
 
@@ -255,18 +254,18 @@ class TransformDockWidget(QDockWidget):
         self.spin_rot_angle.setDecimals(1)
         self.spin_rot_angle.setSingleStep(5.0)
         self.spin_rot_angle.setSuffix(" °")
-        self.spin_rot_angle.setToolTip("Rotationswinkel in Grad (frei einstellbar)")
+        self.spin_rot_angle.setToolTip(self.tr("Rotation angle in degrees"))
         self.spin_rot_angle.valueChanged.connect(self._on_rot_angle_spin_changed)
         r_layout.addWidget(self.spin_rot_angle)
 
         self.btn_rotate_ccw = QPushButton("-90°")
         self.btn_rotate_ccw.setIcon(get_icon("rotate-ccw", size=16))
-        self.btn_rotate_ccw.setToolTip("90° gegen Uhrzeigersinn drehen (Strg+Umschalt+R)")
+        self.btn_rotate_ccw.setToolTip(self.tr("Rotate 90° CCW (Ctrl+Shift+R)"))
         self.btn_rotate_ccw.clicked.connect(lambda: self.rotate_selected(-90.0))
 
         self.btn_rotate_cw = QPushButton("+90°")
         self.btn_rotate_cw.setIcon(get_icon("rotate-cw", size=16))
-        self.btn_rotate_cw.setToolTip("90° im Uhrzeigersinn drehen (Strg+R)")
+        self.btn_rotate_cw.setToolTip(self.tr("Rotate 90° CW (Ctrl+R)"))
         self.btn_rotate_cw.clicked.connect(lambda: self.rotate_selected(90.0))
 
         r_layout.addWidget(self.btn_rotate_ccw)
@@ -274,24 +273,24 @@ class TransformDockWidget(QDockWidget):
         self.grp_rotation.addLayout(r_layout)
         self.main_layout.addWidget(self.grp_rotation)
 
-        # 4. Gruppe "Platzieren"
-        self.grp_placement = SectionGroup("Platzieren")
+        # 4. Group "Placement"
+        self.grp_placement = SectionGroup(self.tr("Placement"))
         p_layout = QHBoxLayout()
         p_layout.setSpacing(6)
 
-        self.btn_center_h = QPushButton("Horiz. Mittig")
+        self.btn_center_h = QPushButton(self.tr("Center Horiz."))
         self.btn_center_h.setIcon(get_icon("align-h-center", size=16))
-        self.btn_center_h.setToolTip("Horizontal auf Blatt / Plottbereich mittig ausrichten")
+        self.btn_center_h.setToolTip(self.tr("Center horizontally relative to reference frame"))
         self.btn_center_h.clicked.connect(self.align_center_h)
 
-        self.btn_center_v = QPushButton("Vert. Mittig")
+        self.btn_center_v = QPushButton(self.tr("Center Vert."))
         self.btn_center_v.setIcon(get_icon("align-v-center", size=16))
-        self.btn_center_v.setToolTip("Vertikal auf Blatt / Plottbereich mittig ausrichten")
+        self.btn_center_v.setToolTip(self.tr("Center vertically relative to reference frame"))
         self.btn_center_v.clicked.connect(self.align_center_v)
 
-        self.btn_center_both = QPushButton("Zentrieren")
+        self.btn_center_both = QPushButton(self.tr("Center"))
         self.btn_center_both.setIcon(get_icon("align-center", size=16))
-        self.btn_center_both.setToolTip("Auf Blatt / Plottbereich mittig zentrieren (beide Achsen)")
+        self.btn_center_both.setToolTip(self.tr("Center on sheet or printable area (both axes)"))
         self.btn_center_both.clicked.connect(self.align_center_both)
 
         p_layout.addWidget(self.btn_center_h)
@@ -300,15 +299,15 @@ class TransformDockWidget(QDockWidget):
         self.grp_placement.addLayout(p_layout)
         self.main_layout.addWidget(self.grp_placement)
 
-        # 5. Gruppe "Skalierung"
-        self.grp_scaling = SectionGroup("Skalierung")
+        # 5. Group "Scale"
+        self.grp_scaling = SectionGroup(self.tr("Scale"))
 
-        # Row 1: Zoom (ehemals Skalierung)
+        # Row 1: Zoom
         zoom_row = QHBoxLayout()
         zoom_row.setContentsMargins(0, 0, 0, 0)
         zoom_row.setSpacing(6)
 
-        lbl_zoom = QLabel("Zoom:")
+        lbl_zoom = QLabel(self.tr("Zoom:"))
         lbl_zoom.setStyleSheet("font-weight: 500; color: #4b5563;")
         zoom_row.addWidget(lbl_zoom)
 
@@ -325,40 +324,40 @@ class TransformDockWidget(QDockWidget):
         self.btn_scale_up = QPushButton("+")
         self.btn_scale_up.setFixedWidth(28)
         self.btn_scale_up.setStyleSheet("font-weight: bold; font-size: 13px;")
-        self.btn_scale_up.setToolTip("Um 10% vergrößern")
+        self.btn_scale_up.setToolTip(self.tr("Enlarge by 10%"))
         self.btn_scale_up.clicked.connect(lambda: self.scale_relative(1.1))
         zoom_row.addWidget(self.btn_scale_up)
 
         self.btn_scale_down = QPushButton("-")
         self.btn_scale_down.setFixedWidth(28)
         self.btn_scale_down.setStyleSheet("font-weight: bold; font-size: 13px;")
-        self.btn_scale_down.setToolTip("Um 10% verkleinern")
+        self.btn_scale_down.setToolTip(self.tr("Shrink by 10%"))
         self.btn_scale_down.clicked.connect(lambda: self.scale_relative(0.9))
         zoom_row.addWidget(self.btn_scale_down)
 
-        self.btn_original_size = QPushButton("Original")
+        self.btn_original_size = QPushButton(self.tr("Original"))
         self.btn_original_size.setIcon(get_icon("original-size", size=14))
-        self.btn_original_size.setToolTip("Auf Originalgröße (100% / 1:1) zurücksetzen")
+        self.btn_original_size.setToolTip(self.tr("Reset to original size (100% / 1:1)"))
         self.btn_original_size.clicked.connect(self.reset_to_original_size)
         zoom_row.addWidget(self.btn_original_size)
 
         zoom_row.addStretch()
         self.grp_scaling.addLayout(zoom_row)
 
-        # Row 2: Einpassen & Rand
+        # Row 2: Fit to Sheet & Margin
         fit_row = QHBoxLayout()
         fit_row.setContentsMargins(0, 0, 0, 0)
         fit_row.setSpacing(6)
 
-        self.btn_fit = QPushButton("Einpassen")
+        self.btn_fit = QPushButton(self.tr("Fit to Sheet"))
         self.btn_fit.setIcon(get_icon("fit-page", size=16))
-        self.btn_fit.setToolTip("Proportional auf Blatt/Plottbereich einpassen unter Beachtung des Randabstands")
+        self.btn_fit.setToolTip(self.tr("Fit proportionally to reference frame with margin"))
         self.btn_fit.clicked.connect(lambda: self.fit_to_page())
         fit_row.addWidget(self.btn_fit)
 
-        lbl_margin = QLabel("Rand:")
+        lbl_margin = QLabel(self.tr("Margin:"))
         lbl_margin.setStyleSheet("font-weight: 500; color: #4b5563;")
-        lbl_margin.setToolTip("Sicherheitsabstand / Mindestabstand zum Blattrand bzw. Plottbereich beim Einpassen")
+        lbl_margin.setToolTip(self.tr("Safety margin to sheet edges when fitting"))
         fit_row.addWidget(lbl_margin)
 
         self.spin_fit_margin = QDoubleSpinBox()
@@ -367,7 +366,7 @@ class TransformDockWidget(QDockWidget):
         self.spin_fit_margin.setDecimals(1)
         self.spin_fit_margin.setValue(15.0)
         self.spin_fit_margin.setSuffix(" mm")
-        self.spin_fit_margin.setToolTip("Sicherheitsabstand / Mindestabstand zum Blattrand bzw. Plottbereich beim Einpassen in mm")
+        self.spin_fit_margin.setToolTip(self.tr("Safety margin to sheet edges when fitting in mm"))
         fit_row.addWidget(self.spin_fit_margin)
 
         fit_row.addStretch()
