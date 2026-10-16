@@ -10,7 +10,9 @@ Praktische Dokumentation und Benutzerhandbuch für Anwender:
 * **[2. Layout-Modus & Objektverwaltung](anleitung/2-layout-und-objektverwaltung.md):** Import von SVG, Seiteneinrichtung mit Hard-Clip-Abfrage (`OH;`), Transformation (50%, 100%, 200%, Proportions-Sperre, Einpassen, Zentrieren), Z-Order Ebenenverwaltung und Stiftzuordnung.
 * **[3. Ausgabe-Modus, Simulation & Export](anleitung/3-ausgabe-simulation-export.md):** Pipeline-Tuning (Merge, Reverse, RDP, 2-Opt), Pre-Flight-Statistiken, interaktive Scrubber-Simulation mit Leerfahrten-Visualisierung, Stiftfilterung, serielles Streaming und HP-GL/SVG-Export.
 * **[4. Hardware-Setup, Kalibrierung & Diagnose](anleitung/4-hardware-setup-und-test.md):** RS-232 Verkabelung mit Hardware-Handshake (RTS/CTS), Bedienfeld-Setup, Hardware-Diagnosetool `xp500_probe.py`, der offizielle Kalibrierplot (`resources/calibration_plot_a3.svg`) und Einbindung weiterer Plottermodelle.
-* **[5. Hintergrund: Konzepte, Algorithmen & Architektur (Deep-Dive)](anleitung/5-konzepte-und-architektur.md):** Slicer-Architektur, mathematische Grundlagen der 2-Opt TSP Pfadoptimierung, Koordinatensysteme (Center-Origin vs. Bottom-Left), asymmetrische Rollenränder und Multi-Plotter-Treiberdesign.
+* **[5. Leitfaden: Vektorformate, Quellen & Workflows](anleitung/5-vektorformate-und-workflows.md):** Best Practices für eigene SVG-Skripte, Inkscape als Universal-Konverter, Blender (3D zu 2D SVG), HP-GL, DXF und Community-Tools (Awesome Plotters, Drawingbots, vpype).
+* **[6. Hintergrund: Konzepte, Algorithmen & Architektur (Deep-Dive)](anleitung/6-konzepte-und-architektur.md):** Slicer-Architektur, mathematische Grundlagen der 2-Opt TSP Pfadoptimierung, Koordinatensysteme (Center-Origin vs. Bottom-Left), asymmetrische Rollenränder und Multi-Plotter-Treiberdesign.
+
 
 ---
 

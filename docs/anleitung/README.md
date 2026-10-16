@@ -45,7 +45,6 @@ Plotter Studio ist ein spezialisierter **Slicer und Arbeitsbereich für Vektor-S
    * Seiteneinrichtung (DIN A4–A0, Randprofile EXP/NORM, optische Hard-Clip-Abfrage `OH;`).
    * Vektor-Import (SVG & HP-GL/PLT) & automatisches Farb-Clustering.
    * Docks: *Objekte & Ebenen* (Z-Order, Sichtbarkeit, Sperren), *Transformation* (Proportions-Sperre, Schnelltasten, Drehen, freie Winkel) und *Stifte*.
-   * **Leitfaden Vektorformate & Datenquellen:** Eigene Skripte (SVG), Inkscape als Universal-Konverter, Blender (3D zu 2D SVG), HP-GL und DXF.
 3. **[3. Ausgabe-Modus, Simulation & Export](3-ausgabe-simulation-export.md)**
    * Die Optimierungs-Pipeline (Merge, Reverse, RDP, 2-Opt Pfadoptimierung).
    * Pre-Flight-Statistiken (Zeichenweg, Eilgang-Ersparnis, Stiftwechsel, Dauer).
@@ -59,7 +58,14 @@ Plotter Studio ist ein spezialisierter **Slicer und Arbeitsbereich für Vektor-S
    * Hardware-Diagnosetool `tools/xp500_probe.py` (CTS, DSR, `OI`, `OF`, `OH`, `OE`, `OS`, ESC-Sequenzen).
    * Der offizielle Kalibrierplot (`resources/calibration_plot_a3.svg`): Nachmessen mit dem Stahllineal, Backlash-Prüfung, Randabstände und 8-Stift-Matrix.
    * Beliebige weitere Plotter einbinden (Geräte-Dialog und eigene YAML-Profile).
-5. **[5. Hintergrund: Konzepte, Algorithmen & Architektur (Deep-Dive)](5-konzepte-und-architektur.md)**
+5. **[5. Leitfaden: Vektorformate, Quellen & Workflows](5-vektorformate-und-workflows.md)**
+   * Eigene Skripte (SVG selbst generieren, Maßeinheiten `mm`, 8 Standardfarben für Stifte).
+   * Inkscape als Universal-Konverter, Hershey-Einlinienschriften & Centerline-Tracing.
+   * Blender (3D-Szenen als 2D-SVG mit Freestyle & Grease Pencil Line Art).
+   * HP-GL (`.hpgl` / `.plt`) Direktimport & externe Konverter (`vpype`, `hp2xx`).
+   * DXF (CAD-Zeichnungen und Layer-Besonderheiten).
+   * Empfohlene Ressourcen, Tools & Community (Awesome Plotters, Drawingbots, vpype, vsketch, Turtletoy, ln, Reddit r/PlotterArt).
+6. **[6. Hintergrund: Konzepte, Algorithmen & Architektur (Deep-Dive)](6-konzepte-und-architektur.md)**
    * Ausführliche mathematische und technische Hintergründe für Entwickler und Power-User.
    * Details zu 2-Opt TSP, Ramer-Douglas-Peucker, Koordinatentransformationen und der Streaming-Architektur.
 
@@ -69,5 +75,5 @@ Plotter Studio ist ein spezialisierter **Slicer und Arbeitsbereich für Vektor-S
 * **[Mutoh XP-500 Gerätedokumentation](../devices/mutoh-xp500/README.md):** Umfassende Transkription des Original-Handbuchs, MH-GL-Befehlssatz, Escape-Sequenzen und Register.
 * **[Awesome Plotters (GitHub)](https://github.com/beardicus/awesome-plotters):** Die zentrale, kuratierte Linksammlung für Stiftplotter, Zeichenroboter, Software und Kunst.
 * **[Drawingbots.net](https://drawingbots.net/):** Globale Community, News, Guides und Discord für Plotter-Künstler.
-* **[Leitfaden Vektorformate & Werkzeuge](2-layout-und-objektverwaltung.md#7-leitfaden-vektorformate-quellen--workflows):** Detaillierte Tool-Tipps (Inkscape, Blender, vpype, vsketch, Turtletoy, ln u.v.m.).
+* **[Leitfaden Vektorformate & Werkzeuge](5-vektorformate-und-workflows.md):** Detaillierte Tool-Tipps (Inkscape, Blender, vpype, vsketch, Turtletoy, ln u.v.m.).
 

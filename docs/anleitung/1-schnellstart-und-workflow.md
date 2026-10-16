@@ -120,5 +120,8 @@ Klicken Sie oben auf den Reiter **Ausgabe / Plotten**:
   -> **[Kapitel 3: Ausgabe-Modus, Simulation & Export](3-ausgabe-simulation-export.md)**
 * RS-232 Verkabelung, Hardware-Diagnosetool und der Kalibrierplot:  
   -> **[Kapitel 4: Hardware-Setup, Kalibrierung & Diagnose](4-hardware-setup-und-test.md)**
+* Vektorformate, eigene Skripte, Inkscape, Blender und Tools:  
+  -> **[Kapitel 5: Leitfaden: Vektorformate, Quellen & Workflows](5-vektorformate-und-workflows.md)**
 * Mathematische Hintergründe, Slicer-Algorithmen und Multi-Plotter-Treiber:  
-  -> **[Kapitel 5: Hintergrund: Konzepte, Algorithmen & Architektur (Deep-Dive)](5-konzepte-und-architektur.md)**
+  -> **[Kapitel 6: Hintergrund: Konzepte, Algorithmen & Architektur (Deep-Dive)](6-konzepte-und-architektur.md)**
+

@@ -93,7 +93,8 @@ Das Handbuch ist in praxisorientierte Kapitel unterteilt:
   * **[2. Layout-Modus & Objektverwaltung](docs/anleitung/2-layout-und-objektverwaltung.md):** Canvas, Werkzeuge, Seiteneinrichtung, Z-Order, Skalierung & Stifte.
   * **[3. Ausgabe-Modus, Simulation & Export](docs/anleitung/3-ausgabe-simulation-export.md):** Pipeline-Tuning, Pre-Flight-Statistiken, Scrubber-Simulation, Stift-Filterung & Live-Streaming.
   * **[4. Hardware-Setup, Kalibrierung & Diagnose](docs/anleitung/4-hardware-setup-und-test.md):** Nullmodem-Pinbelegung (RS-232 mit RTS/CTS), USB-Adapter, Hardware-Diagnosetool `xp500_probe.py`, der offizielle Kalibrierplot (`resources/calibration_plot_a3.svg`) und Anbindung weiterer Plotter.
-  * **[5. Hintergrund: Konzepte, Algorithmen & Architektur (Deep-Dive)](docs/anleitung/5-konzepte-und-architektur.md):** Detaillierter Einblick in Slicer-Mathematik, 2-Opt TSP, Koordinatentransformationen und Streaming.
+  * **[5. Leitfaden: Vektorformate, Quellen & Workflows](docs/anleitung/5-vektorformate-und-workflows.md):** Best Practices für eigene SVG-Skripte, Inkscape, Blender, HP-GL, DXF und Community-Tools (Awesome Plotters, Drawingbots, vpype).
+  * **[6. Hintergrund: Konzepte, Algorithmen & Architektur (Deep-Dive)](docs/anleitung/6-konzepte-und-architektur.md):** Detaillierter Einblick in Slicer-Mathematik, 2-Opt TSP, Koordinatentransformationen und Streaming.
 * **[Gerätedokumentation Mutoh XP-500](docs/devices/mutoh-xp500/README.md):** Befehlssatz MH-GL, Escape-Sequenzen, DIP-Schalter und Register.
 
 ---
