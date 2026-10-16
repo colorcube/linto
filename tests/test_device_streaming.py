@@ -414,3 +414,75 @@ def test_serial_streamer_write_timeout(monkeypatch):
     )
     assert recorded_kwargs.get("write_timeout") == 4.2
 
+
+def test_streamer_pause_on_pen_change(monkeypatch):
+    """Verify automatic pause before SPn; pen change and resume."""
+    import serial
+    from plotter_studio.device.emitter import EmittedCommand
+    from plotter_studio.device.streamer import StreamerState
+
+    written_chunks = []
+    flushed = [False]
+
+    class MockSerial:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def reset_input_buffer(self):
+            pass
+
+        def reset_output_buffer(self):
+            pass
+
+        def write(self, data: bytes):
+            written_chunks.append(data.decode("ascii"))
+
+        def flush(self):
+            flushed[0] = True
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(serial, "Serial", MockSerial)
+
+    cmds = [
+        EmittedCommand(hpgl="IN;\r\n", step_index=0, pen=0, is_draw=False, dist_mm=0.0),
+        EmittedCommand(hpgl="SP1;VS15;FS20;\r\n", step_index=0, pen=1, is_draw=False, dist_mm=0.0),
+        EmittedCommand(hpgl="PD100,100;\r\n", step_index=1, pen=1, is_draw=True, dist_mm=10.0),
+        EmittedCommand(hpgl="SP2;VS15;FS20;\r\n", step_index=1, pen=2, is_draw=False, dist_mm=0.0),
+        EmittedCommand(hpgl="PD200,200;\r\n", step_index=2, pen=2, is_draw=True, dist_mm=10.0),
+        EmittedCommand(hpgl="PU;SP0;\r\n", step_index=2, pen=0, is_draw=False, dist_mm=0.0),
+    ]
+
+    statuses = []
+    finished = [False, False]
+    streamer = SerialStreamer(
+        on_status=lambda st, msg: statuses.append((st, msg)),
+        on_finished=lambda ok, msg: finished.__setitem__(0, True) or finished.__setitem__(1, ok),
+        end_settle_delay_s=0.01,
+    )
+
+    streamer.start_stream("/dev/ttyUSB0", cmds, pause_on_pen_change=True, end_settle_delay_s=0.01)
+
+    # Wait until streamer pauses at SP2
+    start_t = time.time()
+    while not streamer.is_user_paused() and (time.time() - start_t < 2.0):
+        time.sleep(0.01)
+
+    assert streamer.is_user_paused() is True
+    assert streamer.state == StreamerState.PAUSED
+    # SP1 and PD100,100 should have been sent, but SP2 not yet
+    assert any("SP1;" in c for c in written_chunks)
+    assert not any("SP2;" in c for c in written_chunks)
+
+    # Resume and wait for completion
+    streamer.resume()
+    start_t = time.time()
+    while not finished[0] and (time.time() - start_t < 2.0):
+        time.sleep(0.01)
+
+    assert finished == [True, True]
+    assert any("SP2;" in c for c in written_chunks)
+    assert flushed[0] is True
+
+

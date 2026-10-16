@@ -1,6 +1,7 @@
 """Page and paper setup dialog."""
 
 from __future__ import annotations
+import threading
 from typing import Optional, Dict, Any
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QUndoStack
@@ -28,6 +29,7 @@ class PageSetupDialog(QDialog):
     Does NOT contain duplicate device selection — uses active device globally.
     """
     page_changed = Signal()
+    _probe_finished = Signal(str, object)
 
     def __init__(self, doc: Document, device_manager: Optional[DeviceManager] = None, undo_stack: Optional[QUndoStack] = None, parent=None):
         super().__init__(parent)
@@ -38,6 +40,8 @@ class PageSetupDialog(QDialog):
         self.doc = doc
         self.device_manager = device_manager
         self.undo_stack = undo_stack
+        self._probe_thread: Optional[threading.Thread] = None
+        self._probe_finished.connect(self._handle_probe_result)
 
         # Store initial state for canceling
         self._initial_state = {
@@ -279,12 +283,16 @@ class PageSetupDialog(QDialog):
 
     def _on_fetch_device_size(self):
         target = self._active_dev.port if self._active_dev else "/dev/ttyUSB0"
+        baud = self._active_dev.baudrate if self._active_dev else 19200
         self.btn_fetch_device.setEnabled(False)
         self.btn_fetch_device.setText(f"Frage '{target}' ab...")
-        self.btn_fetch_device.repaint()
 
-        res = probe_plotter(target, timeout=0.6)
-        self._handle_probe_result(target, res)
+        def _worker():
+            res = probe_plotter(target, baudrate=baud, timeout=0.6)
+            self._probe_finished.emit(target, res)
+
+        self._probe_thread = threading.Thread(target=_worker, daemon=True, name="PageSetupProbeThread")
+        self._probe_thread.start()
 
     def _handle_probe_result(self, target: str, res):
         self.btn_fetch_device.setEnabled(True)

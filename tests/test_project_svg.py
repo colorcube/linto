@@ -231,4 +231,83 @@ def test_project_curve_preservation_roundtrip():
             os.remove(tmp_path)
 
 
+def test_project_metadata_persistence_and_plot_job_svg_export(tmp_path):
+    """Verify device_profile, feed_edge, item.visible, item.locked persistence and export_plot_job_to_svg."""
+    from plotter_studio.core.svg_export import export_plot_job_to_svg
+    from plotter_studio.pipeline.compiler import compile_document_to_plot_job
+
+    doc = Document()
+    doc.page.apply_device_profile("mutoh_xp500", "bottom")
+    it1 = ImportItem(
+        name="VisibleLocked",
+        paths=[VectorPath(points=np.array([[10.0, 10.0], [50.0, 50.0]]), pen_id=1)],
+        visible=True,
+        locked=True,
+    )
+    it2 = ImportItem(
+        name="HiddenUnlocked",
+        paths=[VectorPath(points=np.array([[20.0, 20.0], [60.0, 60.0]]), pen_id=2)],
+        visible=False,
+        locked=False,
+    )
+    doc.items.extend([it1, it2])
+
+    proj_file = str(tmp_path / "meta_test.svg")
+    export_document_to_svg(doc, proj_file)
+    reloaded = load_document_from_svg(proj_file)
+
+    assert reloaded.page.device_profile == "mutoh_xp500"
+    assert reloaded.page.feed_edge == "bottom"
+    assert len(reloaded.items) == 2
+    assert reloaded.items[0].visible is True
+    assert reloaded.items[0].locked is True
+    assert reloaded.items[1].visible is False
+    assert reloaded.items[1].locked is False
+
+    # Test export_plot_job_to_svg
+    job = compile_document_to_plot_job(doc)
+    plot_svg_file = str(tmp_path / "plot_job.svg")
+    export_plot_job_to_svg(job, doc.page, plot_svg_file)
+    assert os.path.exists(plot_svg_file)
+    svg_text = Path(plot_svg_file).read_text(encoding="utf-8")
+    assert "pen_1_" in svg_text
+    assert "<path" in svg_text
+
+
+def test_main_window_dirty_state_and_direct_save(qapp, tmp_path, monkeypatch):
+    from PySide6.QtWidgets import QMessageBox
+    from plotter_studio.gui.main_window import MainWindow
+    from plotter_studio.gui.commands import AddItemCommand
+
+    doc = Document()
+    win = MainWindow(doc)
+
+    assert win.undo_stack.isClean()
+    assert "*" not in win.windowTitle()
+
+    it = ImportItem(
+        name="TestPath",
+        paths=[VectorPath(points=np.array([[10.0, 10.0], [40.0, 40.0]]), pen_id=1)],
+    )
+    win.undo_stack.push(AddItemCommand(doc, it, win._on_item_structure_changed))
+    assert not win.undo_stack.isClean()
+    assert "*" in win.windowTitle()
+
+    # If user cancels unsaved prompt, new_document should abort and keep items
+    monkeypatch.setattr(QMessageBox, "question", lambda *a, **kw: QMessageBox.StandardButton.Cancel)
+    win.new_document()
+    assert len(doc.items) == 1
+
+    # Direct save via save_project when current_project_path is set
+    save_path = str(tmp_path / "direct_save.svg")
+    win.current_project_path = save_path
+    assert win.save_project() is True
+    assert os.path.exists(save_path)
+    assert win.undo_stack.isClean()
+    assert "*" not in win.windowTitle()
+    assert "direct_save.svg" in win.windowTitle()
+    win.close()
+
+
+
 

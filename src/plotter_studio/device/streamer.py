@@ -44,11 +44,13 @@ class SerialStreamer:
         on_status: Optional[Callable[[StreamerState, str], None]] = None,
         on_finished: Optional[Callable[[bool, str], None]] = None,
         write_timeout: float = 5.0,
+        end_settle_delay_s: float = 0.05,
     ):
         self.on_progress = on_progress
         self.on_status = on_status
         self.on_finished = on_finished
         self.write_timeout = write_timeout
+        self.end_settle_delay_s = end_settle_delay_s
 
         self.state = StreamerState.IDLE
         self._thread: Optional[threading.Thread] = None
@@ -77,6 +79,8 @@ class SerialStreamer:
         rtscts: Optional[bool] = None,
         dsrdtr: Optional[bool] = None,
         write_timeout: Optional[float] = None,
+        pause_on_pen_change: bool = False,
+        end_settle_delay_s: Optional[float] = None,
     ) -> bool:
         """Start streaming commands in a background thread."""
         with self._lock:
@@ -89,10 +93,23 @@ class SerialStreamer:
             self._pause_event.set()
 
             eff_write_timeout = self.write_timeout if write_timeout is None else write_timeout
+            eff_settle_delay = self.end_settle_delay_s if end_settle_delay_s is None else end_settle_delay_s
 
             self._thread = threading.Thread(
                 target=self._run_stream,
-                args=(port, commands, baudrate, inter_command_delay_s, flow_control, xonxoff_userspace, rtscts, dsrdtr, eff_write_timeout),
+                args=(
+                    port,
+                    commands,
+                    baudrate,
+                    inter_command_delay_s,
+                    flow_control,
+                    xonxoff_userspace,
+                    rtscts,
+                    dsrdtr,
+                    eff_write_timeout,
+                    pause_on_pen_change,
+                    eff_settle_delay,
+                ),
                 daemon=True,
                 name="PlotStreamWorker",
             )
@@ -185,6 +202,8 @@ class SerialStreamer:
         rtscts: Optional[bool] = None,
         dsrdtr: Optional[bool] = None,
         write_timeout: float = 5.0,
+        pause_on_pen_change: bool = False,
+        end_settle_delay_s: float = 0.05,
     ) -> None:
         port_clean = port.strip()
         total_commands = len(commands)
@@ -224,9 +243,28 @@ class SerialStreamer:
                 self._serial.reset_output_buffer()
 
             self._emit_status(StreamerState.STREAMING, "Sende Plotdaten...")
+            active_pen: Optional[int] = None
 
             for i, cmd in enumerate(commands):
-                # Check for abort
+                # Automatic pause before pen change (SPn; where n > 0 after first pen)
+                hpgl_stripped = cmd.hpgl.lstrip()
+                is_pen_select = hpgl_stripped.startswith("SP") and not hpgl_stripped.startswith("SP0") and cmd.pen > 0
+                if is_pen_select:
+                    if pause_on_pen_change and active_pen is not None and cmd.pen != active_pen:
+                        with self._lock:
+                            if not self._abort_requested:
+                                self.state = StreamerState.PAUSED
+                                self._pause_event.clear()
+                                self._emit_status(
+                                    StreamerState.PAUSED,
+                                    f"Stiftwechsel auf SP{cmd.pen} – Bitte Stift wechseln und Fortsetzen klicken",
+                                )
+                    active_pen = cmd.pen
+
+                # Wait if paused (manual or pen-change pause)
+                self._pause_event.wait()
+
+                # Check for abort (before or after pause)
                 if self._abort_requested:
                     self._emit_status(StreamerState.ABORTING, "Sende Abbruch-Befehl...")
                     try:
@@ -238,9 +276,6 @@ class SerialStreamer:
                     if self.on_finished:
                         self.on_finished(False, "Plot durch Benutzer abgebrochen")
                     return
-
-                # Wait if paused
-                self._pause_event.wait()
 
                 # Flow control check (userspace XON/XOFF)
                 if effective_xonxoff:
@@ -261,6 +296,15 @@ class SerialStreamer:
                 pct = ((i + 1) / total_commands) * 100.0 if total_commands > 0 else 100.0
                 if self.on_progress:
                     self.on_progress(cmd.step_index, total_commands, pct, cmd.pen, drawn_total_mm / 1000.0)
+
+            # Allow plotter to finish mechanical SP0; pen parking before closing serial port
+            if self._serial and hasattr(self._serial, "flush"):
+                try:
+                    self._serial.flush()
+                except Exception:
+                    pass
+            if end_settle_delay_s > 0.0 and not self._abort_requested:
+                time.sleep(end_settle_delay_s)
 
             # Successfully completed
             self._close_connection()

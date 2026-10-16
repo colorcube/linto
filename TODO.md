@@ -30,13 +30,13 @@ Zentrale Aufgabenliste für die Weiterentwicklung von Plotter Studio. Detaillier
   - Asymmetrische Ränder (z. B. 25 mm Vorschubkante vs. 5 mm Rest) im Dialog nicht versehentlich symmetrisch überschreiben; beim Abfragen der Plotter-Größe (`OH;`) berücksichtigen, dass der Plotter den Hard-Clip-Bereich und nicht die Außenmaße des Bogens meldet.
 
 ### 1.3 Architektur, Projekt-Persistenz & Workflow-Sicherheit
-- [ ] **Dirty-State & direktes Speichern (`Strg+S`):** Vor `Neu`, `Projekt öffnen` und beim Schließen des Fensters (`closeEvent`) über `undo_stack.isClean()` vor ungespeicherten Änderungen warnen; direktes `Speichern` (`Strg+S`) auf den aktuellen Dateipfad ergänzen.
-- [ ] **Projekt-Metadaten in `core/svg_export.py` vervollständigen:** `page.device_profile`, `page.feed_edge`, `item.visible` und `item.locked` im `plotter:`-Namespace mit abspeichern und beim Laden wiederherstellen; fehlenden `Any`-Import in `core/document.py` ergänzen.
-- [ ] **`DeviceManager` von Qt entkoppeln:** `PySide6.QtCore.QObject` in `device/manager.py` durch reine Python-Callbacks ersetzen, damit `plotter_studio.device` auch headless ohne installiertes Qt nutzbar ist.
-- [ ] **Plot-SVG-Export in `core/svg_export.py` auslagern:** String-Aufbau aus `MainWindow.export_plot_svg_dialog()` in eine testbare Funktion in `core/svg_export.py` verschieben.
-- [ ] **Nicht-blockierendes Hardware-Probing in Dialogen:** `probe_plotter()` in `PageSetupDialog` und `DeviceSettingsDialog` wie im `PlotDockWidget` in einen Hintergrund-Thread auslagern.
-- [ ] **Manueller Stiftwechsel / Pause bei Stiftwechsel:** Option im `SerialStreamer`, vor `SPn;`-Wechseln automatisch zu pausieren (wichtig für 1-Stift-Plotter und Spezialstifte außerhalb des 8er-Karussells).
-- [ ] **Ausschwingzeit nach `SP0;` am Job-Ende:** Kurze Wartezeit in `SerialStreamer._run_stream()` vor dem Schließen des seriellen Ports, damit der Plotter den Stift mechanisch ins Karussell ablegen kann, bevor DTR/RTS abfällt.
+- [x] **Dirty-State & direktes Speichern (`Strg+S`):** Vor `Neu`, `Projekt öffnen` und beim Schließen des Fensters (`closeEvent`) über `undo_stack.isClean()` vor ungespeicherten Änderungen warnen; direktes `Speichern` (`Strg+S`) auf den aktuellen Dateipfad ergänzen.
+- [x] **Projekt-Metadaten in `core/svg_export.py` vervollständigen:** `page.device_profile`, `page.feed_edge`, `item.visible` und `item.locked` im `plotter:`-Namespace mit abspeichern und beim Laden wiederherstellen; fehlenden `Any`-Import in `core/document.py` ergänzen.
+- [x] **`DeviceManager` von Qt entkoppeln:** `PySide6.QtCore.QObject` in `device/manager.py` durch reine Python-Callbacks ersetzen, damit `plotter_studio.device` auch headless ohne installiertes Qt nutzbar ist.
+- [x] **Plot-SVG-Export in `core/svg_export.py` auslagern:** String-Aufbau aus `MainWindow.export_plot_svg_dialog()` in eine testbare Funktion in `core/svg_export.py` verschieben.
+- [x] **Nicht-blockierendes Hardware-Probing in Dialogen:** `probe_plotter()` in `PageSetupDialog` und `DeviceSettingsDialog` wie im `PlotDockWidget` in einen Hintergrund-Thread auslagern.
+- [x] **Manueller Stiftwechsel / Pause bei Stiftwechsel:** Option im `SerialStreamer`, vor `SPn;`-Wechseln automatisch zu pausieren (wichtig für 1-Stift-Plotter und Spezialstifte außerhalb des 8er-Karussells).
+- [x] **Ausschwingzeit nach `SP0;` am Job-Ende:** Kurze Wartezeit in `SerialStreamer._run_stream()` vor dem Schließen des seriellen Ports, damit der Plotter den Stift mechanisch ins Karussell ablegen kann, bevor DTR/RTS abfällt.
 
 ---
 

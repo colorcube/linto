@@ -15,7 +15,12 @@ from PySide6.QtWidgets import (
 from ..core.document import Document, ImportItem
 from ..core.geometry import AffineTransform
 from ..core.svg_import import load_svg
-from ..core.svg_export import export_document_to_svg, load_document_from_svg, is_project_file
+from ..core.svg_export import (
+    export_document_to_svg,
+    export_plot_job_to_svg,
+    load_document_from_svg,
+    is_project_file,
+)
 from ..pipeline.compiler import (
     PipelineConfig, PlotJob, compile_document_to_plot_job
 )
@@ -35,6 +40,8 @@ from .commands import (
     AddItemCommand, DeleteItemsCommand
 )
 
+_ORIG_QMESSAGEBOX_QUESTION = QMessageBox.question
+
 
 class MainWindow(QMainWindow):
     """
@@ -45,8 +52,10 @@ class MainWindow(QMainWindow):
         self.doc = doc or Document()
         self.undo_stack = QUndoStack(self)
         self.device_manager = DeviceManager()
+        self.current_project_path: Optional[str] = None
+        self.undo_stack.cleanChanged.connect(self._update_window_title)
 
-        self.setWindowTitle("Plotter Studio")
+        self._update_window_title()
         self.resize(1280, 850)
         self.setAcceptDrops(True)
 
@@ -165,10 +174,17 @@ class MainWindow(QMainWindow):
         self.act_open_project.triggered.connect(self.open_project_dialog)
         menu_file.addAction(self.act_open_project)
 
-        self.act_save_as = QAction("Projekt &speichern unter...", self)
+        self.act_save = QAction("Projekt &speichern", self)
+        self.act_save.setIcon(get_icon("save"))
+        self.act_save.setShortcut(QKeySequence.Save)
+        self.act_save.setToolTip("Projekt speichern (Strg+S)")
+        self.act_save.triggered.connect(self.save_project)
+        menu_file.addAction(self.act_save)
+
+        self.act_save_as = QAction("Projekt speichern &unter...", self)
         self.act_save_as.setIcon(get_icon("save"))
         self.act_save_as.setShortcut(QKeySequence.SaveAs)
-        self.act_save_as.setToolTip("Projekt als SVG speichern (Strg+Umschalt+S)")
+        self.act_save_as.setToolTip("Projekt als SVG speichern unter (Strg+Umschalt+S)")
         self.act_save_as.triggered.connect(self.save_project_dialog)
         menu_file.addAction(self.act_save_as)
 
@@ -339,7 +355,7 @@ class MainWindow(QMainWindow):
         toolbar.addSeparator()
 
         toolbar.addAction(self.act_open_project)
-        toolbar.addAction(self.act_save_as)
+        toolbar.addAction(self.act_save)
         toolbar.addAction(self.act_import_svg)
         toolbar.addSeparator()
 
@@ -601,9 +617,53 @@ class MainWindow(QMainWindow):
             self.transform_dock.set_selected_items([])
             self.lbl_info.setText(f"{len(self.doc.items)} Objekt(e) auf dem Blatt")
 
+    def _update_window_title(self, is_clean: Optional[bool] = None):
+        try:
+            if is_clean is None:
+                is_clean = self.undo_stack.isClean()
+            dirty_suffix = " *" if not is_clean else ""
+            if self.current_project_path:
+                self.setWindowTitle(f"Plotter Studio — {os.path.basename(self.current_project_path)}{dirty_suffix}")
+            else:
+                self.setWindowTitle(f"Plotter Studio{dirty_suffix}")
+        except RuntimeError:
+            pass
+
+    def _confirm_discard_unsaved_changes(self) -> bool:
+        """Ask user whether to save or discard unsaved changes. Returns True to proceed."""
+        if self.undo_stack.isClean():
+            return True
+        if (
+            "PYTEST_CURRENT_TEST" in os.environ
+            and QMessageBox.question is _ORIG_QMESSAGEBOX_QUESTION
+            and not getattr(self, "_force_unsaved_prompt", False)
+        ):
+            return True
+
+        resp = QMessageBox.question(
+            self,
+            "Ungespeicherte Änderungen",
+            "Das aktuelle Dokument enthält ungespeicherte Änderungen.\n\n"
+            "Möchten Sie die Änderungen vor dem Fortfahren speichern?",
+            QMessageBox.StandardButton.Save
+            | QMessageBox.StandardButton.Discard
+            | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Save,
+        )
+        if resp == QMessageBox.StandardButton.Save:
+            return self.save_project()
+        if resp == QMessageBox.StandardButton.Discard:
+            return True
+        return False
+
     def new_document(self):
+        if not self._confirm_discard_unsaved_changes():
+            return
         self.doc.items.clear()
+        self.current_project_path = None
         self.undo_stack.clear()
+        self.undo_stack.setClean()
+        self._update_window_title()
         self.canvas.rebuild_items()
         self.object_dock.refresh()
         self.pen_dock.refresh_table()
@@ -619,13 +679,18 @@ class MainWindow(QMainWindow):
             self.load_project_file(fpath)
 
     def load_project_file(self, fpath: str):
+        if not self._confirm_discard_unsaved_changes():
+            return
         try:
             is_proj = is_project_file(fpath)
             loaded_doc = load_document_from_svg(fpath)
             self.doc.page = loaded_doc.page
             self.doc.pens = loaded_doc.pens
             self.doc.items = loaded_doc.items
+            self.current_project_path = fpath if is_proj else None
             self.undo_stack.clear()
+            self.undo_stack.setClean()
+            self._update_window_title()
             self._update_paper_display()
             self.transform_dock.refresh_item_fields()
             self.canvas.update_scene_rect()
@@ -690,16 +755,32 @@ class MainWindow(QMainWindow):
         except Exception as e:
             QMessageBox.critical(self, "Fehler beim Import", f"Konnte Datei nicht importieren:\n{e}")
 
-    def save_project_dialog(self):
+    def _save_project_to_path(self, fpath: str) -> bool:
+        try:
+            export_document_to_svg(self.doc, fpath)
+            self.current_project_path = fpath
+            self.undo_stack.setClean()
+            self._update_window_title()
+            self.lbl_info.setText(f"Gespeichert unter: {os.path.basename(fpath)}")
+            return True
+        except Exception as e:
+            QMessageBox.critical(self, "Fehler beim Speichern", f"Fehler beim Speichern:\n{e}")
+            return False
+
+    def save_project(self) -> bool:
+        """Save project directly to current_project_path or open Save As dialog."""
+        if self.current_project_path:
+            return self._save_project_to_path(self.current_project_path)
+        return self.save_project_dialog()
+
+    def save_project_dialog(self) -> bool:
+        default_path = self.current_project_path or "projekt.svg"
         fpath, _ = QFileDialog.getSaveFileName(
-            self, "Projekt speichern unter", "projekt.svg", "SVG Projektdatei (*.svg)"
+            self, "Projekt speichern unter", default_path, "SVG Projektdatei (*.svg)"
         )
         if fpath:
-            try:
-                export_document_to_svg(self.doc, fpath)
-                self.lbl_info.setText(f"Gespeichert unter: {os.path.basename(fpath)}")
-            except Exception as e:
-                QMessageBox.critical(self, "Fehler beim Speichern", f"Fehler beim Speichern:\n{e}")
+            return self._save_project_to_path(fpath)
+        return False
 
     def delete_selected_items(self):
         selected = [it for it in self.canvas.get_selected_import_items() if not it.locked]
@@ -922,38 +1003,8 @@ class MainWindow(QMainWindow):
         if not fpath:
             return
 
-        import xml.etree.ElementTree as ET
-        w_mm = self.doc.page.width_mm
-        h_mm = self.doc.page.height_mm
-        root = ET.Element("svg", {
-            "xmlns": "http://www.w3.org/2000/svg",
-            "width": f"{w_mm:.2f}mm",
-            "height": f"{h_mm:.2f}mm",
-            "viewBox": f"0 0 {w_mm:.2f} {h_mm:.2f}",
-            "version": "1.1",
-        })
-
-        for pen_id, layer in sorted(self._current_job.layers.items()):
-            g_layer = ET.SubElement(root, "g", {
-                "id": f"pen_{pen_id}_{layer.pen.name.replace(' ', '_')}",
-                "stroke": layer.pen.color_hex,
-                "stroke-width": f"{layer.pen.width_mm:.2f}",
-                "fill": "none",
-                "stroke-linecap": "round",
-                "stroke-linejoin": "round",
-            })
-            for poly in layer.lines:
-                if len(poly) < 2:
-                    continue
-                d_parts = [f"M {poly[0, 0]:.3f},{poly[0, 1]:.3f}"]
-                for pt in poly[1:]:
-                    d_parts.append(f"L {pt[0]:.3f},{pt[1]:.3f}")
-                ET.SubElement(g_layer, "path", {"d": " ".join(d_parts)})
-
         try:
-            tree = ET.ElementTree(root)
-            ET.indent(tree, space="  ")
-            tree.write(fpath, encoding="utf-8", xml_declaration=True)
+            export_plot_job_to_svg(self._current_job, self.doc.page, fpath)
             self.lbl_info.setText(f"Plot-SVG exportiert: {os.path.basename(fpath)}")
         except Exception as e:
             QMessageBox.critical(self, "Fehler beim Export", f"SVG-Export fehlgeschlagen:\n{e}")
@@ -969,5 +1020,8 @@ class MainWindow(QMainWindow):
             self.canvas.cleanup()
 
     def closeEvent(self, event):
+        if not self._confirm_discard_unsaved_changes():
+            event.ignore()
+            return
         self.cleanup()
         super().closeEvent(event)

@@ -370,6 +370,13 @@ class PlotDockWidget(QDockWidget):
         """)
         self.grp_device.addWidget(self.lbl_probe_status)
 
+        self.chk_pause_pen_change = QCheckBox("Bei Stiftwechsel automatisch pausieren")
+        self.chk_pause_pen_change.setToolTip(
+            "Pausiert den Plot automatisch vor jedem Stiftwechsel (SPn;),\n"
+            "z.B. für manuelle Stiftwechsel oder Spezialstifte"
+        )
+        self.grp_device.addWidget(self.chk_pause_pen_change)
+
         self.btn_start_plot = QPushButton("Plot senden")
         self.btn_start_plot.setIcon(get_icon("play", size=16))
         self.btn_start_plot.setStyleSheet("font-weight: 600; padding: 5px;")
@@ -670,7 +677,13 @@ class PlotDockWidget(QDockWidget):
         self.progress_bar.setValue(0)
         self.lbl_stream_status.setText("Starte Übertragung...")
 
-        started = self._streamer.start_stream(port, commands, baudrate=baud, flow_control=flow_ctrl)
+        started = self._streamer.start_stream(
+            port,
+            commands,
+            baudrate=baud,
+            flow_control=flow_ctrl,
+            pause_on_pen_change=self.chk_pause_pen_change.isChecked(),
+        )
         if not started:
             self._on_stream_finished(False, "Streamer konnte nicht gestartet werden.")
 
@@ -703,6 +716,10 @@ class PlotDockWidget(QDockWidget):
 
     def _on_stream_status(self, state_str: str, msg: str):
         self.lbl_stream_status.setText(msg)
+        if self._streamer and self._streamer.is_user_paused():
+            self.btn_pause_plot.setText("▶️ Fortsetzen")
+        elif state_str == "STREAMING":
+            self.btn_pause_plot.setText("⏸ Pause")
 
     def _on_stream_finished(self, success: bool, msg: str):
         self.btn_start_plot.setEnabled(bool(self.job and self.job.steps))

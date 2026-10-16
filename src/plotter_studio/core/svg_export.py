@@ -54,6 +54,8 @@ def export_document_to_svg(doc: Document, output_path: str):
         "width_mm": f"{doc.page.width_mm:.2f}",
         "height_mm": f"{doc.page.height_mm:.2f}",
         "orientation": doc.page.orientation,
+        "device_profile": doc.page.device_profile,
+        "feed_edge": doc.page.feed_edge,
         "margin_left": f"{doc.page.margin_left_mm:.2f}",
         "margin_right": f"{doc.page.margin_right_mm:.2f}",
         "margin_top": f"{doc.page.margin_top_mm:.2f}",
@@ -84,6 +86,8 @@ def export_document_to_svg(doc: Document, output_path: str):
             "id": f"item_{item.item_id[:8]}",
             f"{{{NS_PS}}}name": item.name,
             f"{{{NS_PS}}}transform": f"{item.transform.a},{item.transform.b},{item.transform.c},{item.transform.d},{item.transform.tx},{item.transform.ty}",
+            f"{{{NS_PS}}}visible": str(item.visible).lower(),
+            f"{{{NS_PS}}}locked": str(item.locked).lower(),
         })
         if item.source_path:
             g_item.set(f"{{{NS_PS}}}source", item.source_path)
@@ -236,6 +240,10 @@ def load_document_from_svg(filepath_or_data: str) -> Document:
             preset = ps_page.get("preset", "A3")
             orientation = ps_page.get("orientation", "landscape")
             page.apply_preset(preset, orientation)
+            if "device_profile" in ps_page.attrib:
+                page.device_profile = ps_page.attrib["device_profile"]
+            if "feed_edge" in ps_page.attrib:
+                page.feed_edge = ps_page.attrib["feed_edge"]
             if "width_mm" in ps_page.attrib:
                 page.width_mm = float(ps_page.attrib["width_mm"])
             if "height_mm" in ps_page.attrib:
@@ -295,6 +303,8 @@ def load_document_from_svg(filepath_or_data: str) -> Document:
 
         name = ps_name or (item_id_attr[5:] if item_id_attr.startswith("item_") else "Import")
         source = g.attrib.get(f"{{{NS_PS}}}source")
+        visible = g.attrib.get(f"{{{NS_PS}}}visible", "true").lower() == "true"
+        locked = g.attrib.get(f"{{{NS_PS}}}locked", "false").lower() == "true"
         t_str = g.attrib.get(f"{{{NS_PS}}}transform")
         if t_str:
             try:
@@ -340,6 +350,8 @@ def load_document_from_svg(filepath_or_data: str) -> Document:
                 transform=transform,
                 source_path=source,
                 item_id=raw_id,
+                visible=visible,
+                locked=locked,
             )
             items.append(item)
 
@@ -349,3 +361,38 @@ def load_document_from_svg(filepath_or_data: str) -> Document:
             items.append(fallback_item)
 
     return Document(page=page, pens=pens, items=items)
+
+
+def export_plot_job_to_svg(job, page: Page, output_path: str):
+    """Export compiled plot job polylines into a clean SVG file grouped by pen."""
+    w_mm = page.width_mm
+    h_mm = page.height_mm
+    root = ET.Element("svg", {
+        "xmlns": "http://www.w3.org/2000/svg",
+        "width": f"{w_mm:.2f}mm",
+        "height": f"{h_mm:.2f}mm",
+        "viewBox": f"0 0 {w_mm:.2f} {h_mm:.2f}",
+        "version": "1.1",
+    })
+
+    for pen_id, layer in sorted(job.layers.items()):
+        g_layer = ET.SubElement(root, "g", {
+            "id": f"pen_{pen_id}_{layer.pen.name.replace(' ', '_')}",
+            "stroke": layer.pen.color_hex,
+            "stroke-width": f"{layer.pen.width_mm:.2f}",
+            "fill": "none",
+            "stroke-linecap": "round",
+            "stroke-linejoin": "round",
+        })
+        for poly in layer.lines:
+            if len(poly) < 2:
+                continue
+            d_parts = [f"M {poly[0, 0]:.3f},{poly[0, 1]:.3f}"]
+            for pt in poly[1:]:
+                d_parts.append(f"L {pt[0]:.3f},{pt[1]:.3f}")
+            ET.SubElement(g_layer, "path", {"d": " ".join(d_parts)})
+
+    tree = ET.ElementTree(root)
+    ET.indent(tree, space="  ")
+    tree.write(output_path, encoding="utf-8", xml_declaration=True)
+

@@ -5,12 +5,30 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Callable
 import yaml
 
-from PySide6.QtCore import QObject, Signal
 from .profile import DeviceProfile, load_profile, get_default_profile
 from .probe import list_serial_ports
+
+
+class _EventSignal:
+    """Lightweight pure-Python signal supporting .connect(), .disconnect(), and .emit()."""
+
+    def __init__(self):
+        self._callbacks: List[Callable[..., Any]] = []
+
+    def connect(self, callback: Callable[..., Any]):
+        if callback not in self._callbacks:
+            self._callbacks.append(callback)
+
+    def disconnect(self, callback: Callable[..., Any]):
+        if callback in self._callbacks:
+            self._callbacks.remove(callback)
+
+    def emit(self, *args: Any, **kwargs: Any):
+        for cb in list(self._callbacks):
+            cb(*args, **kwargs)
 
 
 @dataclass
@@ -64,16 +82,15 @@ def _get_config_path() -> Path:
     return config_dir / "devices.yaml"
 
 
-class DeviceManager(QObject):
+class DeviceManager:
     """
     Central manager for configured plotters.
     Emits signals when active device or device list changes so all UI docks stay synchronized.
     """
-    device_changed = Signal(object)  # ConfiguredDevice
-    devices_updated = Signal()
 
-    def __init__(self, config_path: Optional[Path] = None, parent: Optional[QObject] = None):
-        super().__init__(parent)
+    def __init__(self, config_path: Optional[Path] = None, parent: Optional[Any] = None):
+        self.device_changed = _EventSignal()
+        self.devices_updated = _EventSignal()
         self.config_path = config_path or _get_config_path()
         self.devices: List[ConfiguredDevice] = []
         self.active_device_id: str = ""

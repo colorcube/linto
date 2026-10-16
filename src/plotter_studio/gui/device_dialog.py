@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import copy
+import threading
 import uuid
 from typing import Optional
 
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtWidgets import (
     QDialog, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QFormLayout, QLabel, QLineEdit, QComboBox, QSpinBox, QCheckBox,
@@ -22,6 +23,7 @@ from .icons import get_icon
 
 class DeviceSettingsDialog(QDialog):
     """Configuration dialog for plotter devices."""
+    _probe_finished = Signal(object)
 
     def __init__(self, device_manager: DeviceManager, parent: Optional[QWidget] = None):
         super().__init__(parent)
@@ -29,6 +31,8 @@ class DeviceSettingsDialog(QDialog):
         self.setMinimumSize(680, 480)
         self.manager = device_manager
         self._current_device: Optional[ConfiguredDevice] = None
+        self._probe_thread: Optional[threading.Thread] = None
+        self._probe_finished.connect(self._handle_test_result)
 
         self._init_ui()
         self._load_devices_list()
@@ -306,9 +310,15 @@ class DeviceSettingsDialog(QDialog):
         self.btn_test.setEnabled(False)
         self.lbl_test_result.setText(f"Prüfe {port} mit {baudrate} Baud...")
         self.lbl_test_result.setStyleSheet("padding: 4px; background: #fff9c4; color: #f57f17; border-radius: 4px; font-size: 11px;")
-        self.lbl_test_result.repaint()
 
-        res = probe_plotter(port, baudrate=baudrate)
+        def _worker():
+            res = probe_plotter(port, baudrate=baudrate)
+            self._probe_finished.emit(res)
+
+        self._probe_thread = threading.Thread(target=_worker, daemon=True, name="DeviceSettingsProbeThread")
+        self._probe_thread.start()
+
+    def _handle_test_result(self, res):
         self.btn_test.setEnabled(True)
 
         if res.success:

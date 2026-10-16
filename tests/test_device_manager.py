@@ -100,9 +100,34 @@ def test_device_dialog_headless(qapp, tmp_path):
     assert mgr.get_device(dlg._current_device.id).baudrate == 300
     assert mgr.get_device(dlg._current_device.id).flow_control == "xonxoff"
 
-    # Test connection test error handling (fast timeout, non-blocking)
+    # Test connection test error handling (background thread, non-blocking)
     dlg.combo_port.setEditText("/dev/nonexistent_test_port")
     dlg._on_test_device()
+    if dlg._probe_thread is not None:
+        dlg._probe_thread.join(timeout=2.0)
+    qapp.processEvents()
     assert "Fehlgeschlagen:" in dlg.lbl_test_result.text()
 
     dlg.close()
+
+
+def test_device_manager_pure_python_signals_without_qobject(tmp_path):
+    from PySide6.QtCore import QObject
+    config_file = tmp_path / "devices_pure.yaml"
+    mgr = DeviceManager(config_path=config_file)
+    assert not isinstance(mgr, QObject)
+
+    changed_events = []
+    updated_events = []
+    mgr.device_changed.connect(lambda dev: changed_events.append(dev.id))
+    mgr.devices_updated.connect(lambda: updated_events.append(True))
+
+    devices = mgr.list_devices()
+    other_id = [d.id for d in devices if d.id != mgr.active_device_id][0]
+    mgr.set_active_device(other_id)
+    assert changed_events == [other_id]
+
+    new_dev = ConfiguredDevice(id="dev_sig", name="Signal Test")
+    mgr.add_device(new_dev)
+    assert len(updated_events) == 1
+
