@@ -76,6 +76,21 @@ SVG_TEMPLATES: Dict[str, str] = {
         '<polyline points="3 9 3 3 9 3" fill="none" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
         '</svg>'
     ),
+    "zoom-in": (
+        '<svg viewBox="0 0 24 24" width="24" height="24">'
+        '<circle cx="11" cy="11" r="7" fill="none" stroke="{color}" stroke-width="2"/>'
+        '<line x1="21" y1="21" x2="16.5" y2="16.5" stroke="{color}" stroke-width="2" stroke-linecap="round"/>'
+        '<line x1="11" y1="8" x2="11" y2="14" stroke="{color}" stroke-width="2" stroke-linecap="round"/>'
+        '<line x1="8" y1="11" x2="14" y2="11" stroke="{color}" stroke-width="2" stroke-linecap="round"/>'
+        '</svg>'
+    ),
+    "zoom-out": (
+        '<svg viewBox="0 0 24 24" width="24" height="24">'
+        '<circle cx="11" cy="11" r="7" fill="none" stroke="{color}" stroke-width="2"/>'
+        '<line x1="21" y1="21" x2="16.5" y2="16.5" stroke="{color}" stroke-width="2" stroke-linecap="round"/>'
+        '<line x1="8" y1="11" x2="14" y2="11" stroke="{color}" stroke-width="2" stroke-linecap="round"/>'
+        '</svg>'
+    ),
     "rotate-ccw": (
         '<svg viewBox="0 0 24 24" width="24" height="24">'
         '<path d="M1 4v6h6" fill="none" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'

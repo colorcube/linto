@@ -273,12 +273,26 @@ class MainWindow(QMainWindow):
 
         menu_view.addSeparator()
 
-        self.act_zoom_fit = QAction("Ganzes Blatt anzeigen", self)
+        self.act_zoom_fit = QAction("Blatt im Fenster einpassen", self)
         self.act_zoom_fit.setIcon(get_icon("zoom-fit"))
         self.act_zoom_fit.setShortcut(QKeySequence("Ctrl+0"))
-        self.act_zoom_fit.setToolTip("Ganzes Blatt im Fenster einpassen (Strg+0)")
+        self.act_zoom_fit.setToolTip("Blatt im Fenster einpassen (Strg+0)")
         self.act_zoom_fit.triggered.connect(self.canvas.zoom_to_fit)
         menu_view.addAction(self.act_zoom_fit)
+
+        self.act_zoom_in = QAction("Vergrößern", self)
+        self.act_zoom_in.setIcon(get_icon("zoom-in"))
+        self.act_zoom_in.setShortcut(QKeySequence.ZoomIn)
+        self.act_zoom_in.setToolTip("Vergrößern (Strg++)")
+        self.act_zoom_in.triggered.connect(lambda checked=False: self.canvas.zoom_in())
+        menu_view.addAction(self.act_zoom_in)
+
+        self.act_zoom_out = QAction("Verkleinern", self)
+        self.act_zoom_out.setIcon(get_icon("zoom-out"))
+        self.act_zoom_out.setShortcut(QKeySequence.ZoomOut)
+        self.act_zoom_out.setToolTip("Verkleinern (Strg+-)")
+        self.act_zoom_out.triggered.connect(lambda checked=False: self.canvas.zoom_out())
+        menu_view.addAction(self.act_zoom_out)
 
         # Docks toggle & Display options
         menu_view.addSeparator()
@@ -306,6 +320,7 @@ class MainWindow(QMainWindow):
         toolbar.setMovable(False)
         toolbar.setToolButtonStyle(Qt.ToolButtonIconOnly)
         self.addToolBar(Qt.TopToolBarArea, toolbar)
+        self.toolbar = toolbar
 
         # Mode switches with text beside icon
         toolbar.addAction(self.act_mode_layout)
@@ -325,15 +340,18 @@ class MainWindow(QMainWindow):
         toolbar.addAction(self.act_import_svg)
         toolbar.addSeparator()
 
+        # Zoom controls (fit to window, zoom in, zoom out) before Undo/Redo
+        toolbar.addAction(self.act_zoom_fit)
+        toolbar.addAction(self.act_zoom_in)
+        toolbar.addAction(self.act_zoom_out)
+        toolbar.addSeparator()
+
         toolbar.addAction(self.act_undo)
         toolbar.addAction(self.act_redo)
         toolbar.addSeparator()
 
         toolbar.addAction(self.act_duplicate)
         toolbar.addAction(self.act_delete)
-        toolbar.addSeparator()
-
-        toolbar.addAction(self.act_zoom_fit)
         toolbar.addSeparator()
 
         toolbar.addAction(self.act_rotate_ccw)

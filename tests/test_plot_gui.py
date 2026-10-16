@@ -322,3 +322,48 @@ def test_plot_dock_pipeline_dirty_and_nodes(qapp, tmp_path):
     win.cleanup()
 
 
+def test_toolbar_zoom_actions_and_ordering(qapp):
+    doc = Document()
+    doc.page.apply_preset("A4", "landscape")
+    win = MainWindow(doc)
+    win.show()
+
+    try:
+        # Check action existence
+        assert hasattr(win, "act_zoom_fit")
+        assert hasattr(win, "act_zoom_in")
+        assert hasattr(win, "act_zoom_out")
+        assert win.act_zoom_fit.text() == "Blatt im Fenster einpassen"
+        assert win.act_zoom_in.text() == "Vergrößern"
+        assert win.act_zoom_out.text() == "Verkleinern"
+
+        # Check toolbar order
+        toolbar = win.toolbar
+        actions = toolbar.actions()
+
+        idx_fit = actions.index(win.act_zoom_fit)
+        idx_in = actions.index(win.act_zoom_in)
+        idx_out = actions.index(win.act_zoom_out)
+        idx_undo = actions.index(win.act_undo)
+        idx_redo = actions.index(win.act_redo)
+
+        # Zoom actions are adjacent and before undo/redo
+        assert idx_fit < idx_in < idx_out < idx_undo < idx_redo
+
+        # Test zoom actions functionality
+        scale_init = win.canvas.transform().m11()
+        win.act_zoom_in.trigger()
+        assert win.canvas.transform().m11() > scale_init
+
+        scale_after_in = win.canvas.transform().m11()
+        win.act_zoom_out.trigger()
+        assert win.canvas.transform().m11() < scale_after_in
+
+        win.act_zoom_fit.trigger()
+        assert win.canvas.transform().m11() > 0.0
+    finally:
+        win.close()
+        win.cleanup()
+
+
+

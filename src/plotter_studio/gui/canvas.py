@@ -319,6 +319,32 @@ class PlotterCanvas(QGraphicsView):
         self.fitInView(rect, Qt.KeepAspectRatio)
         self.zoom_changed.emit(self.transform().m11())
 
+    def zoom_in(self, factor: float = 1.25):
+        """Zoom in relative to viewport center."""
+        if not isinstance(factor, (int, float)) or isinstance(factor, bool) or factor <= 0:
+            factor = 1.25
+        old_anchor = self.transformationAnchor()
+        self.setTransformationAnchor(QGraphicsView.AnchorViewCenter)
+        current_scale = self.transform().m11()
+        new_scale = current_scale * factor
+        if new_scale <= 50.0:
+            self.scale(factor, factor)
+            self.zoom_changed.emit(self.transform().m11())
+        self.setTransformationAnchor(old_anchor)
+
+    def zoom_out(self, factor: float = 1.25):
+        """Zoom out relative to viewport center."""
+        if not isinstance(factor, (int, float)) or isinstance(factor, bool) or factor <= 0:
+            factor = 1.25
+        old_anchor = self.transformationAnchor()
+        self.setTransformationAnchor(QGraphicsView.AnchorViewCenter)
+        current_scale = self.transform().m11()
+        new_scale = current_scale / factor
+        if new_scale >= 0.05:
+            self.scale(1.0 / factor, 1.0 / factor)
+            self.zoom_changed.emit(self.transform().m11())
+        self.setTransformationAnchor(old_anchor)
+
     def get_selected_import_items(self) -> List[ImportItem]:
         selected = []
         for g_item in self._scene.selectedItems():
