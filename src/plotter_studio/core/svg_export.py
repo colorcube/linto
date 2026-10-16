@@ -12,7 +12,7 @@ import svgelements
 
 from .document import Document, LogicalPen, ImportItem, VectorPath, Page, DEFAULT_PENS
 from .geometry import AffineTransform
-from .svg_import import segment_to_points, _clean_duplicate_attributes
+from .svg_import import segment_to_points, _clean_duplicate_attributes, load_svg
 
 
 NS_PS = "https://plotter-studio.org/schema/v1"
@@ -123,7 +123,64 @@ def is_project_file(filepath_or_data: str) -> bool:
 
 
 def load_document_from_svg(filepath_or_data: str) -> Document:
-    """Load a Plotter Studio project SVG and reconstruct the full Document model."""
+    """Load an SVG file and reconstruct the full Document model.
+
+    Supports both Plotter Studio project SVGs (with embedded page/pen/item metadata)
+    and standard SVGs (which are loaded as an ImportItem on a matching or default page).
+    """
+    if not is_project_file(filepath_or_data):
+        item = load_svg(filepath_or_data)
+        page = Page()
+        try:
+            if os.path.exists(filepath_or_data):
+                svg_obj = svgelements.SVG.parse(filepath_or_data)
+            else:
+                import io
+                svg_obj = svgelements.SVG.parse(io.StringIO(filepath_or_data))
+            w_mm = None
+            h_mm = None
+            if svg_obj.width and svg_obj.height:
+                w_mm = float(svg_obj.width) * (25.4 / 96.0)
+                h_mm = float(svg_obj.height) * (25.4 / 96.0)
+            elif getattr(svg_obj, "viewbox", None):
+                vb = svg_obj.viewbox
+                if vb.width and vb.height:
+                    w_mm = float(vb.width) * (25.4 / 96.0)
+                    h_mm = float(vb.height) * (25.4 / 96.0)
+
+            if w_mm and h_mm:
+                formats = {
+                    "A4": (210, 297),
+                    "A3": (297, 420),
+                    "A2": (420, 594),
+                    "A1": (594, 841),
+                    "A0": (841, 1189),
+                }
+                detected_preset = None
+                detected_orient = "portrait"
+                for name, (dim1, dim2) in formats.items():
+                    if abs(w_mm - dim1) < 5 and abs(h_mm - dim2) < 5:
+                        detected_preset = name
+                        detected_orient = "portrait"
+                        break
+                    elif abs(w_mm - dim2) < 5 and abs(h_mm - dim1) < 5:
+                        detected_preset = name
+                        detected_orient = "landscape"
+                        break
+                if detected_preset:
+                    page.apply_preset(detected_preset, detected_orient)
+                elif w_mm > 0.0 and h_mm > 0.0:
+                    page.set_custom_size(round(w_mm, 2), round(h_mm, 2))
+            elif item.current_bounds:
+                b = item.current_bounds
+                w = round(max(50.0, b.max_x + 10.0), 2)
+                h = round(max(50.0, b.max_y + 10.0), 2)
+                page.set_custom_size(w, h)
+        except Exception:
+            pass
+
+        return Document(page=page, pens=copy.deepcopy(DEFAULT_PENS), items=[item] if item.paths else [])
+
     if os.path.exists(filepath_or_data):
         raw = Path(filepath_or_data).read_text(encoding="utf-8", errors="replace")
     else:
@@ -274,5 +331,10 @@ def load_document_from_svg(filepath_or_data: str) -> Document:
                 item_id=raw_id,
             )
             items.append(item)
+
+    if not items:
+        fallback_item = load_svg(filepath_or_data)
+        if fallback_item.paths:
+            items.append(fallback_item)
 
     return Document(page=page, pens=pens, items=items)

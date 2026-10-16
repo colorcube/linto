@@ -156,3 +156,35 @@ def test_load_existing_user_projekt():
     assert "calibration_plot_a3" in names
     assert doc.page.preset == "A3"
     assert len(doc.pens) == 8
+
+
+def test_load_standard_svg_as_project():
+    """Verify that a standard SVG (non-project) loads cleanly into a new Document."""
+    svg_path = "examples/TEST_10cm.svg"
+    if not os.path.exists(svg_path):
+        pytest.skip("examples/TEST_10cm.svg not found")
+
+    assert is_project_file(svg_path) is False
+    doc = load_document_from_svg(svg_path)
+    assert len(doc.items) == 1
+    assert len(doc.items[0].paths) > 0
+    assert doc.items[0].name == "TEST_10cm"
+    assert doc.page.preset == "Custom"
+    assert doc.page.width_mm == 100.0
+    assert doc.page.height_mm == 100.0
+
+    with tempfile.NamedTemporaryFile(suffix=".svg", delete=False) as f:
+        tmp_out = f.name
+    try:
+        export_document_to_svg(doc, tmp_out)
+        assert is_project_file(tmp_out) is True
+        reloaded = load_document_from_svg(tmp_out)
+        assert reloaded.page.preset == "Custom"
+        assert reloaded.page.width_mm == 100.0
+        assert reloaded.page.height_mm == 100.0
+        assert len(reloaded.items) == 1
+    finally:
+        if os.path.exists(tmp_out):
+            os.remove(tmp_out)
+
+

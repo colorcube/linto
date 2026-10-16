@@ -157,7 +157,7 @@ class MainWindow(QMainWindow):
         self.act_open_project = QAction("Projekt &öffnen...", self)
         self.act_open_project.setIcon(get_icon("open"))
         self.act_open_project.setShortcut(QKeySequence.Open)
-        self.act_open_project.setToolTip("Gespeichertes SVG-Projekt öffnen (Strg+O)")
+        self.act_open_project.setToolTip("Projekt oder SVG-Datei öffnen (Strg+O)")
         self.act_open_project.triggered.connect(self.open_project_dialog)
         menu_file.addAction(self.act_open_project)
 
@@ -622,13 +622,14 @@ class MainWindow(QMainWindow):
 
     def open_project_dialog(self):
         fpath, _ = QFileDialog.getOpenFileName(
-            self, "Projekt öffnen", "", "Plotter Studio SVG-Projekt (*.svg);;Alle Dateien (*)"
+            self, "Projekt oder SVG öffnen", "", "SVG-Dateien (*.svg);;Alle Dateien (*)"
         )
         if fpath:
             self.load_project_file(fpath)
 
     def load_project_file(self, fpath: str):
         try:
+            is_proj = is_project_file(fpath)
             loaded_doc = load_document_from_svg(fpath)
             self.doc.page = loaded_doc.page
             self.doc.pens = loaded_doc.pens
@@ -646,9 +647,14 @@ class MainWindow(QMainWindow):
             self._on_selection_changed()
             if self.canvas._mode == CanvasMode.PLOT:
                 self.recompile_plot_job()
-            self.lbl_info.setText(f"Projekt geladen: {os.path.basename(fpath)} ({len(self.doc.items)} Objekt(e))")
+
+            if is_proj:
+                self.lbl_info.setText(f"Projekt geladen: {os.path.basename(fpath)} ({len(self.doc.items)} Objekt(e))")
+            else:
+                num_paths = sum(len(it.paths) for it in self.doc.items)
+                self.lbl_info.setText(f"SVG geladen: {os.path.basename(fpath)} ({num_paths} Pfade)")
         except Exception as e:
-            QMessageBox.critical(self, "Fehler beim Öffnen des Projekts", f"Konnte Projektdatei nicht laden:\n{e}")
+            QMessageBox.critical(self, "Fehler beim Öffnen der Datei", f"Konnte Datei nicht laden:\n{e}")
 
     def import_svg_dialog(self):
         fpath, _ = QFileDialog.getOpenFileName(

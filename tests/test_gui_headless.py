@@ -355,4 +355,16 @@ def test_main_window_open_project(qapp, tmp_path):
         assert len(win.canvas._item_map) == 3
         assert win.object_dock.tree.topLevelItemCount() == 3
 
+    # Check opening standard SVG via load_project_file
+    if os.path.exists("examples/TEST_10cm.svg"):
+        win.load_project_file("examples/TEST_10cm.svg")
+        assert len(win.doc.items) == 1
+        assert "Pfade" in win.lbl_info.text()
+        assert win.canvas._item_map is not None
+        assert win.object_dock.tree.topLevelItemCount() == 1
+        assert win.doc.page.preset == "Custom"
+        assert win.paper_dock.combo_preset.currentData() == "Custom"
+        assert win.paper_dock.spin_width.value() == 100.0
+        assert win.paper_dock.spin_height.value() == 100.0
+
     win.close()
