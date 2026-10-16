@@ -59,6 +59,10 @@ Tests direkt am physischen Mutoh XP-500 Plotter mit [tools/xp500_probe.py](tools
 - [ ] **Panel-Einstellungen verifizieren:** Hard-Clip-Fenster (`EXP`), Puffergröße (`Small` = 1000 Zeichen), Handshake (`RTS/CTS`), Schrittauflösung (`0.025 mm`).
 - [ ] **Hardware-Inquiry prüfen:** Rückmeldungen von `OI;`, `OF;` und `OH;` gegen die Software-Parser abgleichen.
 - [ ] **Kalibrierungs-Plot:** [resources/calibration_plot_a3.svg](resources/calibration_plot_a3.svg) auf DIN A3 zeichnen und Randmaße mit dem Stahllineal gegen das Profil abgleichen.
+- [ ] **Kalibrierungs-Assistent für reale Blatt- und Rand-Offsets (Workflow aus MutohPlot):**
+  - Geführter Dialog (Wizard) zum Zeichnen des Kalibrierbogens (`resources/calibration_plot_*.svg`) und Eintragen von real mit dem Lineal gemessenen Randabständen (Oben/Unten/Links/Rechts).
+  - Automatische Berechnung der Mittenverschiebung (`offset_first_mm`, `offset_second_mm`) und Speicherung im Geräteprofil (`ConfiguredDevice`).
+  - Optionale Schrittweiten-Feinjustierung (`units_per_mm`), falls gemessene 100/200/400-mm-Strecken Abweichungen zeigen.
 - [ ] **Puffer- und Abbruchverhalten:** Wirksamkeit von `ESC.K` (Puffer leeren) bei Live-Abbrüchen verifizieren.
 
 ---
