@@ -155,6 +155,8 @@ class PageConfigCommand(QUndoCommand):
         self.page.width_mm = state.get("width_mm", self.page.width_mm)
         self.page.height_mm = state.get("height_mm", self.page.height_mm)
         self.page.orientation = state.get("orientation", self.page.orientation)
+        self.page.device_profile = state.get("device_profile", self.page.device_profile)
+        self.page.feed_edge = state.get("feed_edge", self.page.feed_edge)
         self.page.margin_left_mm = state.get("margin_left_mm", self.page.margin_left_mm)
         self.page.margin_right_mm = state.get("margin_right_mm", self.page.margin_right_mm)
         self.page.margin_top_mm = state.get("margin_top_mm", self.page.margin_top_mm)
@@ -230,4 +232,98 @@ class ApplyPresetCommand(QUndoCommand):
         for path, pid in self.new_assignments:
             path.pen_id = pid
         self.on_updated()
+
+
+class ModifyItemPropertiesCommand(QUndoCommand):
+    """Undoable command for changing name, visibility or lock state of an ImportItem."""
+    def __init__(
+        self,
+        item: ImportItem,
+        old_props: Dict[str, Any],
+        new_props: Dict[str, Any],
+        on_updated: Callable[[], None],
+        text: str = "Objekt-Eigenschaft ändern",
+    ):
+        super().__init__(text)
+        self.item = item
+        self.old_props = copy.deepcopy(old_props)
+        self.new_props = copy.deepcopy(new_props)
+        self.on_updated = on_updated
+
+    def _apply(self, props: Dict[str, Any]):
+        for k, v in props.items():
+            setattr(self.item, k, v)
+
+    def undo(self):
+        self._apply(self.old_props)
+        self.on_updated()
+
+    def redo(self):
+        self._apply(self.new_props)
+        self.on_updated()
+
+
+class MoveItemZOrderCommand(QUndoCommand):
+    """Undoable command for moving an ImportItem up or down in document z-order."""
+    def __init__(
+        self,
+        doc: Document,
+        item_id: str,
+        direction: str,
+        on_updated: Callable[[], None],
+        text: str = "Ebenen-Reihenfolge ändern",
+    ):
+        super().__init__(text)
+        self.doc = doc
+        self.item_id = item_id
+        self.direction = direction  # "up" or "down"
+        self.on_updated = on_updated
+
+    def undo(self):
+        if self.direction == "up":
+            self.doc.move_item_down(self.item_id)
+        else:
+            self.doc.move_item_up(self.item_id)
+        self.on_updated()
+
+    def redo(self):
+        if self.direction == "up":
+            self.doc.move_item_up(self.item_id)
+        else:
+            self.doc.move_item_down(self.item_id)
+        self.on_updated()
+
+
+class ModifyPenPropertyCommand(QUndoCommand):
+    """Undoable command for modifying a property of a LogicalPen (color, width, speed, force, mapped_to, enabled)."""
+    def __init__(
+        self,
+        doc: Document,
+        pen_id: int,
+        attr_name: str,
+        old_value: Any,
+        new_value: Any,
+        on_updated: Callable[[], None],
+        text: str = "Stift ändern",
+    ):
+        super().__init__(text)
+        self.doc = doc
+        self.pen_id = pen_id
+        self.attr_name = attr_name
+        self.old_value = old_value
+        self.new_value = new_value
+        self.on_updated = on_updated
+
+    def undo(self):
+        p = self.doc.get_pen(self.pen_id)
+        if p is not None:
+            setattr(p, self.attr_name, self.old_value)
+        self.on_updated()
+
+    def redo(self):
+        p = self.doc.get_pen(self.pen_id)
+        if p is not None:
+            setattr(p, self.attr_name, self.new_value)
+        self.on_updated()
+
 

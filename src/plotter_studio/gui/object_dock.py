@@ -1,19 +1,31 @@
 """Object and Layer management dock widget."""
 
 from __future__ import annotations
+import copy
+import re
 from typing import Optional, TYPE_CHECKING
+import numpy as np
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QIcon, QKeySequence, QShortcut
+from PySide6.QtGui import QIcon, QKeySequence, QShortcut, QUndoStack
 from PySide6.QtWidgets import (
     QDockWidget, QWidget, QVBoxLayout, QHBoxLayout,
     QTreeWidget, QTreeWidgetItem, QToolButton, QHeaderView,
     QAbstractItemView
 )
 from .icons import get_icon
+from .commands import (
+    AddItemCommand,
+    DeleteItemsCommand,
+    ModifyItemPropertiesCommand,
+    MoveItemZOrderCommand,
+)
 
 if TYPE_CHECKING:
     from ..core.document import Document, ImportItem
     from .canvas import PlotterCanvas
+
+
+_PATH_SUFFIX_RE = re.compile(r"\s*\(\d+\s+Pfade?\)$")
 
 
 class ObjectDockWidget(QDockWidget):
@@ -32,6 +44,7 @@ class ObjectDockWidget(QDockWidget):
         super().__init__("Objekte & Ebenen", parent)
         self.doc = doc
         self.canvas = canvas
+        self.undo_stack: Optional[QUndoStack] = None
         self._updating = False
 
         self.setObjectName("ObjectDockWidget")
@@ -110,6 +123,7 @@ class ObjectDockWidget(QDockWidget):
 
         # Connect Tree Events
         self.tree.itemClicked.connect(self._on_item_clicked)
+        self.tree.itemDoubleClicked.connect(self._on_item_double_clicked)
         self.tree.itemChanged.connect(self._on_item_changed)
         self.tree.itemSelectionChanged.connect(self._on_tree_selection_changed)
 
@@ -122,47 +136,65 @@ class ObjectDockWidget(QDockWidget):
         # Initial populate
         self.refresh()
 
+    def set_undo_stack(self, stack: QUndoStack):
+        self.undo_stack = stack
+
     def get_selected_item_id(self) -> Optional[str]:
         items = self.tree.selectedItems()
         if not items:
             return None
         return items[0].data(0, Qt.UserRole)
 
+    def _populate_tree_node(self, node: QTreeWidgetItem, item: ImportItem):
+        node.setData(0, Qt.UserRole, item.item_id)
+
+        # Col 0: Visibility
+        vis_icon = get_icon("eye" if item.visible else "eye-off", size=16)
+        node.setIcon(0, vis_icon)
+        node.setToolTip(0, "Sichtbarkeit umschalten" if item.visible else "Ausgeblendet (klicken zum Einblenden)")
+
+        # Col 1: Lock
+        lock_icon = get_icon("lock" if item.locked else "lock-open", size=16)
+        node.setIcon(1, lock_icon)
+        node.setToolTip(1, "Gesperrt (klicken zum Entsperren)" if item.locked else "Entsperrt (klicken zum Sperren)")
+
+        # Col 2: Name + Path count
+        path_count = len(item.paths)
+        label = f"{item.name} ({path_count} Pfade)" if path_count != 1 else f"{item.name} (1 Pfad)"
+        node.setText(2, label)
+        node.setData(2, Qt.UserRole, item.name)  # Raw name for renaming
+        node.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable)
+
     def refresh(self):
-        """Rebuild tree items based on document items (ordered reverse so top layer is at top)."""
+        """Rebuild or update tree items based on document items (ordered reverse so top layer is at top)."""
         if self._updating:
             return
         self._updating = True
         self.tree.blockSignals(True)
 
         current_sel_id = self.get_selected_item_id()
-        self.tree.clear()
+        rev_items = list(reversed(self.doc.items))
+        existing_ids = [
+            self.tree.topLevelItem(i).data(0, Qt.UserRole)
+            for i in range(self.tree.topLevelItemCount())
+        ]
+        target_ids = [item.item_id for item in rev_items]
 
-        # Display items in reverse order: doc.items[-1] is top layer
-        for item in reversed(self.doc.items):
-            node = QTreeWidgetItem(self.tree)
-            node.setData(0, Qt.UserRole, item.item_id)
-
-            # Col 0: Visibility
-            vis_icon = get_icon("eye" if item.visible else "eye-off", size=16)
-            node.setIcon(0, vis_icon)
-            node.setToolTip(0, "Sichtbarkeit umschalten" if item.visible else "Ausgeblendet (klicken zum Einblenden)")
-
-            # Col 1: Lock
-            lock_icon = get_icon("lock" if item.locked else "lock-open", size=16)
-            node.setIcon(1, lock_icon)
-            node.setToolTip(1, "Gesperrt (klicken zum Entsperren)" if item.locked else "Entsperrt (klicken zum Sperren)")
-
-            # Col 2: Name + Path count
-            path_count = len(item.paths)
-            label = f"{item.name} ({path_count} Pfade)" if path_count != 1 else f"{item.name} (1 Pfad)"
-            node.setText(2, label)
-            node.setData(2, Qt.UserRole, item.name)  # Raw name for renaming
-            node.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable)
-
-            if item.item_id == current_sel_id:
-                node.setSelected(True)
-                self.tree.setCurrentItem(node)
+        if existing_ids == target_ids:
+            for i, item in enumerate(rev_items):
+                node = self.tree.topLevelItem(i)
+                self._populate_tree_node(node, item)
+                if item.item_id == current_sel_id:
+                    node.setSelected(True)
+                    self.tree.setCurrentItem(node)
+        else:
+            self.tree.clear()
+            for item in rev_items:
+                node = QTreeWidgetItem(self.tree)
+                self._populate_tree_node(node, item)
+                if item.item_id == current_sel_id:
+                    node.setSelected(True)
+                    self.tree.setCurrentItem(node)
 
         self._update_button_states()
         self.tree.blockSignals(False)
@@ -196,9 +228,10 @@ class ObjectDockWidget(QDockWidget):
 
     def _update_button_states(self):
         item_id = self.get_selected_item_id()
-        has_sel = item_id is not None
+        item = self.doc.find_item(item_id) if item_id else None
+        has_sel = item is not None
         self.btn_dup.setEnabled(has_sel)
-        self.btn_del.setEnabled(has_sel)
+        self.btn_del.setEnabled(has_sel and not item.locked)
 
         if not has_sel or len(self.doc.items) <= 1:
             self.btn_up.setEnabled(False)
@@ -211,6 +244,13 @@ class ObjectDockWidget(QDockWidget):
             # Down means towards bottom layer (0)
             self.btn_down.setEnabled(idx > 0)
 
+    def _on_prop_cmd_updated(self, item_id: str):
+        g_item = self.canvas._item_map.get(item_id)
+        if g_item:
+            g_item.sync_from_transform()
+        self.refresh()
+        self.document_modified.emit()
+
     def _on_item_clicked(self, node: QTreeWidgetItem, column: int):
         item_id = node.data(0, Qt.UserRole)
         item = self.doc.find_item(item_id)
@@ -218,31 +258,64 @@ class ObjectDockWidget(QDockWidget):
             return
 
         if column == 0:
-            # Toggle visibility
-            item.visible = not item.visible
-            node.setIcon(0, get_icon("eye" if item.visible else "eye-off", size=16))
-            g_item = self.canvas._item_map.get(item_id)
-            if g_item:
-                g_item.sync_from_transform()
-            self.document_modified.emit()
+            old_vis = item.visible
+            new_vis = not old_vis
+            if self.undo_stack:
+                cmd = ModifyItemPropertiesCommand(
+                    item,
+                    {"visible": old_vis},
+                    {"visible": new_vis},
+                    lambda iid=item_id: self._on_prop_cmd_updated(iid),
+                    text=f"{item.name} {'einblenden' if new_vis else 'ausblenden'}",
+                )
+                self.undo_stack.push(cmd)
+            else:
+                item.visible = new_vis
+                self._on_prop_cmd_updated(item_id)
         elif column == 1:
-            # Toggle lock
-            item.locked = not item.locked
-            node.setIcon(1, get_icon("lock" if item.locked else "lock-open", size=16))
-            g_item = self.canvas._item_map.get(item_id)
-            if g_item:
-                g_item.sync_from_transform()
-            self.document_modified.emit()
+            old_lock = item.locked
+            new_lock = not old_lock
+            if self.undo_stack:
+                cmd = ModifyItemPropertiesCommand(
+                    item,
+                    {"locked": old_lock},
+                    {"locked": new_lock},
+                    lambda iid=item_id: self._on_prop_cmd_updated(iid),
+                    text=f"{item.name} {'sperren' if new_lock else 'entsperren'}",
+                )
+                self.undo_stack.push(cmd)
+            else:
+                item.locked = new_lock
+                self._on_prop_cmd_updated(item_id)
+
+    def _on_item_double_clicked(self, node: QTreeWidgetItem, column: int):
+        if column == 2:
+            raw_name = node.data(2, Qt.UserRole)
+            if raw_name:
+                self.tree.blockSignals(True)
+                node.setText(2, str(raw_name))
+                self.tree.blockSignals(False)
 
     def _on_item_changed(self, node: QTreeWidgetItem, column: int):
         if column == 2 and not self._updating:
             item_id = node.data(0, Qt.UserRole)
             item = self.doc.find_item(item_id)
             if item:
-                new_text = node.text(2).strip()
-                # If user entered something, update item name
-                if new_text:
-                    item.name = new_text
+                raw_text = node.text(2).strip()
+                clean_name = _PATH_SUFFIX_RE.sub("", raw_text).strip()
+                if clean_name and clean_name != item.name:
+                    old_name = item.name
+                    if self.undo_stack:
+                        cmd = ModifyItemPropertiesCommand(
+                            item,
+                            {"name": old_name},
+                            {"name": clean_name},
+                            lambda iid=item_id: self._on_prop_cmd_updated(iid),
+                            text=f"Objekt umbenennen in '{clean_name}'",
+                        )
+                        self.undo_stack.push(cmd)
+                        return
+                    item.name = clean_name
                 self.refresh()
                 self.document_modified.emit()
 
@@ -265,6 +338,16 @@ class ObjectDockWidget(QDockWidget):
         self._updating = False
         self.canvas.selection_changed_signal.emit()
 
+    def _on_structure_cmd_updated(self, select_id: Optional[str] = None):
+        self.canvas.rebuild_items()
+        self.refresh()
+        target_id = select_id or (self.doc.items[-1].item_id if self.doc.items else None)
+        if target_id and target_id in self.canvas._item_map:
+            self.canvas._scene.clearSelection()
+            self.canvas._item_map[target_id].setSelected(True)
+        self.sync_from_canvas_selection()
+        self.document_modified.emit()
+
     def duplicate_selected(self):
         item_id = self.get_selected_item_id()
         if not item_id:
@@ -273,49 +356,73 @@ class ObjectDockWidget(QDockWidget):
         if not item:
             return
         new_item = self.doc.duplicate_item(item, offset_mm=10.0)
-        self.canvas.rebuild_items()
-        self.refresh()
-        # Select the duplicated item
-        g_item = self.canvas._item_map.get(new_item.item_id)
-        if g_item:
-            self.canvas._scene.clearSelection()
-            g_item.setSelected(True)
-        self.sync_from_canvas_selection()
-        self.document_modified.emit()
+        if self.undo_stack:
+            # Remove first so AddItemCommand.redo() appends cleanly
+            self.doc.remove_item(new_item.item_id)
+            cmd = AddItemCommand(
+                self.doc,
+                new_item,
+                lambda nid=new_item.item_id: self._on_structure_cmd_updated(nid),
+                text=f"{item.name} duplizieren",
+            )
+            self.undo_stack.push(cmd)
+        else:
+            self._on_structure_cmd_updated(new_item.item_id)
 
     def delete_selected(self):
         item_id = self.get_selected_item_id()
         if not item_id:
             return
-        self.doc.remove_item(item_id)
-        self.canvas.rebuild_items()
-        self.refresh()
-        self.document_modified.emit()
+        item = self.doc.find_item(item_id)
+        if not item or item.locked:
+            return
+        if self.undo_stack:
+            cmd = DeleteItemsCommand(
+                self.doc,
+                [item],
+                lambda: self._on_structure_cmd_updated(),
+                text=f"{item.name} löschen",
+            )
+            self.undo_stack.push(cmd)
+        else:
+            self.doc.remove_item(item_id)
+            self._on_structure_cmd_updated()
 
     def move_selected_up(self):
         item_id = self.get_selected_item_id()
         if not item_id:
             return
-        if self.doc.move_item_up(item_id):
-            self.canvas.rebuild_items()
-            g_item = self.canvas._item_map.get(item_id)
-            if g_item:
-                self.canvas._scene.clearSelection()
-                g_item.setSelected(True)
-            self.refresh()
-            self.sync_from_canvas_selection()
-            self.document_modified.emit()
+        idx = next((i for i, it in enumerate(self.doc.items) if it.item_id == item_id), -1)
+        if idx < 0 or idx >= len(self.doc.items) - 1:
+            return
+        if self.undo_stack:
+            cmd = MoveItemZOrderCommand(
+                self.doc,
+                item_id,
+                "up",
+                lambda iid=item_id: self._on_structure_cmd_updated(iid),
+                text="Ebene nach oben verschieben",
+            )
+            self.undo_stack.push(cmd)
+        elif self.doc.move_item_up(item_id):
+            self._on_structure_cmd_updated(item_id)
 
     def move_selected_down(self):
         item_id = self.get_selected_item_id()
         if not item_id:
             return
-        if self.doc.move_item_down(item_id):
-            self.canvas.rebuild_items()
-            g_item = self.canvas._item_map.get(item_id)
-            if g_item:
-                self.canvas._scene.clearSelection()
-                g_item.setSelected(True)
-            self.refresh()
-            self.sync_from_canvas_selection()
-            self.document_modified.emit()
+        idx = next((i for i, it in enumerate(self.doc.items) if it.item_id == item_id), -1)
+        if idx <= 0:
+            return
+        if self.undo_stack:
+            cmd = MoveItemZOrderCommand(
+                self.doc,
+                item_id,
+                "down",
+                lambda iid=item_id: self._on_structure_cmd_updated(iid),
+                text="Ebene nach unten verschieben",
+            )
+            self.undo_stack.push(cmd)
+        elif self.doc.move_item_down(item_id):
+            self._on_structure_cmd_updated(item_id)
+

@@ -86,3 +86,42 @@ def test_page_setup_dialog_cancel_restores_state(qapp):
     assert doc.page.preset == "A4"
     assert doc.page.width_mm == orig_w
     assert doc.page.height_mm == orig_h
+
+
+def test_page_setup_dialog_asymmetric_margins_and_probe_clip(qapp, monkeypatch):
+    from PySide6.QtWidgets import QMessageBox
+    monkeypatch.setattr(QMessageBox, "information", lambda *a, **kw: QMessageBox.StandardButton.Ok)
+
+    doc = Document()
+    doc.page.apply_device_profile("mutoh_xp500", "top")
+    assert doc.page.margin_top_mm == 25.0
+    assert doc.page.margin_bottom_mm == 5.0
+    assert doc.page.margin_left_mm == 5.0
+    assert doc.page.margin_right_mm == 5.0
+
+    dlg = PageSetupDialog(doc)
+    assert dlg.spin_margin_top.value() == 25.0
+    assert dlg.spin_margin_bottom.value() == 5.0
+    assert dlg.spin_margin_left.value() == 5.0
+    assert dlg.spin_margin_right.value() == 5.0
+
+    # Changing only left margin preserves right/top/bottom margins
+    dlg.spin_margin_left.setValue(12.0)
+    assert doc.page.margin_left_mm == 12.0
+    assert doc.page.margin_right_mm == 5.0
+    assert doc.page.margin_top_mm == 25.0
+    assert doc.page.margin_bottom_mm == 5.0
+
+    # Test OH; probe result with custom hard_clip_mm adds margins to form outer sheet size
+    res = ProbeResult(
+        port="virtual://mutoh",
+        success=True,
+        model="XP-500",
+        hard_clip_mm=(400.0, 250.0),
+        detected_format=None,
+    )
+    dlg._handle_probe_result("virtual://mutoh", res)
+    assert doc.page.preset == "Custom"
+    assert doc.page.width_mm == pytest.approx(400.0 + 12.0 + 5.0)
+    assert doc.page.height_mm == pytest.approx(250.0 + 25.0 + 5.0)
+

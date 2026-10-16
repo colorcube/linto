@@ -121,6 +121,7 @@ class TransformDockWidget(QDockWidget):
         self.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
         self.doc = doc
         self.active_item: Optional[ImportItem] = None
+        self.selected_items: list[ImportItem] = []
         self.undo_stack: Optional[QUndoStack] = None
         self._updating_fields = False
 
@@ -243,6 +244,20 @@ class TransformDockWidget(QDockWidget):
         self.grp_rotation = SectionGroup("Rotation")
         r_layout = QHBoxLayout()
         r_layout.setSpacing(6)
+
+        lbl_angle = QLabel("Winkel:")
+        lbl_angle.setStyleSheet("font-weight: 500; color: #4b5563;")
+        r_layout.addWidget(lbl_angle)
+
+        self.spin_rot_angle = QDoubleSpinBox()
+        self.spin_rot_angle.setAlignment(Qt.AlignLeft)
+        self.spin_rot_angle.setRange(-360.0, 360.0)
+        self.spin_rot_angle.setDecimals(1)
+        self.spin_rot_angle.setSingleStep(5.0)
+        self.spin_rot_angle.setSuffix(" °")
+        self.spin_rot_angle.setToolTip("Rotationswinkel in Grad (frei einstellbar)")
+        self.spin_rot_angle.valueChanged.connect(self._on_rot_angle_spin_changed)
+        r_layout.addWidget(self.spin_rot_angle)
 
         self.btn_rotate_ccw = QPushButton("-90°")
         self.btn_rotate_ccw.setIcon(get_icon("rotate-ccw", size=16))
@@ -379,6 +394,7 @@ class TransformDockWidget(QDockWidget):
             s.setFixedWidth(spin_mm_w)
         self.spin_obj_scale.setFixedWidth(spin_pct_w)
         self.spin_fit_margin.setFixedWidth(margin_w)
+        self.spin_rot_angle.setFixedWidth(margin_w)
         self.btn_chain.setFixedSize(lock_size, lock_size)
         self.btn_chain.setIconSize(QSize(icon_size, icon_size))
 
@@ -423,6 +439,7 @@ class TransformDockWidget(QDockWidget):
         self.spin_obj_scale.setEnabled(enabled)
         self.btn_scale_down.setEnabled(enabled)
         self.btn_scale_up.setEnabled(enabled)
+        self.spin_rot_angle.setEnabled(enabled)
         self.btn_rotate_ccw.setEnabled(enabled)
         self.btn_rotate_cw.setEnabled(enabled)
         self.btn_center_h.setEnabled(enabled)
@@ -432,22 +449,49 @@ class TransformDockWidget(QDockWidget):
         self.spin_fit_margin.setEnabled(enabled)
         self.btn_original_size.setEnabled(enabled)
 
-    def set_active_item(self, item: Optional[ImportItem]):
-        self.active_item = item
-        if item is None:
+    def _get_unlocked_items(self) -> list[ImportItem]:
+        items = self.selected_items if self.selected_items else ([self.active_item] if self.active_item else [])
+        return [it for it in items if it is not None and not it.locked and it.original_bounds is not None]
+
+    def _get_selection_bounds(self, items: Optional[list[ImportItem]] = None) -> Optional[BoundingBox]:
+        targets = items if items is not None else self._get_unlocked_items()
+        box: Optional[BoundingBox] = None
+        for it in targets:
+            cb = it.current_bounds
+            if cb is not None:
+                box = cb if box is None else box.expanded_to(cb)
+        return box
+
+    def set_selected_items(self, items: list[ImportItem]):
+        self.selected_items = list(items)
+        self.active_item = items[0] if items else None
+        if not items:
             self.lbl_item_name.setText("Kein Objekt ausgewählt")
             self.lbl_locked_badge.setVisible(False)
             self._set_item_controls_enabled(False)
+            return
+
+        if len(items) == 1:
+            self.lbl_item_name.setText(items[0].name)
         else:
-            self.lbl_item_name.setText(item.name)
-            if item.locked:
-                self.lbl_locked_badge.setText("🔒 Gesperrt")
+            self.lbl_item_name.setText(f"{len(items)} Objekte ausgewählt")
+
+        unlocked = self._get_unlocked_items()
+        if not unlocked:
+            self.lbl_locked_badge.setText("🔒 Gesperrt")
+            self.lbl_locked_badge.setVisible(True)
+            self._set_item_controls_enabled(False)
+        else:
+            if len(unlocked) < len(items):
+                self.lbl_locked_badge.setText(f"🔒 {len(items) - len(unlocked)} gesperrt")
                 self.lbl_locked_badge.setVisible(True)
-                self._set_item_controls_enabled(False)
             else:
                 self.lbl_locked_badge.setVisible(False)
-                self._set_item_controls_enabled(True)
-            self.refresh_item_fields()
+            self._set_item_controls_enabled(True)
+        self.refresh_item_fields()
+
+    def set_active_item(self, item: Optional[ImportItem]):
+        self.set_selected_items([item] if item is not None else [])
 
     def refresh_item_fields(self):
         if not self.active_item or not self.active_item.original_bounds:
@@ -457,16 +501,19 @@ class TransformDockWidget(QDockWidget):
 
         self._updating_fields = True
         try:
-            cb = self.active_item.current_bounds
+            targets = self.selected_items if len(self.selected_items) > 1 else [self.active_item]
+            cb = self._get_selection_bounds(targets)
             if not cb:
                 return
 
             sx = math.hypot(self.active_item.transform.a, self.active_item.transform.b)
             scale_pct = sx * 100.0
+            angle_deg = math.degrees(math.atan2(self.active_item.transform.b, self.active_item.transform.a))
 
             self.spin_obj_w.setValue(cb.width)
             self.spin_obj_h.setValue(cb.height)
             self.spin_obj_scale.setValue(scale_pct)
+            self.spin_rot_angle.setValue(angle_deg)
 
             tb = self._get_target_box()
             self.spin_pos_x.setValue(cb.min_x - tb.min_x)
@@ -481,7 +528,7 @@ class TransformDockWidget(QDockWidget):
 
     # --- Item Sizing & Transformation ---
     def _apply_item_transform(self, old_t: AffineTransform, new_t: AffineTransform, text: str):
-        if not self.active_item:
+        if not self.active_item or self.active_item.locked:
             return
         if self.undo_stack:
             cmd = TransformItemCommand(
@@ -492,49 +539,95 @@ class TransformDockWidget(QDockWidget):
             self.active_item.transform = copy.deepcopy(new_t)
             self._on_transform_applied()
 
+    def _apply_multi_transforms(self, changes: list[tuple[ImportItem, AffineTransform, AffineTransform]], text: str):
+        if not changes:
+            return
+        if len(changes) == 1:
+            it, old_t, new_t = changes[0]
+            if self.undo_stack:
+                cmd = TransformItemCommand(it, old_t, new_t, self._on_transform_applied, text=text)
+                self.undo_stack.push(cmd)
+            else:
+                it.transform = copy.deepcopy(new_t)
+                self._on_transform_applied()
+            return
+
+        if self.undo_stack:
+            self.undo_stack.beginMacro(text)
+            try:
+                for it, old_t, new_t in changes:
+                    cmd = TransformItemCommand(it, old_t, new_t, self._on_transform_applied, text=text)
+                    self.undo_stack.push(cmd)
+            finally:
+                self.undo_stack.endMacro()
+        else:
+            for it, _, new_t in changes:
+                it.transform = copy.deepcopy(new_t)
+            self._on_transform_applied()
+
     def _on_transform_applied(self):
         self.refresh_item_fields()
         self.item_transformed.emit()
 
-    def rotate_selected(self, angle_degrees: float):
-        """Rotate active item around its current visual center."""
-        if not self.active_item or not self.active_item.original_bounds:
+    def _on_rot_angle_spin_changed(self, target_angle_deg: float):
+        if self._updating_fields:
             return
-        cb = self.active_item.current_bounds
+        unlocked = self._get_unlocked_items()
+        if not unlocked or not self.active_item:
+            return
+        cur_angle = math.degrees(math.atan2(self.active_item.transform.b, self.active_item.transform.a))
+        delta = target_angle_deg - cur_angle
+        if abs(delta) < 1e-4:
+            return
+        self.rotate_selected(delta)
+
+    def rotate_selected(self, angle_degrees: float):
+        """Rotate unlocked selected item(s) around their visual center."""
+        unlocked = self._get_unlocked_items()
+        if not unlocked:
+            return
+        cb = self._get_selection_bounds(unlocked)
         if cb is None:
             return
 
         cx, cy = cb.center.x, cb.center.y
-        old_t = copy.deepcopy(self.active_item.transform)
         rot_t = AffineTransform.rotation(angle_degrees, cx, cy)
-        new_t = rot_t.multiply(old_t)
+        changes = []
+        for it in unlocked:
+            old_t = copy.deepcopy(it.transform)
+            new_t = rot_t.multiply(old_t)
+            changes.append((it, old_t, new_t))
 
         dir_str = "im Uhrzeigersinn" if angle_degrees > 0 else "gegen den Uhrzeigersinn"
-        self._apply_item_transform(old_t, new_t, f"Objekt drehen ({int(abs(angle_degrees))}° {dir_str})")
+        self._apply_multi_transforms(changes, f"Objekt drehen ({angle_degrees:.1f}° {dir_str})")
 
     def _apply_scene_scale(self, factor_x: float, factor_y: float):
-        """Scale active item around its center in scene coordinates, preserving rotation."""
-        if not self.active_item or not self.active_item.original_bounds:
+        """Scale unlocked selected item(s) around center in scene coordinates, preserving rotation."""
+        unlocked = self._get_unlocked_items()
+        if not unlocked:
             return
-        cb = self.active_item.current_bounds
+        cb = self._get_selection_bounds(unlocked)
         if cb is None:
             return
 
         cx, cy = cb.center.x, cb.center.y
-        old_t = copy.deepcopy(self.active_item.transform)
-
         t1 = AffineTransform.translation(-cx, -cy)
         s = AffineTransform(factor_x, 0.0, 0.0, factor_y, 0.0, 0.0)
         t2 = AffineTransform.translation(cx, cy)
         s_scene = t2.multiply(s.multiply(t1))
 
-        new_t = s_scene.multiply(old_t)
-        self._apply_item_transform(old_t, new_t, "Objekt skalieren")
+        changes = []
+        for it in unlocked:
+            old_t = copy.deepcopy(it.transform)
+            new_t = s_scene.multiply(old_t)
+            changes.append((it, old_t, new_t))
+        self._apply_multi_transforms(changes, "Objekt skalieren")
 
     def _on_obj_w_changed(self, new_w: float):
-        if self._updating_fields or not self.active_item or not self.active_item.original_bounds:
+        if self._updating_fields:
             return
-        cb = self.active_item.current_bounds
+        unlocked = self._get_unlocked_items()
+        cb = self._get_selection_bounds(unlocked)
         if cb is None or cb.width <= 0:
             return
         factor_x = new_w / cb.width
@@ -542,9 +635,10 @@ class TransformDockWidget(QDockWidget):
         self._apply_scene_scale(factor_x, factor_y)
 
     def _on_obj_h_changed(self, new_h: float):
-        if self._updating_fields or not self.active_item or not self.active_item.original_bounds:
+        if self._updating_fields:
             return
-        cb = self.active_item.current_bounds
+        unlocked = self._get_unlocked_items()
+        cb = self._get_selection_bounds(unlocked)
         if cb is None or cb.height <= 0:
             return
         factor_y = new_h / cb.height
@@ -552,7 +646,7 @@ class TransformDockWidget(QDockWidget):
         self._apply_scene_scale(factor_x, factor_y)
 
     def _on_scale_spin_changed(self, pct: float):
-        if self._updating_fields or not self.active_item or not self.active_item.original_bounds:
+        if self._updating_fields or not self.active_item or self.active_item.locked or not self.active_item.original_bounds:
             return
         target_scale = max(0.01, pct / 100.0)
         cur_scale = math.hypot(self.active_item.transform.a, self.active_item.transform.b)
@@ -566,22 +660,37 @@ class TransformDockWidget(QDockWidget):
 
     def reset_to_original_size(self):
         """Reset scale to 1.0 (true 1:1 original mm size from source file), preserving rotation."""
-        if not self.active_item:
+        unlocked = self._get_unlocked_items()
+        if not unlocked:
             return
-        cur_scale = math.hypot(self.active_item.transform.a, self.active_item.transform.b)
-        if cur_scale <= 1e-6:
-            return
-        factor = 1.0 / cur_scale
-        self._apply_scene_scale(factor, factor)
+        changes = []
+        for it in unlocked:
+            cur_scale = math.hypot(it.transform.a, it.transform.b)
+            if cur_scale <= 1e-6:
+                continue
+            factor = 1.0 / cur_scale
+            cb = it.current_bounds
+            if cb is None:
+                continue
+            cx, cy = cb.center.x, cb.center.y
+            t1 = AffineTransform.translation(-cx, -cy)
+            s = AffineTransform(factor, 0.0, 0.0, factor, 0.0, 0.0)
+            t2 = AffineTransform.translation(cx, cy)
+            s_scene = t2.multiply(s.multiply(t1))
+            old_t = copy.deepcopy(it.transform)
+            new_t = s_scene.multiply(old_t)
+            changes.append((it, old_t, new_t))
+        self._apply_multi_transforms(changes, "Originalgröße (1:1)")
 
     def fit_to_page(self, margin_mm: Optional[float] = None):
-        if not self.active_item or not self.active_item.original_bounds:
+        unlocked = self._get_unlocked_items()
+        if not unlocked:
             return
         if margin_mm is None:
             margin_mm = self.spin_fit_margin.value()
 
         tb = self._get_target_box()
-        cb = self.active_item.current_bounds
+        cb = self._get_selection_bounds(unlocked)
         if cb is None or cb.width <= 0 or cb.height <= 0:
             return
 
@@ -590,22 +699,28 @@ class TransformDockWidget(QDockWidget):
 
         scale_factor = min(avail_w / cb.width, avail_h / cb.height)
         cx, cy = cb.center.x, cb.center.y
-        old_t = copy.deepcopy(self.active_item.transform)
 
         t1 = AffineTransform.translation(-cx, -cy)
         s = AffineTransform(scale_factor, 0.0, 0.0, scale_factor, 0.0, 0.0)
         t2 = AffineTransform.translation(tb.center.x, tb.center.y)
         fit_t = t2.multiply(s.multiply(t1))
 
-        new_t = fit_t.multiply(old_t)
-        self._apply_item_transform(old_t, new_t, "Auf Blatt einpassen")
+        changes = []
+        for it in unlocked:
+            old_t = copy.deepcopy(it.transform)
+            new_t = fit_t.multiply(old_t)
+            changes.append((it, old_t, new_t))
+        self._apply_multi_transforms(changes, "Auf Blatt einpassen")
 
     # --- Position and Alignment ---
     def _on_pos_mm_changed(self):
-        if self._updating_fields or not self.active_item or not self.active_item.original_bounds:
+        if self._updating_fields:
+            return
+        unlocked = self._get_unlocked_items()
+        if not unlocked:
             return
         tb = self._get_target_box()
-        cb = self.active_item.current_bounds
+        cb = self._get_selection_bounds(unlocked)
         if cb is None:
             return
 
@@ -614,50 +729,66 @@ class TransformDockWidget(QDockWidget):
         dx = target_left - cb.min_x
         dy = target_top - cb.min_y
 
-        old_t = copy.deepcopy(self.active_item.transform)
-        new_t = copy.deepcopy(old_t)
-        new_t.tx += dx
-        new_t.ty += dy
+        changes = []
+        for it in unlocked:
+            old_t = copy.deepcopy(it.transform)
+            new_t = copy.deepcopy(old_t)
+            new_t.tx += dx
+            new_t.ty += dy
+            changes.append((it, old_t, new_t))
 
-        self._apply_item_transform(old_t, new_t, "Position ändern (mm)")
+        self._apply_multi_transforms(changes, "Position ändern (mm)")
 
     def align_center_h(self):
-        if not self.active_item or not self.active_item.original_bounds:
+        unlocked = self._get_unlocked_items()
+        if not unlocked:
             return
         tb = self._get_target_box()
-        cb = self.active_item.current_bounds
+        cb = self._get_selection_bounds(unlocked)
         if cb is None:
             return
         dx = tb.center.x - cb.center.x
-        old_t = copy.deepcopy(self.active_item.transform)
-        new_t = copy.deepcopy(old_t)
-        new_t.tx += dx
-        self._apply_item_transform(old_t, new_t, "Horizontal zentrieren")
+        changes = []
+        for it in unlocked:
+            old_t = copy.deepcopy(it.transform)
+            new_t = copy.deepcopy(old_t)
+            new_t.tx += dx
+            changes.append((it, old_t, new_t))
+        self._apply_multi_transforms(changes, "Horizontal zentrieren")
 
     def align_center_v(self):
-        if not self.active_item or not self.active_item.original_bounds:
+        unlocked = self._get_unlocked_items()
+        if not unlocked:
             return
         tb = self._get_target_box()
-        cb = self.active_item.current_bounds
+        cb = self._get_selection_bounds(unlocked)
         if cb is None:
             return
         dy = tb.center.y - cb.center.y
-        old_t = copy.deepcopy(self.active_item.transform)
-        new_t = copy.deepcopy(old_t)
-        new_t.ty += dy
-        self._apply_item_transform(old_t, new_t, "Vertikal zentrieren")
+        changes = []
+        for it in unlocked:
+            old_t = copy.deepcopy(it.transform)
+            new_t = copy.deepcopy(old_t)
+            new_t.ty += dy
+            changes.append((it, old_t, new_t))
+        self._apply_multi_transforms(changes, "Vertikal zentrieren")
 
     def align_center_both(self):
-        if not self.active_item or not self.active_item.original_bounds:
+        unlocked = self._get_unlocked_items()
+        if not unlocked:
             return
         tb = self._get_target_box()
-        cb = self.active_item.current_bounds
+        cb = self._get_selection_bounds(unlocked)
         if cb is None:
             return
         dx = tb.center.x - cb.center.x
         dy = tb.center.y - cb.center.y
-        old_t = copy.deepcopy(self.active_item.transform)
-        new_t = copy.deepcopy(old_t)
-        new_t.tx += dx
-        new_t.ty += dy
-        self._apply_item_transform(old_t, new_t, "Mittig zentrieren")
+        changes = []
+        for it in unlocked:
+            old_t = copy.deepcopy(it.transform)
+            new_t = copy.deepcopy(old_t)
+            new_t.tx += dx
+            new_t.ty += dy
+            changes.append((it, old_t, new_t))
+        self._apply_multi_transforms(changes, "Mittig zentrieren")
+

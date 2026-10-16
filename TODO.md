@@ -14,17 +14,17 @@ Zentrale Aufgabenliste für die Weiterentwicklung von Plotter Studio. Detaillier
 - [x] **Preset-Logik im Stift-Dock zusammenführen:** Duplizierte Preset-Anwendung in `gui/pen_dock.py` (`_on_apply_preset_clicked` und `_on_load_preset_clicked`) in eine gemeinsame Methode extrahieren.
 
 ### 1.2 GUI-Bugs & Bedienungskonsistenz
-- [ ] **`PenDockWidget` Signal-Bug beheben:** `self.table.itemChanged.connect(self._on_table_item_changed)` in `gui/pen_dock.py` aus `refresh_table()` in `_setup_ui()` verschieben, damit das Signal nicht bei jedem Refresh mehrfach registriert wird.
-- [ ] **Stift-Geschwindigkeit (`VS`) und Anpressdruck (`FS`) in der GUI:** Spalten für Geschwindigkeit (`cm/s`) und Kraft (`g`) im `PenDockWidget` ergänzen (`LogicalPen` und `HPGLEmitter` unterstützen sie bereits).
-- [ ] **Undo/Redo-Lücken (`QUndoStack`) schließen:**
+- [x] **`PenDockWidget` Signal-Bug beheben:** `self.table.itemChanged.connect(self._on_table_item_changed)` in `gui/pen_dock.py` aus `refresh_table()` in `_setup_ui()` verschieben, damit das Signal nicht bei jedem Refresh mehrfach registriert wird.
+- [x] **Stift-Geschwindigkeit (`VS`) und Anpressdruck (`FS`) in der GUI:** Spalten für Geschwindigkeit (`cm/s`) und Kraft (`g`) im `PenDockWidget` ergänzen (`LogicalPen` und `HPGLEmitter` unterstützen sie bereits).
+- [x] **Undo/Redo-Lücken (`QUndoStack`) schließen:**
   - Löschen über das Papierkorb-Icon im `ObjectDockWidget` über `DeleteItemsCommand` leiten (wie bei der `Entf`-Taste).
   - Duplizieren, Z-Order (Hoch/Runter), Umbenennen, Sperren und Ausblenden im `ObjectDockWidget` sowie manuelle Stiftänderungen im `PenDockWidget` als `QUndoCommand` kapseln.
-- [ ] **Objekt-Umbenennen im `ObjectDockWidget` reparieren:** Beim Editieren des Namens per Doppelklick nicht das Anzeige-Suffix ` ({path_count} Pfade)` in `doc_item.name` zurückschreiben (z. B. über `Qt.ItemDataRole.EditRole` oder eigene Spalte).
-- [ ] **Gesperrte Objekte (`item.locked`) schützen:** In allen Transformations-Methoden (`center_on_sheet`, `fit_to_sheet`, `rotate_90_cw/ccw`, `reset_scale_1_1`) und in `delete_selected_items` prüfen, ob `item.locked` gesetzt ist.
-- [ ] **Multi-Selektion & freie Rotation im `TransformDockWidget`:**
+- [x] **Objekt-Umbenennen im `ObjectDockWidget` reparieren:** Beim Editieren des Namens per Doppelklick nicht das Anzeige-Suffix ` ({path_count} Pfade)` in `doc_item.name` zurückschreiben (z. B. über `Qt.ItemDataRole.EditRole` oder eigene Spalte).
+- [x] **Gesperrte Objekte (`item.locked`) schützen:** In allen Transformations-Methoden (`center_on_sheet`, `fit_to_sheet`, `rotate_90_cw/ccw`, `reset_scale_1_1`) und in `delete_selected_items` prüfen, ob `item.locked` gesetzt ist.
+- [x] **Multi-Selektion & freie Rotation im `TransformDockWidget`:**
   - Mehrfachauswahl (`selected`) bei Transformationen (Zentrieren, Drehen, Skalieren) gemeinsam transformieren statt nur `selected[0]`.
   - Numerisches Eingabefeld (Spinbox) für freie Rotationswinkel (`0,0°`–`360,0°`) ergänzen (`AffineTransform.rotation()` unterstützt dies bereits).
-- [ ] **`PageSetupDialog`-Details:**
+- [x] **`PageSetupDialog`-Details:**
   - Einfaches `&` in `QGroupBox("Papierformat && Ausrichtung")` und `QGroupBox("Ränder && Vorschubkante")` maskieren (verhindert Unterstrich-Darstellung `_Ausrichtung`).
   - Statusleiste (`self.lbl_sheet_status`) in `MainWindow._on_page_changed_from_dialog()` aktualisieren.
   - Asymmetrische Ränder (z. B. 25 mm Vorschubkante vs. 5 mm Rest) im Dialog nicht versehentlich symmetrisch überschreiben; beim Abfragen der Plotter-Größe (`OH;`) berücksichtigen, dass der Plotter den Hard-Clip-Bereich und nicht die Außenmaße des Bogens meldet.

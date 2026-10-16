@@ -79,7 +79,7 @@ class PageSetupDialog(QDialog):
         main_layout.addWidget(self.lbl_device_info)
 
         # --- Group: Paper Format & Orientation ---
-        grp_format = QGroupBox("Papierformat & Ausrichtung")
+        grp_format = QGroupBox("Papierformat && Ausrichtung")
         f_layout = QFormLayout(grp_format)
         f_layout.setSpacing(8)
 
@@ -122,7 +122,7 @@ class PageSetupDialog(QDialog):
         main_layout.addWidget(grp_format)
 
         # --- Group: Ränder & Vorschub ---
-        grp_margins = QGroupBox("Ränder & Vorschubkante")
+        grp_margins = QGroupBox("Ränder && Vorschubkante")
         m_layout = QFormLayout(grp_margins)
         m_layout.setSpacing(8)
 
@@ -135,27 +135,52 @@ class PageSetupDialog(QDialog):
         self.combo_feed.currentIndexChanged.connect(self._on_feed_edge_changed)
         m_layout.addRow("Vorschubkante:", self.combo_feed)
 
-        # Margins
-        margin_layout = QHBoxLayout()
-        self.spin_margin_x = QDoubleSpinBox()
-        self.spin_margin_x.setRange(0.0, 100.0)
-        self.spin_margin_x.setDecimals(1)
-        self.spin_margin_x.setSuffix(" mm")
-        self.spin_margin_x.setValue(self.doc.page.margin_left_mm)
-        self.spin_margin_x.valueChanged.connect(self._on_margins_changed)
+        # Margins (4 individual edges to preserve asymmetric margins)
+        margin_h_layout = QHBoxLayout()
+        self.spin_margin_left = QDoubleSpinBox()
+        self.spin_margin_left.setRange(0.0, 100.0)
+        self.spin_margin_left.setDecimals(1)
+        self.spin_margin_left.setSuffix(" mm")
+        self.spin_margin_left.setValue(self.doc.page.margin_left_mm)
+        self.spin_margin_left.valueChanged.connect(self._on_margins_changed)
 
-        self.spin_margin_y = QDoubleSpinBox()
-        self.spin_margin_y.setRange(0.0, 100.0)
-        self.spin_margin_y.setDecimals(1)
-        self.spin_margin_y.setSuffix(" mm")
-        self.spin_margin_y.setValue(self.doc.page.margin_top_mm)
-        self.spin_margin_y.valueChanged.connect(self._on_margins_changed)
+        self.spin_margin_right = QDoubleSpinBox()
+        self.spin_margin_right.setRange(0.0, 100.0)
+        self.spin_margin_right.setDecimals(1)
+        self.spin_margin_right.setSuffix(" mm")
+        self.spin_margin_right.setValue(self.doc.page.margin_right_mm)
+        self.spin_margin_right.valueChanged.connect(self._on_margins_changed)
 
-        margin_layout.addWidget(QLabel("X:"))
-        margin_layout.addWidget(self.spin_margin_x)
-        margin_layout.addWidget(QLabel("Y:"))
-        margin_layout.addWidget(self.spin_margin_y)
-        m_layout.addRow("Ränder:", margin_layout)
+        margin_h_layout.addWidget(QLabel("Links:"))
+        margin_h_layout.addWidget(self.spin_margin_left)
+        margin_h_layout.addWidget(QLabel("Rechts:"))
+        margin_h_layout.addWidget(self.spin_margin_right)
+        m_layout.addRow("Ränder X:", margin_h_layout)
+
+        margin_v_layout = QHBoxLayout()
+        self.spin_margin_top = QDoubleSpinBox()
+        self.spin_margin_top.setRange(0.0, 100.0)
+        self.spin_margin_top.setDecimals(1)
+        self.spin_margin_top.setSuffix(" mm")
+        self.spin_margin_top.setValue(self.doc.page.margin_top_mm)
+        self.spin_margin_top.valueChanged.connect(self._on_margins_changed)
+
+        self.spin_margin_bottom = QDoubleSpinBox()
+        self.spin_margin_bottom.setRange(0.0, 100.0)
+        self.spin_margin_bottom.setDecimals(1)
+        self.spin_margin_bottom.setSuffix(" mm")
+        self.spin_margin_bottom.setValue(self.doc.page.margin_bottom_mm)
+        self.spin_margin_bottom.valueChanged.connect(self._on_margins_changed)
+
+        margin_v_layout.addWidget(QLabel("Oben:"))
+        margin_v_layout.addWidget(self.spin_margin_top)
+        margin_v_layout.addWidget(QLabel("Unten:"))
+        margin_v_layout.addWidget(self.spin_margin_bottom)
+        m_layout.addRow("Ränder Y:", margin_v_layout)
+
+        # Backwards-compatible aliases
+        self.spin_margin_x = self.spin_margin_left
+        self.spin_margin_y = self.spin_margin_top
 
         main_layout.addWidget(grp_margins)
 
@@ -175,8 +200,10 @@ class PageSetupDialog(QDialog):
     def _sync_from_page(self):
         self.spin_width.blockSignals(True)
         self.spin_height.blockSignals(True)
-        self.spin_margin_x.blockSignals(True)
-        self.spin_margin_y.blockSignals(True)
+        self.spin_margin_left.blockSignals(True)
+        self.spin_margin_right.blockSignals(True)
+        self.spin_margin_top.blockSignals(True)
+        self.spin_margin_bottom.blockSignals(True)
         self.combo_preset.blockSignals(True)
         self.combo_orient.blockSignals(True)
         self.combo_feed.blockSignals(True)
@@ -184,8 +211,10 @@ class PageSetupDialog(QDialog):
         try:
             self.spin_width.setValue(self.doc.page.width_mm)
             self.spin_height.setValue(self.doc.page.height_mm)
-            self.spin_margin_x.setValue(self.doc.page.margin_left_mm)
-            self.spin_margin_y.setValue(self.doc.page.margin_top_mm)
+            self.spin_margin_left.setValue(self.doc.page.margin_left_mm)
+            self.spin_margin_right.setValue(self.doc.page.margin_right_mm)
+            self.spin_margin_top.setValue(self.doc.page.margin_top_mm)
+            self.spin_margin_bottom.setValue(self.doc.page.margin_bottom_mm)
 
             preset_idx = self.combo_preset.findData(self.doc.page.preset)
             if preset_idx >= 0:
@@ -204,8 +233,10 @@ class PageSetupDialog(QDialog):
         finally:
             self.spin_width.blockSignals(False)
             self.spin_height.blockSignals(False)
-            self.spin_margin_x.blockSignals(False)
-            self.spin_margin_y.blockSignals(False)
+            self.spin_margin_left.blockSignals(False)
+            self.spin_margin_right.blockSignals(False)
+            self.spin_margin_top.blockSignals(False)
+            self.spin_margin_bottom.blockSignals(False)
             self.combo_preset.blockSignals(False)
             self.combo_orient.blockSignals(False)
             self.combo_feed.blockSignals(False)
@@ -240,10 +271,10 @@ class PageSetupDialog(QDialog):
 
     def _on_margins_changed(self):
         self.doc.page.device_profile = "custom"
-        self.doc.page.margin_left_mm = self.spin_margin_x.value()
-        self.doc.page.margin_right_mm = self.spin_margin_x.value()
-        self.doc.page.margin_top_mm = self.spin_margin_y.value()
-        self.doc.page.margin_bottom_mm = self.spin_margin_y.value()
+        self.doc.page.margin_left_mm = self.spin_margin_left.value()
+        self.doc.page.margin_right_mm = self.spin_margin_right.value()
+        self.doc.page.margin_top_mm = self.spin_margin_top.value()
+        self.doc.page.margin_bottom_mm = self.spin_margin_bottom.value()
         self._sync_from_page()
 
     def _on_fetch_device_size(self):
@@ -253,6 +284,9 @@ class PageSetupDialog(QDialog):
         self.btn_fetch_device.repaint()
 
         res = probe_plotter(target, timeout=0.6)
+        self._handle_probe_result(target, res)
+
+    def _handle_probe_result(self, target: str, res):
         self.btn_fetch_device.setEnabled(True)
         self.btn_fetch_device.setText("Papiergröße vom Plotter abfragen")
 
@@ -263,7 +297,9 @@ class PageSetupDialog(QDialog):
                 self.doc.page.apply_preset(res.detected_format, "landscape")
             elif res.hard_clip_mm:
                 w, h = res.hard_clip_mm
-                self.doc.page.set_custom_size(w, h)
+                sheet_w = w + self.doc.page.margin_left_mm + self.doc.page.margin_right_mm
+                sheet_h = h + self.doc.page.margin_top_mm + self.doc.page.margin_bottom_mm
+                self.doc.page.set_custom_size(sheet_w, sheet_h)
             self._sync_from_page()
             QMessageBox.information(
                 self,

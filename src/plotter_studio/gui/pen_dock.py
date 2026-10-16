@@ -18,7 +18,7 @@ from ..core.pen_presets import (
     PenPreset, BUILTIN_PRESETS, get_builtin_presets,
     save_preset_json, load_preset_json, remap_document_to_preset
 )
-from .commands import ApplyPresetCommand, PenRemapCommand
+from .commands import ApplyPresetCommand, PenRemapCommand, ModifyPenPropertyCommand
 
 
 class PenPresetDialog(QDialog):
@@ -63,6 +63,7 @@ class PenDockWidget(QDockWidget):
     Dock widget managing pens 1 to 8:
     - Display color picker
     - Physical stroke width in mm
+    - Pen speed (cm/s) and force (g)
     - Dynamic remapping (merging pens / monochrome)
     - Stift Presets (Fineliner, Posca, Isograph, Ballpoint, Custom)
     - Quick assignment to selected canvas objects
@@ -120,15 +121,18 @@ class PenDockWidget(QDockWidget):
         self.layout.addWidget(qa_group)
 
         # --- Section 3: Table of Pens ---
-        self.table = QTableWidget(len(self.doc.pens), 5)
-        self.table.setHorizontalHeaderLabels(["Stift", "Farbe", "Breite", "Zuweisung", "Aktiv"])
+        self.table = QTableWidget(len(self.doc.pens), 7)
+        self.table.setHorizontalHeaderLabels(["Stift", "Farbe", "Breite", "Tempo", "Druck", "Zuweisung", "Aktiv"])
         self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
         self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
         self.table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
-        self.table.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
+        self.table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeToContents)
         self.table.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeToContents)
+        self.table.horizontalHeader().setSectionResizeMode(5, QHeaderView.Stretch)
+        self.table.horizontalHeader().setSectionResizeMode(6, QHeaderView.ResizeToContents)
         self.table.verticalHeader().setVisible(False)
         self.table.setSelectionMode(QTableWidget.NoSelection)
+        self.table.itemChanged.connect(self._on_table_item_changed)
 
         self.layout.addWidget(self.table)
 
@@ -182,71 +186,146 @@ class PenDockWidget(QDockWidget):
         self.table.blockSignals(True)
         for row, pen in enumerate(self.doc.pens):
             # Col 0: Pen ID & Name
-            item_name = QTableWidgetItem(f"SP{pen.pen_id}")
-            item_name.setTextAlignment(Qt.AlignCenter)
-            item_name.setFlags(Qt.ItemIsEnabled)
-            self.table.setItem(row, 0, item_name)
+            item_name = self.table.item(row, 0)
+            if item_name is None:
+                item_name = QTableWidgetItem(f"SP{pen.pen_id}")
+                item_name.setTextAlignment(Qt.AlignCenter)
+                item_name.setFlags(Qt.ItemIsEnabled)
+                self.table.setItem(row, 0, item_name)
+            else:
+                item_name.setText(f"SP{pen.pen_id}")
 
             # Col 1: Color swatch button
-            btn_col = QPushButton()
-            btn_col.setFixedSize(26, 20)
+            btn_col = self.table.cellWidget(row, 1)
+            if btn_col is None:
+                btn_col = QPushButton()
+                btn_col.setFixedSize(26, 20)
+                btn_col.clicked.connect(lambda checked=False, pid=pen.pen_id: self._choose_color(self.doc.get_pen(pid)))
+                self.table.setCellWidget(row, 1, btn_col)
             btn_col.setStyleSheet(f"background-color: {pen.color_hex}; border: 1px solid #555; border-radius: 3px;")
-            btn_col.clicked.connect(lambda checked=False, p=pen: self._choose_color(p))
-            self.table.setCellWidget(row, 1, btn_col)
 
             # Col 2: Width spinbox (mm)
-            spin_w = QDoubleSpinBox()
-            spin_w.setRange(0.05, 5.0)
-            spin_w.setSingleStep(0.05)
-            spin_w.setDecimals(2)
+            spin_w = self.table.cellWidget(row, 2)
+            if spin_w is None:
+                spin_w = QDoubleSpinBox()
+                spin_w.setRange(0.05, 5.0)
+                spin_w.setSingleStep(0.05)
+                spin_w.setDecimals(2)
+                spin_w.setSuffix(" mm")
+                spin_w.valueChanged.connect(lambda val, pid=pen.pen_id: self._update_pen_width(self.doc.get_pen(pid), val))
+                self.table.setCellWidget(row, 2, spin_w)
+            spin_w.blockSignals(True)
             spin_w.setValue(pen.width_mm)
-            spin_w.setSuffix(" mm")
-            spin_w.valueChanged.connect(lambda val, p=pen: self._update_pen_width(p, val))
-            self.table.setCellWidget(row, 2, spin_w)
+            spin_w.blockSignals(False)
 
-            # Col 3: Remap combobox
-            combo_remap = QComboBox()
-            combo_remap.addItem(f"-> SP{pen.pen_id} (Standard)", None)
-            for target_id in range(1, 9):
-                if target_id != pen.pen_id:
-                    combo_remap.addItem(f"-> auf SP{target_id} umleiten", target_id)
+            # Col 3: Speed spinbox (cm/s)
+            spin_speed = self.table.cellWidget(row, 3)
+            if spin_speed is None:
+                spin_speed = QDoubleSpinBox()
+                spin_speed.setRange(1.0, 100.0)
+                spin_speed.setSingleStep(5.0)
+                spin_speed.setDecimals(0)
+                spin_speed.setSuffix(" cm/s")
+                spin_speed.setToolTip("Zeichengeschwindigkeit (VS in cm/s)")
+                spin_speed.valueChanged.connect(lambda val, pid=pen.pen_id: self._update_pen_speed(self.doc.get_pen(pid), val))
+                self.table.setCellWidget(row, 3, spin_speed)
+            spin_speed.blockSignals(True)
+            spin_speed.setValue(pen.speed_cm_s)
+            spin_speed.blockSignals(False)
+
+            # Col 4: Force spinbox (g)
+            spin_force = self.table.cellWidget(row, 4)
+            if spin_force is None:
+                spin_force = QDoubleSpinBox()
+                spin_force.setRange(1.0, 500.0)
+                spin_force.setSingleStep(5.0)
+                spin_force.setDecimals(0)
+                spin_force.setSuffix(" g")
+                spin_force.setToolTip("Anpressdruck (FS / Gramm)")
+                spin_force.valueChanged.connect(lambda val, pid=pen.pen_id: self._update_pen_force(self.doc.get_pen(pid), val))
+                self.table.setCellWidget(row, 4, spin_force)
+            spin_force.blockSignals(True)
+            spin_force.setValue(pen.force_g)
+            spin_force.blockSignals(False)
+
+            # Col 5: Remap combobox
+            combo_remap = self.table.cellWidget(row, 5)
+            if combo_remap is None:
+                combo_remap = QComboBox()
+                combo_remap.addItem(f"-> SP{pen.pen_id} (Standard)", None)
+                for target_id in range(1, 9):
+                    if target_id != pen.pen_id:
+                        combo_remap.addItem(f"-> auf SP{target_id} umleiten", target_id)
+                combo_remap.currentIndexChanged.connect(lambda idx, cb=combo_remap, pid=pen.pen_id: self._update_remap(self.doc.get_pen(pid), cb.currentData()))
+                self.table.setCellWidget(row, 5, combo_remap)
+            combo_remap.blockSignals(True)
             if pen.mapped_to is not None:
                 idx = combo_remap.findData(pen.mapped_to)
                 if idx >= 0:
                     combo_remap.setCurrentIndex(idx)
-            combo_remap.currentIndexChanged.connect(lambda idx, cb=combo_remap, p=pen: self._update_remap(p, cb.currentData()))
-            self.table.setCellWidget(row, 3, combo_remap)
+            else:
+                combo_remap.setCurrentIndex(0)
+            combo_remap.blockSignals(False)
 
-            # Col 4: Enabled checkbox
-            chk_item = QTableWidgetItem()
-            chk_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsUserCheckable)
+            # Col 6: Enabled checkbox
+            chk_item = self.table.item(row, 6)
+            if chk_item is None:
+                chk_item = QTableWidgetItem()
+                chk_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsUserCheckable)
+                self.table.setItem(row, 6, chk_item)
             chk_item.setCheckState(Qt.Checked if pen.enabled else Qt.Unchecked)
-            self.table.setItem(row, 4, chk_item)
 
-        self.table.itemChanged.connect(self._on_table_item_changed)
         self.table.blockSignals(False)
+
+    def _push_pen_change(self, pen: LogicalPen, attr_name: str, old_val: Any, new_val: Any, text: str):
+        if old_val == new_val:
+            return
+        if self.undo_stack:
+            cmd = ModifyPenPropertyCommand(
+                self.doc, pen.pen_id, attr_name, old_val, new_val, self._on_preset_cmd_updated, text=text
+            )
+            self.undo_stack.push(cmd)
+        else:
+            setattr(pen, attr_name, new_val)
+            self.refresh_table()
+            self.pen_changed.emit()
 
     def _choose_color(self, pen: LogicalPen):
         col = QColorDialog.getColor(QColor(pen.color_hex), self, f"Farbe für Stift {pen.pen_id} wählen")
         if col.isValid():
-            pen.color_hex = col.name()
-            self.refresh_table()
-            self.pen_changed.emit()
+            self._push_pen_change(
+                pen, "color_hex", pen.color_hex, col.name(), f"Farbe Stift {pen.pen_id} ändern"
+            )
 
     def _update_pen_width(self, pen: LogicalPen, val: float):
-        pen.width_mm = val
-        self.pen_changed.emit()
+        if abs(pen.width_mm - val) < 1e-6:
+            return
+        self._push_pen_change(pen, "width_mm", pen.width_mm, val, f"Stiftbreite SP{pen.pen_id} ändern")
+
+    def _update_pen_speed(self, pen: LogicalPen, val: float):
+        if abs(pen.speed_cm_s - val) < 1e-6:
+            return
+        self._push_pen_change(pen, "speed_cm_s", pen.speed_cm_s, val, f"Geschwindigkeit SP{pen.pen_id} ändern")
+
+    def _update_pen_force(self, pen: LogicalPen, val: float):
+        if abs(pen.force_g - val) < 1e-6:
+            return
+        self._push_pen_change(pen, "force_g", pen.force_g, val, f"Anpressdruck SP{pen.pen_id} ändern")
 
     def _update_remap(self, pen: LogicalPen, target_id: Optional[int]):
-        pen.mapped_to = target_id
-        self.pen_changed.emit()
+        self._push_pen_change(
+            pen, "mapped_to", pen.mapped_to, target_id, f"Umleitung SP{pen.pen_id} ändern"
+        )
 
     def _on_table_item_changed(self, item: QTableWidgetItem):
-        if item.column() == 4:
+        if item.column() == 6:
             row = item.row()
             if 0 <= row < len(self.doc.pens):
-                self.doc.pens[row].enabled = (item.checkState() == Qt.Checked)
-                self.pen_changed.emit()
+                pen = self.doc.pens[row]
+                new_enabled = (item.checkState() == Qt.Checked)
+                self._push_pen_change(
+                    pen, "enabled", pen.enabled, new_enabled, f"Stift {pen.pen_id} aktivieren/deaktivieren"
+                )
 
     def _apply_preset_with_dialog(self, preset: PenPreset, always_ask_strategy: bool = False):
         strategy = "slot"

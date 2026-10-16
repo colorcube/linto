@@ -105,6 +105,7 @@ class MainWindow(QMainWindow):
 
         # Panel 1: Objekte & Ebenen (Top Right)
         self.object_dock = ObjectDockWidget(self.doc, self.canvas, self)
+        self.object_dock.set_undo_stack(self.undo_stack)
         self.addDockWidget(Qt.RightDockWidgetArea, self.object_dock)
 
         # Panel 2: Skalieren & Platzieren (Bottom Right)
@@ -572,46 +573,32 @@ class MainWindow(QMainWindow):
         self.undo_stack.push(cmd)
 
     def rotate_selected_items(self, angle_degrees: float):
-        """Rotate all currently selected items by angle_degrees."""
-        selected = self.canvas.get_selected_import_items()
+        """Rotate all currently selected unlocked items by angle_degrees."""
+        selected = [it for it in self.canvas.get_selected_import_items() if not it.locked]
         if not selected:
             return
-        if len(selected) == 1:
-            self.transform_dock.rotate_selected(angle_degrees)
-        else:
-            dir_str = "im Uhrzeigersinn" if angle_degrees > 0 else "gegen den Uhrzeigersinn"
-            self.undo_stack.beginMacro(f"Objekte drehen ({int(abs(angle_degrees))}° {dir_str})")
-            try:
-                for it in selected:
-                    cb = it.current_bounds
-                    if cb:
-                        cx, cy = cb.center.x, cb.center.y
-                        old_t = copy.deepcopy(it.transform)
-                        rot_t = AffineTransform.rotation(angle_degrees, cx, cy)
-                        new_t = rot_t.multiply(old_t)
-                        cmd = TransformItemCommand(
-                            it, old_t, new_t, self._on_item_transformed, text=f"{it.name} drehen"
-                        )
-                        self.undo_stack.push(cmd)
-            finally:
-                self.undo_stack.endMacro()
+        self.transform_dock.set_selected_items(selected)
+        self.transform_dock.rotate_selected(angle_degrees)
 
     def _on_selection_changed(self):
         selected = self.canvas.get_selected_import_items()
         if selected:
             item = selected[0]
-            self.transform_dock.set_active_item(item)
+            self.transform_dock.set_selected_items(selected)
             b = item.current_bounds
             if b:
                 pb = self.doc.page.plottable_box
                 is_oob = not pb.contains_box(b)
                 scale_pct = math.hypot(item.transform.a, item.transform.b) * 100.0
                 warn_text = " — ⚠️ Außerhalb des Plottbereichs!" if is_oob else ""
-                self.lbl_info.setText(
-                    f"Ausgewählt: {item.name} ({b.width:.1f} x {b.height:.1f} mm, Skalierung: {scale_pct:.0f}%){warn_text}"
-                )
+                if len(selected) == 1:
+                    self.lbl_info.setText(
+                        f"Ausgewählt: {item.name} ({b.width:.1f} x {b.height:.1f} mm, Skalierung: {scale_pct:.0f}%){warn_text}"
+                    )
+                else:
+                    self.lbl_info.setText(f"{len(selected)} Objekte ausgewählt")
         else:
-            self.transform_dock.set_active_item(None)
+            self.transform_dock.set_selected_items([])
             self.lbl_info.setText(f"{len(self.doc.items)} Objekt(e) auf dem Blatt")
 
     def new_document(self):
@@ -715,7 +702,7 @@ class MainWindow(QMainWindow):
                 QMessageBox.critical(self, "Fehler beim Speichern", f"Fehler beim Speichern:\n{e}")
 
     def delete_selected_items(self):
-        selected = self.canvas.get_selected_import_items()
+        selected = [it for it in self.canvas.get_selected_import_items() if not it.locked]
         if not selected:
             return
         cmd = DeleteItemsCommand(
@@ -731,7 +718,7 @@ class MainWindow(QMainWindow):
         self._on_selection_changed()
 
     def assign_selection_to_pen(self, pen_id: int):
-        selected = self.canvas.get_selected_import_items()
+        selected = [it for it in self.canvas.get_selected_import_items() if not it.locked]
         if not selected:
             return
         cmd = AssignPenCommand(
