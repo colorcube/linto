@@ -72,10 +72,11 @@ def list_serial_ports() -> list[str]:
 def probe_plotter(
     port: str,
     baudrate: int = 19200,
-    timeout: float = 0.6,
+    timeout: Optional[float] = None,
 ) -> ProbeResult:
     """Send inquiry commands (OI, OF, OH) and detect plotter configuration."""
     port_clean = port.strip()
+    effective_timeout = timeout if timeout is not None else max(0.8, (50.0 * 10.0 / max(1, baudrate)) + 0.5)
 
     try:
         raw_resp = bytearray()
@@ -88,11 +89,11 @@ def probe_plotter(
             host_port = port_clean[6:].split(":")
             host = host_port[0]
             tcp_port = int(host_port[1]) if len(host_port) > 1 else 9999
-            with socket.create_connection((host, tcp_port), timeout=timeout) as sock:
-                sock.settimeout(timeout)
+            with socket.create_connection((host, tcp_port), timeout=effective_timeout) as sock:
+                sock.settimeout(effective_timeout)
                 sock.sendall(b"OI;OF;OH;\r")
                 start = time.time()
-                while time.time() - start < timeout:
+                while time.time() - start < effective_timeout:
                     try:
                         chunk = sock.recv(1024)
                         if chunk:
@@ -110,8 +111,8 @@ def probe_plotter(
                 parity=serial.PARITY_NONE,
                 stopbits=serial.STOPBITS_ONE,
                 rtscts=False,  # Non-blocking probe without handshake stall
-                timeout=timeout,
-                write_timeout=timeout,
+                timeout=effective_timeout,
+                write_timeout=effective_timeout,
             ) as ser:
                 try:
                     cts_val = bool(ser.cts)
@@ -121,7 +122,7 @@ def probe_plotter(
                 ser.reset_input_buffer()
                 ser.write(b"OI;OF;OH;\r")
                 start = time.time()
-                while time.time() - start < timeout:
+                while time.time() - start < effective_timeout:
                     chunk = ser.read(128)
                     if chunk:
                         raw_resp.extend(chunk)

@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
 )
 
 from ..device.manager import DeviceManager, ConfiguredDevice
+from ..device.profile import list_available_profiles
 from ..device.probe import list_serial_ports, probe_plotter
 from .icons import get_icon
 
@@ -72,7 +73,11 @@ class DeviceSettingsDialog(QDialog):
         form.addRow("Bezeichnung:", self.txt_name)
 
         self.combo_model = QComboBox()
-        self.combo_model.addItem("Mutoh XP-500", "mutoh_xp500")
+        avail_profiles = list_available_profiles()
+        for p in avail_profiles:
+            self.combo_model.addItem(f"{p.name} ({p.manufacturer})", p.model_id)
+        if not avail_profiles:
+            self.combo_model.addItem("Mutoh XP-500", "mutoh_xp500")
         form.addRow("Modellprofil:", self.combo_model)
 
         port_row = QHBoxLayout()
@@ -90,10 +95,25 @@ class DeviceSettingsDialog(QDialog):
         form.addRow("Schnittstelle:", port_row)
 
         self.combo_baud = QComboBox()
-        for b in [9600, 19200, 38400, 57600, 115200]:
+        for b in [300, 600, 1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200]:
             self.combo_baud.addItem(str(b), b)
+        self.combo_baud.setEditable(True)
         self.combo_baud.setCurrentText("19200")
         form.addRow("Baudrate:", self.combo_baud)
+
+        self.combo_flow = QComboBox()
+        self.combo_flow.addItem("Hardware (RTS / CTS)", "rtscts")
+        self.combo_flow.addItem("Hardware (DTR / DSR)", "dsrdtr")
+        self.combo_flow.addItem("Software (XON / XOFF)", "xonxoff")
+        self.combo_flow.addItem("Keine (None)", "none")
+        self.combo_flow.setToolTip(
+            "Flusssteuerung (Handshake):\n"
+            "• RTS/CTS: Standard bei 7/8-adrigen RS-232-Kabeln (Mutoh, HP, Roland)\n"
+            "• DTR/DSR: Hardware-Handshake über Pin 20 (DTR)\n"
+            "• XON/XOFF: Software-Handshake (3-adrige Kabel & TCP-Simulator)\n"
+            "• Keine: Ohne Handshake"
+        )
+        form.addRow("Flusssteuerung:", self.combo_flow)
 
         self.combo_margins = QComboBox()
         self.combo_margins.addItem("EXP (Erweitert: 25 / 5 / 5 / 5 mm)", "exp")
@@ -201,6 +221,12 @@ class DeviceSettingsDialog(QDialog):
             self.combo_model.setCurrentIndex(idx_model)
         self.combo_port.setCurrentText(dev.port)
         self.combo_baud.setCurrentText(str(dev.baudrate))
+        flow = getattr(dev, "flow_control", "rtscts")
+        idx_flow = self.combo_flow.findData(flow)
+        if idx_flow >= 0:
+            self.combo_flow.setCurrentIndex(idx_flow)
+        else:
+            self.combo_flow.setCurrentIndex(0)
         idx_margin = self.combo_margins.findData(dev.margin_profile)
         if idx_margin >= 0:
             self.combo_margins.setCurrentIndex(idx_margin)
@@ -214,12 +240,15 @@ class DeviceSettingsDialog(QDialog):
 
     def _on_add_device(self):
         new_id = f"device_{uuid.uuid4().hex[:6]}"
+        port = self.combo_port.currentText() or "/dev/ttyUSB0"
+        default_flow = "xonxoff" if (port.startswith("tcp://") or "virtual_plotter" in port) else (self.combo_flow.currentData() or "rtscts")
         new_dev = ConfiguredDevice(
             id=new_id,
             name="Neuer Plotter",
-            model_id="mutoh_xp500",
-            port=self.combo_port.currentText() or "/dev/ttyUSB0",
+            model_id=self.combo_model.currentData() or "mutoh_xp500",
+            port=port,
             baudrate=19200,
+            flow_control=default_flow,
             margin_profile="exp",
         )
         self.manager.add_device(new_dev)
@@ -249,7 +278,11 @@ class DeviceSettingsDialog(QDialog):
         self._current_device.name = self.txt_name.text().strip() or "Plotter"
         self._current_device.model_id = self.combo_model.currentData()
         self._current_device.port = self.combo_port.currentText().strip()
-        self._current_device.baudrate = int(self.combo_baud.currentText())
+        try:
+            self._current_device.baudrate = int(self.combo_baud.currentText().strip())
+        except ValueError:
+            self._current_device.baudrate = 19200
+        self._current_device.flow_control = self.combo_flow.currentData() or "rtscts"
         self._current_device.margin_profile = self.combo_margins.currentData()
         self._current_device.rotation = int(self.combo_rotation.currentData())
         self._current_device.swap_xy = self.chk_swap_xy.isChecked()
@@ -267,13 +300,16 @@ class DeviceSettingsDialog(QDialog):
         if not port:
             self.lbl_test_result.setText("Keine Schnittstelle ausgewählt")
             return
-        baudrate = int(self.combo_baud.currentText())
+        try:
+            baudrate = int(self.combo_baud.currentText().strip())
+        except ValueError:
+            baudrate = 19200
         self.btn_test.setEnabled(False)
-        self.lbl_test_result.setText(f"Prüfe {port}...")
+        self.lbl_test_result.setText(f"Prüfe {port} mit {baudrate} Baud...")
         self.lbl_test_result.setStyleSheet("padding: 4px; background: #fff9c4; color: #f57f17; border-radius: 4px; font-size: 11px;")
         self.lbl_test_result.repaint()
 
-        res = probe_plotter(port, baudrate=baudrate, timeout=0.6)
+        res = probe_plotter(port, baudrate=baudrate)
         self.btn_test.setEnabled(True)
 
         if res.success:
@@ -282,7 +318,12 @@ class DeviceSettingsDialog(QDialog):
                 if res.hard_clip_mm
                 else "Kein Bogen gemessen"
             )
-            pin_info = " • CTS: Bereit" if res.cts else " • CTS: Low"
+            pin_parts = []
+            if res.cts is not None:
+                pin_parts.append(f"CTS: {'High (Bereit)' if res.cts else 'Low'}")
+            if res.dsr is not None:
+                pin_parts.append(f"DSR: {'High (Bereit)' if res.dsr else 'Low'}")
+            pin_info = f"<br>Pins: {' • '.join(pin_parts)}" if pin_parts else ""
             self.lbl_test_result.setStyleSheet("padding: 4px; background: #e8f5e9; color: #2e7d32; border-radius: 4px; font-size: 11px;")
             self.lbl_test_result.setText(
                 f"✓ <b>Erfolgreich!</b><br/>"
@@ -291,5 +332,11 @@ class DeviceSettingsDialog(QDialog):
                 f"Bogen: {dim_str}"
             )
         else:
+            pin_parts = []
+            if res.cts is not None:
+                pin_parts.append(f"CTS: {'High' if res.cts else 'Low'}")
+            if res.dsr is not None:
+                pin_parts.append(f"DSR: {'High' if res.dsr else 'Low'}")
+            pin_hint = f"<br>Pins: {' • '.join(pin_parts)}" if pin_parts else ""
             self.lbl_test_result.setStyleSheet("padding: 4px; background: #ffebee; color: #c62828; border-radius: 4px; font-size: 11px;")
-            self.lbl_test_result.setText(f"Fehlgeschlagen: {res.error_message or 'Keine Antwort vom Plotter (Timeout)'}")
+            self.lbl_test_result.setText(f"Fehlgeschlagen: {res.error_message or 'Keine Antwort vom Plotter (Timeout)'}{pin_hint}")

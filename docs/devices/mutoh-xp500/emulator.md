@@ -57,6 +57,7 @@ python -m plotter_studio.emulator --baudrate 1200
 | `--paper` | `A4`, `A3`, `A2`, `A1`, `A0` (Default: `A3`) | Simuliertes Papierformat |
 | `--margin` | `EXP`, `NORM`, `TYPE1`, `TYPE3` (Default: `EXP`) | Hard-Clip-Randprofil laut Handbuch Abb. 7.3 |
 | `--buffer` | `small`, `large` (Default: `small`) | Eingangspuffer: `small` (1000 Zeichen, Panel-Einstellung) oder `large` (1 MB) |
+| `--flow-control` | `xonxoff`, `none` (Default: `xonxoff`) | Flusssteuerung: Sendet `XOFF` bei 80 % Pufferfüllung und `XON` bei 40 % |
 | `--unit` | `0.025`, `0.010` (Default: `0.025`) | Auflösung in mm pro Einheit (`OF;` meldet 40 bzw. 100) |
 | `--symlink` | Pfad (Default: `./virtual_plotter`) | Pfad für den Symlink auf das PTY-Device |
 | `--tcp` | Port (z. B. `9999`) | Startet TCP-Server statt Linux-PTY |
@@ -67,7 +68,27 @@ python -m plotter_studio.emulator --baudrate 1200
 
 ---
 
-## 3. Unterstützte Befehle
+## 3. Flusssteuerung (Handshake): XON / XOFF & Studio-Konfiguration
+
+### Warum Software-Handshake (XON / XOFF)?
+Virtuelle Schnittstellen unter Linux (Pseudoterminals / PTYs) sowie TCP-Netzwerkverbindungen besitzen **keine physischen Hardware-Signalleitungen** (keine RTS/CTS- oder DTR/DSR-Pins).
+
+Um dennoch das hardwaregetreue Pufferverhalten zu simulieren:
+1. **Pufferüberwachung:** Der Emulator überwacht den Füllstand des internen Eingangspuffers (standardmäßig 1.000 Bytes).
+2. **XOFF (`0x13`):** Erreicht der Puffer 80 % Füllstand (*High-Water Mark*, ca. 800 Bytes), sendet der Emulator `XOFF` an den Host.
+3. **Zeichenphase & Pufferabbau:** Während der Emulator im `--realtime`-Modus die Pfade mechanisch abfährt, leert sich der Puffer.
+4. **XON (`0x11`):** Fällt der Pufferstand unter 40 % (*Low-Water Mark*, ca. 400 Bytes), sendet der Emulator `XON` und der Host schickt die nächsten Befehle.
+
+> [!IMPORTANT]
+> **Konfiguration in Plotter Studio:**
+> Wenn Sie Plotter Studio mit dem Emulator verbinden (egal ob über TCP `tcp://127.0.0.1:9999` oder über das PTY `./virtual_plotter`), muss in Plotter Studio unter **Plotter-Geräte konfigurieren** für dieses Gerät die **Flusssteuerung auf `Software (XON / XOFF)`** eingestellt sein!
+>
+> Steht das Gerät fälschlicherweise auf `Hardware (RTS / CTS)`, ignoriert die Übertragungs-Engine die XOFF-Steuerzeichen und die Übertragung wird nicht mit dem Zeichenfortschritt des Emulators synchronisiert. Das ab Werk hinterlegte Profil *„Mutoh XP-500 Simulator (TCP)“* ist bereits standardmäßig auf `Software (XON / XOFF)` eingestellt.
+
+
+---
+
+## 4. Unterstützte Befehle
 
 ### Abfragen (Inquiries)
 * `OI;` / `ESC.A` → `7585B\r` (Plotter-Identifikation HP-7585B)
@@ -94,7 +115,7 @@ python -m plotter_studio.emulator --baudrate 1200
 
 ---
 
-## 4. Nutzung in automatisierten Tests
+## 5. Nutzung in automatisierten Tests
 
 Der Emulator ist modular aufgebaut und kann in Pytest-Fixtures direkt im selben Prozess verwendet werden:
 

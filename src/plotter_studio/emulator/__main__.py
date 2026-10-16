@@ -76,6 +76,12 @@ def main() -> int:
         help="Simulated serial baud rate for data transfer throttling (e.g. 300, 1200, 9600, 19200; default: unlimited)",
     )
     parser.add_argument(
+        "--flow-control",
+        choices=["xonxoff", "none"],
+        default="xonxoff",
+        help="Simulated flow control: xonxoff (XON/XOFF backpressure at buffer limits, default) or none",
+    )
+    parser.add_argument(
         "--svg-output",
         type=str,
         default="./emulator_output.svg",
@@ -136,10 +142,21 @@ def main() -> int:
             last_saved_count[0] = len(plotter.recorded_polylines)
             print(f"           📁 Ergebnis-Vektoren gespeichert: {out_svg_path}\n")
 
+        elif event_type == "flow_control":
+            state = data.get("state", "")
+            used = data.get("buffer_used", 0)
+            size = data.get("buffer_size", 0)
+            if state == "XOFF":
+                print(f"[{timestamp}] ⏸ Puffer voll ({used}/{size} Bytes) -> Sende XOFF (Pause)")
+            elif state == "XON":
+                print(f"[{timestamp}] ▶️ Puffer geleert ({used}/{size} Bytes) -> Sende XON (Fortsetzen)")
+
         elif event_type == "abort":
             print(f"[{timestamp}] ⏹ Abbruch-Signal (ESC.K) empfangen! Puffer geleert, Stift angehoben.")
 
         sys.stdout.flush()
+
+    use_flow = (args.flow_control == "xonxoff")
 
     plotter = VirtualPlotter(
         paper=args.paper,
@@ -149,6 +166,7 @@ def main() -> int:
         realtime=args.realtime,
         speedup=args.speedup,
         baudrate=args.baudrate,
+        flow_control=use_flow,
         on_event=on_plotter_event,
     )
 
@@ -166,6 +184,7 @@ def main() -> int:
     print(f" Ränder (Profil):  {args.margin} ({plotter.plottable_width_mm:.1f} x {plotter.plottable_height_mm:.1f} mm Hard-Clip)")
     print(f" Auflösung:        {args.unit} mm/Unit ({plotter.units_per_mm:.0f} Units/mm)")
     print(f" Puffer:           {args.buffer.upper()} ({plotter.buffer_size:,} Bytes)")
+    print(f" Flusssteuerung:   {args.flow_control.upper()} ({'Aktiviert: 80% XOFF / 40% XON' if use_flow else 'Deaktiviert'})")
     if args.baudrate:
         bps = args.baudrate / 10.0
         print(f" Baudrate:         {args.baudrate} Baud (~{bps:.0f} Bytes/s, 8N1)")

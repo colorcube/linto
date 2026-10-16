@@ -21,6 +21,7 @@ class ConfiguredDevice:
     model_id: str = "mutoh_xp500"
     port: str = "/dev/ttyUSB0"
     baudrate: int = 19200
+    flow_control: str = "rtscts"  # "rtscts", "dsrdtr", "xonxoff", "none"
     margin_profile: str = "exp"
     rotation: int = 0
     swap_xy: bool = False
@@ -42,6 +43,7 @@ DEFAULT_DEVICES = [
         model_id="mutoh_xp500",
         port="/dev/ttyUSB0",
         baudrate=19200,
+        flow_control="rtscts",
         margin_profile="exp",
     ),
     ConfiguredDevice(
@@ -50,6 +52,7 @@ DEFAULT_DEVICES = [
         model_id="mutoh_xp500",
         port="tcp://127.0.0.1:9999",
         baudrate=19200,
+        flow_control="xonxoff",
         margin_profile="exp",
     ),
 ]
@@ -84,6 +87,12 @@ class DeviceManager(QObject):
                 raw_devices = data.get("devices", [])
                 self.devices = []
                 for d in raw_devices:
+                    if "flow_control" not in d:
+                        try:
+                            prof = load_profile(d.get("model_id", "mutoh_xp500"))
+                            d["flow_control"] = prof.connection.flow_control
+                        except Exception:
+                            d["flow_control"] = "xonxoff" if str(d.get("port", "")).startswith("tcp://") else "rtscts"
                     dev_obj = ConfiguredDevice(**d)
                     if dev_obj.id == "mutoh_xp500_usb" and dev_obj.port.startswith("/dev/pts"):
                         dev_obj.port = "/dev/ttyUSB0"

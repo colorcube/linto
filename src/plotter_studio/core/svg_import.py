@@ -1,8 +1,11 @@
 """SVG Import parser converting vector graphics into millimeter VectorPaths."""
 
 from __future__ import annotations
-import os
+import io
 import math
+import os
+import re
+from pathlib import Path
 from typing import List, Tuple, Dict, Optional
 import numpy as np
 import svgelements
@@ -14,6 +17,34 @@ from ..pipeline.flatten import flatten_cubic_bezier, flatten_quadratic_bezier
 
 # Conversion factor: 1 px at 96 DPI = 25.4 / 96.0 mm ≈ 0.26458333 mm
 PX_TO_MM = 25.4 / 96.0
+
+
+def _clean_duplicate_attributes(svg_text: str) -> str:
+    """Remove duplicate XML attributes on the same tag (e.g. duplicate xmlns declarations)."""
+    def dedupe_tag(match):
+        tag_content = match.group(0)
+        seen = set()
+        out = []
+        tag_name_match = re.match(r"^<([a-zA-Z0-9_\-:]+)", tag_content)
+        if not tag_name_match:
+            return tag_content
+        out.append("<" + tag_name_match.group(1))
+        rest = tag_content[len(tag_name_match.group(0)):]
+
+        attr_regex = re.compile(r"([a-zA-Z0-9_\-:]+)\s*=\s*(\"[^\"]*\"|'[^']*')")
+        for m in attr_regex.finditer(rest):
+            attr_name = m.group(1)
+            attr_val = m.group(2)
+            if attr_name not in seen:
+                seen.add(attr_name)
+                out.append(f" {attr_name}={attr_val}")
+        if tag_content.rstrip().endswith("/>"):
+            out.append(" />")
+        elif tag_content.rstrip().endswith(">"):
+            out.append(">")
+        return "".join(out)
+
+    return re.sub(r"<[a-zA-Z0-9_\-:]+[^>]*>", dedupe_tag, svg_text)
 
 
 def extract_stroke_color(element: svgelements.SVGElement) -> str:
@@ -92,12 +123,26 @@ def load_svg(
     if os.path.exists(filepath_or_data):
         item_name = name or os.path.splitext(os.path.basename(filepath_or_data))[0]
         source_path = filepath_or_data
-        svg = svgelements.SVG.parse(filepath_or_data)
+        try:
+            svg = svgelements.SVG.parse(filepath_or_data)
+        except Exception as e:
+            if "duplicate attribute" in str(e).lower():
+                raw = Path(filepath_or_data).read_text(encoding="utf-8", errors="replace")
+                cleaned = _clean_duplicate_attributes(raw)
+                svg = svgelements.SVG.parse(io.StringIO(cleaned))
+            else:
+                raise
     else:
         item_name = name or "Import"
         source_path = None
-        import io
-        svg = svgelements.SVG.parse(io.StringIO(filepath_or_data))
+        try:
+            svg = svgelements.SVG.parse(io.StringIO(filepath_or_data))
+        except Exception as e:
+            if "duplicate attribute" in str(e).lower():
+                cleaned = _clean_duplicate_attributes(filepath_or_data)
+                svg = svgelements.SVG.parse(io.StringIO(cleaned))
+            else:
+                raise
 
     # Determine scale to millimeters
     # Default: svgelements coordinates are in pixels at 96 DPI

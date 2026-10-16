@@ -443,24 +443,35 @@ class PlotDockWidget(QDockWidget):
         self.chk_invert_x.setChecked(dev.invert_x)
         self.chk_invert_y.setChecked(dev.invert_y)
 
+        flow_names = {
+            "rtscts": "RTS/CTS",
+            "dsrdtr": "DTR/DSR",
+            "xonxoff": "XON/XOFF",
+            "none": "Keine",
+        }
+        flow_str = flow_names.get(getattr(dev, "flow_control", "rtscts"), "RTS/CTS")
+        baud_info = f" ({dev.baudrate} Baud, {flow_str})" if not dev.port.startswith("tcp://") else f" ({flow_str})"
         self.lbl_active_device_info.setText(
             f"Gerät: <b>{dev.name}</b><br>"
-            f"Schnittstelle: <code>{dev.port}</code>"
+            f"Schnittstelle: <code>{dev.port}</code>{baud_info}"
         )
 
     def start_probe(self):
         """Inquire connected plotter (OI/OF/OH) in background thread."""
         port = self.combo_port.currentText().strip()
-        if not port and self.device_manager:
+        baud = 19200
+        if self.device_manager:
             dev = self.device_manager.get_active_device()
             if dev:
-                port = dev.port
+                if not port:
+                    port = dev.port
+                baud = dev.baudrate
         if not port:
             self.lbl_probe_status.setText("Kein Port ausgewählt")
             return
 
         self.btn_probe.setEnabled(False)
-        self.lbl_probe_status.setText(f"Prüfe {port}...")
+        self.lbl_probe_status.setText(f"Prüfe {port} mit {baud} Baud...")
         self.lbl_probe_status.setStyleSheet("""
             padding: 6px;
             background-color: #fff9c4;
@@ -471,7 +482,7 @@ class PlotDockWidget(QDockWidget):
         """)
 
         def _probe_worker():
-            res = probe_plotter(port, timeout=0.6)
+            res = probe_plotter(port, baudrate=baud)
             self._bridge.probe_done.emit(res)
 
         self._probe_thread = threading.Thread(target=_probe_worker, daemon=True, name="PlotterProbeThread")
@@ -483,9 +494,12 @@ class PlotDockWidget(QDockWidget):
             clip_info = ""
             if result.hard_clip_mm:
                 clip_info = f" • Hard-Clip: {result.hard_clip_mm[0]:.0f}×{result.hard_clip_mm[1]:.0f} mm"
-            pin_info = ""
+            pin_parts = []
             if result.cts is not None:
-                pin_info = " • CTS: Bereit" if result.cts else " • ⚠️ CTS: Low"
+                pin_parts.append("CTS: Bereit" if result.cts else "⚠️ CTS: Low")
+            if result.dsr is not None:
+                pin_parts.append("DSR: Bereit" if result.dsr else "⚠️ DSR: Low")
+            pin_info = f" • {' / '.join(pin_parts)}" if pin_parts else ""
             self.lbl_probe_status.setText(
                 f"✓ {result.model} ({result.detected_format}, {result.units_per_mm:.0f} U/mm){clip_info}{pin_info}"
             )
@@ -558,12 +572,24 @@ class PlotDockWidget(QDockWidget):
             return
 
         port = self.combo_port.currentText().strip()
+        margin_key = self.combo_margins.currentData() or "exp"
+        profile = get_default_profile()
+        baud = profile.connection.baudrate
+        flow_ctrl = getattr(profile.connection, "flow_control", "rtscts")
+
+        if self.device_manager:
+            dev = self.device_manager.get_active_device()
+            if dev:
+                if not port:
+                    port = dev.port
+                profile = dev.get_profile()
+                baud = dev.baudrate
+                flow_ctrl = getattr(dev, "flow_control", flow_ctrl)
+
         if not port:
             QMessageBox.warning(self, "Plot-Ausgabe", "Bitte wählen Sie eine Schnittstelle oder Adresse aus.")
             return
 
-        margin_key = self.combo_margins.currentData() or "exp"
-        profile = get_default_profile()
         emitter = HPGLEmitter(
             profile,
             margin_profile=margin_key,
@@ -594,8 +620,7 @@ class PlotDockWidget(QDockWidget):
         self.progress_bar.setValue(0)
         self.lbl_stream_status.setText("Starte Übertragung...")
 
-        baud = profile.connection.baudrate
-        started = self._streamer.start_stream(port, commands, baudrate=baud)
+        started = self._streamer.start_stream(port, commands, baudrate=baud, flow_control=flow_ctrl)
         if not started:
             self._on_stream_finished(False, "Streamer konnte nicht gestartet werden.")
 
@@ -603,10 +628,10 @@ class PlotDockWidget(QDockWidget):
         """Toggle pause/resume during streaming."""
         if not self._streamer:
             return
-        if self._streamer.state == StreamerState.PAUSED:
+        if self._streamer.is_user_paused():
             self._streamer.resume()
             self.btn_pause_plot.setText("⏸ Pause")
-        elif self._streamer.state == StreamerState.STREAMING:
+        elif self._streamer.is_active():
             self._streamer.pause()
             self.btn_pause_plot.setText("▶️ Fortsetzen")
 

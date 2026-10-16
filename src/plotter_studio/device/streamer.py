@@ -7,6 +7,7 @@ flow control, progress tracking, pause/resume and immediate abort.
 from __future__ import annotations
 
 import logging
+import select
 import socket
 import threading
 import time
@@ -69,8 +70,10 @@ class SerialStreamer:
         commands: list[EmittedCommand],
         baudrate: int = 19200,
         inter_command_delay_s: float = 0.0,
-        xonxoff_userspace: bool = True,
-        rtscts: bool = True,
+        flow_control: str = "rtscts",
+        xonxoff_userspace: Optional[bool] = None,
+        rtscts: Optional[bool] = None,
+        dsrdtr: Optional[bool] = None,
     ) -> bool:
         """Start streaming commands in a background thread."""
         with self._lock:
@@ -84,28 +87,32 @@ class SerialStreamer:
 
             self._thread = threading.Thread(
                 target=self._run_stream,
-                args=(port, commands, baudrate, inter_command_delay_s, xonxoff_userspace, rtscts),
+                args=(port, commands, baudrate, inter_command_delay_s, flow_control, xonxoff_userspace, rtscts, dsrdtr),
                 daemon=True,
                 name="PlotStreamWorker",
             )
             self._thread.start()
             return True
 
+    def is_user_paused(self) -> bool:
+        return not self._pause_event.is_set()
+
     def pause(self) -> None:
-        """Pause the current plot transmission."""
+        """Pause the current plot transmission (manual user pause)."""
         with self._lock:
-            if self.state == StreamerState.STREAMING:
+            if self.is_active() and not self.is_user_paused():
                 self.state = StreamerState.PAUSED
                 self._pause_event.clear()
                 self._emit_status(StreamerState.PAUSED, "Plot pausiert")
 
     def resume(self) -> None:
-        """Resume transmission from pause."""
+        """Resume transmission from manual user pause."""
         with self._lock:
-            if self.state == StreamerState.PAUSED:
-                self.state = StreamerState.STREAMING
+            if self.is_user_paused():
                 self._pause_event.set()
-                self._emit_status(StreamerState.STREAMING, "Plot fortgesetzt")
+                new_state = StreamerState.PAUSED if self._xoff_paused else StreamerState.STREAMING
+                msg = "Plotter-Puffer voll (XOFF) – warte auf Plotter..." if self._xoff_paused else "Plot fortgesetzt"
+                self._emit_status(new_state, msg)
 
     def abort(self) -> None:
         """Immediately abort current plot job and lift pen."""
@@ -128,22 +135,32 @@ class SerialStreamer:
             self._serial.write(data)
 
     def _check_and_wait_xoff(self) -> None:
-        """Process incoming bytes for XON / XOFF flow control."""
-        if not self._serial:
+        """Process incoming bytes for XON / XOFF flow control (Serial or TCP)."""
+        if not self._serial and not self._socket:
             return
 
         while not self._abort_requested:
             try:
-                available = self._serial.in_waiting
-                if available > 0:
-                    raw = self._serial.read(available)
+                raw = b""
+                if self._serial:
+                    available = self._serial.in_waiting
+                    if available > 0:
+                        raw = self._serial.read(available)
+                elif self._socket:
+                    r, _, _ = select.select([self._socket], [], [], 0)
+                    if r:
+                        raw = self._socket.recv(4096)
+
+                if raw:
                     for b in raw:
                         if b == XOFF:
-                            logger.debug("Plotter sent XOFF (0x13) - pausing send")
+                            logger.info("Plotter sent XOFF (0x13) - pausing send")
                             self._xoff_paused = True
+                            self._emit_status(StreamerState.PAUSED, "Plotter-Puffer voll (XOFF) – warte auf Plotter...")
                         elif b == XON:
-                            logger.debug("Plotter sent XON (0x11) - resuming send")
+                            logger.info("Plotter sent XON (0x11) - resuming send")
                             self._xoff_paused = False
+                            self._emit_status(StreamerState.STREAMING, "Sende Plotdaten (XON)...")
             except Exception as e:
                 logger.warning(f"Error checking flow control: {e}")
                 break
@@ -158,21 +175,31 @@ class SerialStreamer:
         commands: list[EmittedCommand],
         baudrate: int,
         inter_command_delay_s: float = 0.0,
-        xonxoff_userspace: bool = True,
-        rtscts: bool = True,
+        flow_control: str = "rtscts",
+        xonxoff_userspace: Optional[bool] = None,
+        rtscts: Optional[bool] = None,
+        dsrdtr: Optional[bool] = None,
     ) -> None:
         port_clean = port.strip()
         total_commands = len(commands)
         drawn_total_mm = 0.0
 
+        fc = (flow_control or "rtscts").lower()
+        effective_rtscts = (fc == "rtscts") if rtscts is None else bool(rtscts)
+        effective_dsrdtr = (fc == "dsrdtr") if dsrdtr is None else bool(dsrdtr)
+        effective_xonxoff = (fc == "xonxoff") if xonxoff_userspace is None else bool(xonxoff_userspace)
+
         self._emit_status(StreamerState.CONNECTING, f"Verbinde mit {port_clean}...")
 
         try:
             if port_clean.startswith("tcp://"):
+                if fc != "none" and xonxoff_userspace is not False:
+                    effective_xonxoff = True
                 host_port = port_clean[6:].split(":")
                 host = host_port[0]
                 tcp_port = int(host_port[1]) if len(host_port) > 1 else 9999
                 self._socket = socket.create_connection((host, tcp_port), timeout=3.0)
+                self._socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
                 self._socket.settimeout(2.0)
             else:
                 self._serial = serial.Serial(
@@ -181,9 +208,10 @@ class SerialStreamer:
                     bytesize=serial.EIGHTBITS,
                     parity=serial.PARITY_NONE,
                     stopbits=serial.STOPBITS_ONE,
-                    rtscts=rtscts,
+                    rtscts=effective_rtscts,
+                    dsrdtr=effective_dsrdtr,
                     xonxoff=False,
-                    timeout=0.1 if xonxoff_userspace else 2.0,
+                    timeout=0.1 if effective_xonxoff else 2.0,
                 )
                 self._serial.reset_input_buffer()
                 self._serial.reset_output_buffer()
@@ -208,7 +236,7 @@ class SerialStreamer:
                 self._pause_event.wait()
 
                 # Flow control check (userspace XON/XOFF)
-                if xonxoff_userspace:
+                if effective_xonxoff:
                     self._check_and_wait_xoff()
                     if self._abort_requested:
                         continue

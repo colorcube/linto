@@ -96,6 +96,12 @@ class PtyServer:
 
     def _enqueue_response(self, data: bytes) -> None:
         with self._queue_lock:
+            if data in (b"\x13", b"\x11") and self.master_fd is not None:
+                try:
+                    os.write(self.master_fd, data)
+                    return
+                except OSError:
+                    pass
             self._out_queue.append(data)
 
     def start(self) -> str:
@@ -171,10 +177,8 @@ class PtyServer:
                 r, _, _ = select.select([self.master_fd], [], [], timeout)
                 if r and self._running:
                     try:
-                        read_size = self.pacer.chunk_size
-                        data = os.read(self.master_fd, read_size)
+                        data = os.read(self.master_fd, 1024)
                         if data:
-                            self.pacer.pace(len(data))
                             self.plotter.receive_bytes(data)
                     except (BlockingIOError, OSError):
                         pass
@@ -186,6 +190,7 @@ class PtyServer:
     def stop(self) -> None:
         """Stop PTY loop and close all file descriptors."""
         self._running = False
+        self.plotter.stop()
         if self._thread and self._thread.is_alive():
             self._thread.join(timeout=0.5)
 
@@ -237,6 +242,9 @@ class TcpServer:
         with self._queue_lock:
             if self._client_sock:
                 try:
+                    if data in (b"\x13", b"\x11"):
+                        self._client_sock.sendall(data)
+                        return
                     offset = 0
                     while offset < len(data) and self._running:
                         piece = data[offset : offset + self.pacer.chunk_size]
@@ -269,11 +277,9 @@ class TcpServer:
 
                 while self._running and self._client_sock:
                     try:
-                        read_size = self.pacer.chunk_size
-                        data = self._client_sock.recv(read_size)
+                        data = self._client_sock.recv(1024)
                         if not data:
                             break
-                        self.pacer.pace(len(data))
                         self.plotter.receive_bytes(data)
                     except socket.timeout:
                         continue
@@ -293,6 +299,7 @@ class TcpServer:
 
     def stop(self) -> None:
         self._running = False
+        self.plotter.stop()
         if self._client_sock:
             try:
                 self._client_sock.close()

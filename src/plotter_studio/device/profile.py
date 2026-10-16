@@ -19,6 +19,8 @@ class DeviceConnectionConfig:
     stopbits: int = 1
     rtscts: bool = True
     xonxoff: bool = False
+    dsrdtr: bool = False
+    flow_control: str = "rtscts"
 
 
 @dataclass
@@ -87,13 +89,29 @@ def load_profile(path_or_id: str | Path) -> DeviceProfile:
     data = yaml.safe_load(p.read_text(encoding="utf-8"))
 
     conn_data = data.get("connection", {})
+    rtscts = bool(conn_data.get("rtscts", True))
+    xonxoff = bool(conn_data.get("xonxoff", False))
+    dsrdtr = bool(conn_data.get("dsrdtr", False))
+    flow_ctrl = str(conn_data.get("flow_control", "")).lower()
+    if not flow_ctrl:
+        if xonxoff:
+            flow_ctrl = "xonxoff"
+        elif dsrdtr:
+            flow_ctrl = "dsrdtr"
+        elif rtscts:
+            flow_ctrl = "rtscts"
+        else:
+            flow_ctrl = "none"
+
     conn = DeviceConnectionConfig(
         baudrate=int(conn_data.get("baudrate", 19200)),
         bytesize=int(conn_data.get("bytesize", 8)),
         parity=str(conn_data.get("parity", "N")),
         stopbits=int(conn_data.get("stopbits", 1)),
-        rtscts=bool(conn_data.get("rtscts", True)),
-        xonxoff=bool(conn_data.get("xonxoff", False)),
+        rtscts=(flow_ctrl == "rtscts"),
+        xonxoff=(flow_ctrl == "xonxoff"),
+        dsrdtr=(flow_ctrl == "dsrdtr"),
+        flow_control=flow_ctrl,
     )
 
     return DeviceProfile(

@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
 from ..core.document import Document, ImportItem
 from ..core.geometry import AffineTransform
 from ..core.svg_import import load_svg
-from ..core.svg_export import export_document_to_svg
+from ..core.svg_export import export_document_to_svg, load_document_from_svg, is_project_file
 from ..pipeline.compiler import (
     PipelineConfig, PlotJob, compile_document_to_plot_job
 )
@@ -154,14 +154,12 @@ class MainWindow(QMainWindow):
         self.act_new.triggered.connect(self.new_document)
         menu_file.addAction(self.act_new)
 
-        self.act_import_svg = QAction("&Importieren...", self)
-        self.act_import_svg.setIcon(get_icon("import"))
-        self.act_import_svg.setShortcut(QKeySequence("Ctrl+I"))
-        self.act_import_svg.setToolTip("SVG- oder Plotdatei importieren (Strg+I)")
-        self.act_import_svg.triggered.connect(self.import_svg_dialog)
-        menu_file.addAction(self.act_import_svg)
-
-        menu_file.addSeparator()
+        self.act_open_project = QAction("Projekt &öffnen...", self)
+        self.act_open_project.setIcon(get_icon("open"))
+        self.act_open_project.setShortcut(QKeySequence.Open)
+        self.act_open_project.setToolTip("Gespeichertes SVG-Projekt öffnen (Strg+O)")
+        self.act_open_project.triggered.connect(self.open_project_dialog)
+        menu_file.addAction(self.act_open_project)
 
         self.act_save_as = QAction("Projekt &speichern unter...", self)
         self.act_save_as.setIcon(get_icon("save"))
@@ -169,6 +167,15 @@ class MainWindow(QMainWindow):
         self.act_save_as.setToolTip("Projekt als SVG speichern (Strg+Umschalt+S)")
         self.act_save_as.triggered.connect(self.save_project_dialog)
         menu_file.addAction(self.act_save_as)
+
+        menu_file.addSeparator()
+
+        self.act_import_svg = QAction("&Importieren...", self)
+        self.act_import_svg.setIcon(get_icon("import"))
+        self.act_import_svg.setShortcut(QKeySequence("Ctrl+I"))
+        self.act_import_svg.setToolTip("SVG- oder Plotdatei importieren (Strg+I)")
+        self.act_import_svg.triggered.connect(self.import_svg_dialog)
+        menu_file.addAction(self.act_import_svg)
 
         menu_file.addSeparator()
 
@@ -313,8 +320,9 @@ class MainWindow(QMainWindow):
 
         toolbar.addSeparator()
 
-        toolbar.addAction(self.act_import_svg)
+        toolbar.addAction(self.act_open_project)
         toolbar.addAction(self.act_save_as)
+        toolbar.addAction(self.act_import_svg)
         toolbar.addSeparator()
 
         toolbar.addAction(self.act_undo)
@@ -594,6 +602,36 @@ class MainWindow(QMainWindow):
         self._update_paper_display()
         self.lbl_info.setText("Neues Dokument erstellt")
 
+    def open_project_dialog(self):
+        fpath, _ = QFileDialog.getOpenFileName(
+            self, "Projekt öffnen", "", "Plotter Studio SVG-Projekt (*.svg);;Alle Dateien (*)"
+        )
+        if fpath:
+            self.load_project_file(fpath)
+
+    def load_project_file(self, fpath: str):
+        try:
+            loaded_doc = load_document_from_svg(fpath)
+            self.doc.page = loaded_doc.page
+            self.doc.pens = loaded_doc.pens
+            self.doc.items = loaded_doc.items
+            self.undo_stack.clear()
+            self._update_paper_display()
+            self.transform_dock.refresh_item_fields()
+            self.canvas.update_scene_rect()
+            self.canvas.rebuild_items()
+            self.canvas.zoom_to_fit()
+            self.object_dock.refresh()
+            self.pen_dock.refresh_table()
+            self.paper_dock.refresh_page_fields()
+            self.transform_dock.set_active_item(None)
+            self._on_selection_changed()
+            if self.canvas._mode == CanvasMode.PLOT:
+                self.recompile_plot_job()
+            self.lbl_info.setText(f"Projekt geladen: {os.path.basename(fpath)} ({len(self.doc.items)} Objekt(e))")
+        except Exception as e:
+            QMessageBox.critical(self, "Fehler beim Öffnen des Projekts", f"Konnte Projektdatei nicht laden:\n{e}")
+
     def import_svg_dialog(self):
         fpath, _ = QFileDialog.getOpenFileName(
             self, "SVG-Grafik importieren", "", "SVG Dateien (*.svg);;Alle Dateien (*)"
@@ -603,6 +641,21 @@ class MainWindow(QMainWindow):
 
     def import_svg_file(self, fpath: str):
         try:
+            if is_project_file(fpath):
+                resp = QMessageBox.question(
+                    self,
+                    "Projektdatei erkannt",
+                    f"Die Datei »{os.path.basename(fpath)}« ist ein vollständiges Plotter-Studio-Projekt.\n\n"
+                    "Möchten Sie das Projekt vollständig öffnen (Ja) oder als einzelnes Objekt in das aktuelle Blatt importieren (Nein)?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel,
+                    QMessageBox.StandardButton.Yes,
+                )
+                if resp == QMessageBox.StandardButton.Cancel:
+                    return
+                if resp == QMessageBox.StandardButton.Yes:
+                    self.load_project_file(fpath)
+                    return
+
             pen_palette = [(p.pen_id, p.color_hex) for p in self.doc.pens]
             item = load_svg(fpath, pen_palette=pen_palette)
 

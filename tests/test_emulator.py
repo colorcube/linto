@@ -268,27 +268,134 @@ def test_byte_pacer():
 
 
 def test_tcp_server_baudrate_pacing():
-    """Verify that TcpServer throttles incoming data according to baudrate."""
-    plotter = VirtualPlotter(paper="A3", baudrate=2400)
-    server = TcpServer(plotter, host="127.0.0.1", port=19877)
+    """Verify that TcpServer paces inquiry responses according to baudrate."""
+    plotter = VirtualPlotter(paper="A3")
+    server = TcpServer(plotter, host="127.0.0.1", port=19877, baudrate=300)
     server.start()
 
     try:
         time.sleep(0.05)
-        # 2400 baud = 240 bytes/s -> 48 bytes takes ~0.20 s
-        payload = b"IN; SP1; PU 0,0; PD 100,100; PU; SP0;\r"  # 37 bytes
+        # At 300 baud (30 bytes/s), 6 bytes ("7585B\r") takes ~0.20 s
         with socket.create_connection(("127.0.0.1", 19877), timeout=2.0) as sock:
             t0 = time.perf_counter()
-            sock.sendall(payload)
-            # Wait for plotter to process incoming data
-            deadline = time.time() + 2.0
-            while plotter.stats.bytes_received < len(payload) and time.time() < deadline:
-                time.sleep(0.02)
+            sock.sendall(b"OI;")
+            resp = b""
+            while not resp.endswith(b"\r"):
+                chunk = sock.recv(1024)
+                if not chunk:
+                    break
+                resp += chunk
             elapsed = time.perf_counter() - t0
 
-            # 37 bytes at 2400 baud (240 bytes/s) takes ~0.154 s
-            assert plotter.stats.bytes_received == len(payload)
-            assert elapsed >= 0.10
+            assert resp == b"7585B\r"
+            assert elapsed >= 0.08
     finally:
         server.stop()
+
+
+def test_flow_control_buffer_watermarks():
+    """Verify that VirtualPlotter sends XOFF at high-water mark and XON at low-water mark."""
+    responses: list[bytes] = []
+    plotter = VirtualPlotter(
+        paper="A3",
+        buffer_size=100,
+        realtime=True,
+        speedup=20.0,
+        on_response=lambda resp: responses.append(resp),
+    )
+    try:
+        # Feed enough bytes to cross 80-byte high water mark
+        chunk = b"PU 0,0;\n" * 12  # 84 bytes
+        plotter.receive_bytes(chunk)
+        # Should have sent XOFF (0x13)
+        assert b"\x13" in responses
+
+        # Wait for realtime thread to drain below 40-byte low water mark
+        deadline = time.time() + 2.0
+        while b"\x11" not in responses and time.time() < deadline:
+            time.sleep(0.02)
+        assert b"\x11" in responses
+    finally:
+        plotter.stop()
+
+
+def test_tcp_streamer_flow_control():
+    """Verify SerialStreamer streaming over TCP respects emulator XON/XOFF flow control."""
+    from plotter_studio.device.emitter import EmittedCommand
+    from plotter_studio.device.streamer import SerialStreamer
+
+    plotter = VirtualPlotter(paper="A3", buffer_size=100, realtime=True, speedup=50.0)
+    server = TcpServer(plotter, host="127.0.0.1", port=19878)
+    server.start()
+
+    try:
+        time.sleep(0.05)
+        cmds = [
+            EmittedCommand(hpgl=f"PD {i * 10},{i * 10};\n", step_index=i, pen=1, is_draw=True, dist_mm=5.0)
+            for i in range(20)
+        ]
+
+        finished_box = [False, False]
+        streamer = SerialStreamer(
+            on_finished=lambda success, msg: finished_box.__setitem__(0, True) or finished_box.__setitem__(1, success),
+        )
+        streamer.start_stream("tcp://127.0.0.1:19878", cmds, xonxoff_userspace=True)
+
+        deadline = time.time() + 3.0
+        while not finished_box[0] and time.time() < deadline:
+            time.sleep(0.05)
+
+        assert finished_box[0] is True
+        assert finished_box[1] is True
+        assert plotter.stats.commands_executed >= 20
+    finally:
+        server.stop()
+
+
+def test_tcp_streamer_large_buffer_backpressure():
+    """Verify SerialStreamer over TCP triggers genuine XOFF/XON backpressure on a 1000-byte buffer."""
+    from plotter_studio.device.emitter import EmittedCommand
+    from plotter_studio.device.streamer import SerialStreamer, StreamerState
+
+    events: list[tuple[str, dict]] = []
+    plotter = VirtualPlotter(
+        paper="A3",
+        buffer_size=1000,
+        realtime=True,
+        speedup=50.0,
+        flow_control=True,
+        on_event=lambda ev, d: events.append((ev, d)),
+    )
+    server = TcpServer(plotter, host="127.0.0.1", port=19879)
+    server.start()
+
+    try:
+        time.sleep(0.05)
+        cmds = [
+            EmittedCommand(hpgl=f"PA {i * 10},{i * 10};\n", step_index=i, pen=1, is_draw=True, dist_mm=5.0)
+            for i in range(160)  # ~1.9 KB, well exceeding 1000 bytes
+        ]
+
+        statuses: list[StreamerState] = []
+        finished_box = [False, False]
+        streamer = SerialStreamer(
+            on_status=lambda st, msg: statuses.append(st),
+            on_finished=lambda success, msg: finished_box.__setitem__(0, True) or finished_box.__setitem__(1, success),
+        )
+        streamer.start_stream("tcp://127.0.0.1:19879", cmds, flow_control="xonxoff")
+
+        deadline = time.time() + 5.0
+        while not finished_box[0] and time.time() < deadline:
+            time.sleep(0.05)
+
+        assert finished_box[0] is True
+        assert finished_box[1] is True
+        # Verify that streamer was paused due to XOFF
+        assert StreamerState.PAUSED in statuses
+        # Verify that plotter fired flow_control events (XOFF and XON)
+        fc_events = [ev for ev, d in events if ev == "flow_control"]
+        assert len(fc_events) >= 2
+    finally:
+        server.stop()
+
 

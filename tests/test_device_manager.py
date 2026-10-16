@@ -34,6 +34,7 @@ def test_device_manager_defaults_and_persistence(tmp_path):
         model_id="mutoh_xp500",
         port="/dev/ttyUSB1",
         baudrate=9600,
+        flow_control="dsrdtr",
         margin_profile="norm",
         rotation=90,
         swap_xy=True,
@@ -49,12 +50,15 @@ def test_device_manager_defaults_and_persistence(tmp_path):
     assert loaded_dev is not None
     assert loaded_dev.name == "Mein Custom Plotter"
     assert loaded_dev.baudrate == 9600
+    assert loaded_dev.flow_control == "dsrdtr"
     assert loaded_dev.swap_xy is True
 
     # Update device
     new_dev.name = "Umbenannter Plotter"
+    new_dev.flow_control = "xonxoff"
     mgr2.update_device(new_dev)
     assert mgr2.get_device("test_custom_plotter").name == "Umbenannter Plotter"
+    assert mgr2.get_device("test_custom_plotter").flow_control == "xonxoff"
 
     # Delete device
     mgr2.delete_device("test_custom_plotter")
@@ -78,11 +82,23 @@ def test_device_dialog_headless(qapp, tmp_path):
     dlg._on_add_device()
     assert dlg.list_devices.count() == initial_count + 1
 
-    # Test save button label and action
+    # Test save button label, baudrate and flow_control
     assert dlg.btn_save_item.text() == "Speichern"
     dlg.txt_name.setText("Geänderter Name")
+    assert "300" in [dlg.combo_baud.itemText(i) for i in range(dlg.combo_baud.count())]
+    dlg.combo_baud.setCurrentText("300")
+
+    flow_keys = [dlg.combo_flow.itemData(i) for i in range(dlg.combo_flow.count())]
+    assert "rtscts" in flow_keys
+    assert "dsrdtr" in flow_keys
+    assert "xonxoff" in flow_keys
+    assert "none" in flow_keys
+
+    dlg.combo_flow.setCurrentIndex(dlg.combo_flow.findData("xonxoff"))
     dlg._on_save_current_device()
     assert "Geänderter Name" in dlg.list_devices.currentItem().text()
+    assert mgr.get_device(dlg._current_device.id).baudrate == 300
+    assert mgr.get_device(dlg._current_device.id).flow_control == "xonxoff"
 
     # Test connection test error handling (fast timeout, non-blocking)
     dlg.combo_port.setEditText("/dev/nonexistent_test_port")

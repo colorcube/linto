@@ -162,3 +162,18 @@ class AffineTransform:
         m = np.array([[self.a, self.c], [self.b, self.d]])
         t = np.array([self.tx, self.ty])
         return coords @ m.T + t
+
+    def inverse(self) -> AffineTransform:
+        """Calculate the inverse transformation matrix."""
+        det = self.a * self.d - self.b * self.c
+        if abs(det) < 1e-12:
+            return AffineTransform.identity()
+        inv_det = 1.0 / det
+        return AffineTransform(
+            a=self.d * inv_det,
+            b=-self.b * inv_det,
+            c=-self.c * inv_det,
+            d=self.a * inv_det,
+            tx=(-self.d * self.tx + self.c * self.ty) * inv_det,
+            ty=(self.b * self.tx - self.a * self.ty) * inv_det,
+        )

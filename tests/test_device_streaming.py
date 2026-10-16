@@ -289,3 +289,34 @@ def test_userspace_xon_xoff():
         assert finished_box[1] is True
         server.stop()
 
+
+def test_streamer_flow_control_options():
+    """Verify SerialStreamer handles flow_control parameter properly."""
+    plotter = VirtualPlotter(paper="A3")
+    with tempfile.TemporaryDirectory() as tmpdir:
+        symlink = Path(tmpdir) / "streamer_fc_port"
+        server = PtyServer(plotter, symlink_path=symlink)
+        port_path = server.start()
+
+        profile = get_default_profile()
+        emitter = HPGLEmitter(profile)
+        doc = Document()
+        path = VectorPath(points=np.array([[100.0, 100.0], [110.0, 110.0]]), pen_id=1)
+        doc.items.append(ImportItem(name="Line", paths=[path]))
+        cmds = emitter.emit_commands(compile_document_to_plot_job(doc), doc)
+
+        for fc in ["rtscts", "dsrdtr", "xonxoff", "none"]:
+            finished_box = [False, False]
+            streamer = SerialStreamer(
+                on_finished=lambda success, msg: finished_box.__setitem__(0, True) or finished_box.__setitem__(1, success),
+            )
+            started = streamer.start_stream(port_path, cmds, flow_control=fc)
+            assert started is True
+            start_t = time.time()
+            while not finished_box[0] and (time.time() - start_t < 2.0):
+                time.sleep(0.02)
+            assert finished_box[0] is True
+            assert finished_box[1] is True
+
+        server.stop()
+

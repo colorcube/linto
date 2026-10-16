@@ -337,5 +337,22 @@ def test_rotation_ui_and_undo(qapp, tmp_path):
     win.close()
 
 
+def test_main_window_open_project(qapp, tmp_path):
+    doc = Document()
+    win = MainWindow(doc)
+    win.show()
 
+    assert win.act_open_project is not None
+    assert win.act_open_project.text() == "Projekt &öffnen..."
 
+    # Check loading tmp/projekt.svg
+    if os.path.exists("tmp/projekt.svg"):
+        win.load_project_file("tmp/projekt.svg")
+        assert len(win.doc.items) == 3
+        assert win.doc.page.preset == "A3"
+        assert len(win.doc.pens) == 8
+        assert "3 Objekt(e)" in win.lbl_info.text()
+        assert len(win.canvas._item_map) == 3
+        assert win.object_dock.tree.topLevelItemCount() == 3
+
+    win.close()

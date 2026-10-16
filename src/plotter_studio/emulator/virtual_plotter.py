@@ -75,6 +75,7 @@ class VirtualPlotter:
         realtime: bool = False,
         speedup: float = 1.0,
         baudrate: Optional[int] = None,
+        flow_control: bool = True,
         on_response: Optional[Callable[[bytes], None]] = None,
         on_event: Optional[Callable[[str, dict], None]] = None,
     ):
@@ -135,8 +136,12 @@ class VirtualPlotter:
         self.error_code: int = 0
         self.lcd_message: str = ""
 
-        # Buffer tracking
+        # Buffer tracking & Flow Control
         self.buffer_used: int = 0
+        self.flow_control: bool = flow_control
+        self._xoff_sent: bool = False
+        self._high_water_mark: int = max(64, int(self.buffer_size * 0.8))
+        self._low_water_mark: int = max(32, int(self.buffer_size * 0.4))
 
         # Recorded drawing
         self.recorded_polylines: list[RecordedPolyline] = []
@@ -145,6 +150,18 @@ class VirtualPlotter:
 
         # Incoming byte buffer
         self._rx_accumulator = bytearray()
+
+        self._rx_cond: Optional[threading.Condition] = None
+        self._worker_running: bool = False
+        self._worker_thread: Optional[threading.Thread] = None
+
+        if self.realtime:
+            self._rx_cond = threading.Condition(self._lock)
+            self._worker_running = True
+            self._worker_thread = threading.Thread(
+                target=self._realtime_execution_loop, daemon=True, name="PlotterRealtimeExec"
+            )
+            self._worker_thread.start()
 
     @property
     def free_buffer(self) -> int:
@@ -156,6 +173,15 @@ class VirtualPlotter:
         with self._lock:
             return (self.pos_units[0] / self.units_per_mm, self.pos_units[1] / self.units_per_mm)
 
+    def stop(self) -> None:
+        """Stop realtime execution thread if running."""
+        self._worker_running = False
+        if self._rx_cond:
+            with self._lock:
+                self._rx_cond.notify_all()
+        if self._worker_thread and self._worker_thread.is_alive():
+            self._worker_thread.join(timeout=0.5)
+
     def reset(self) -> None:
         """Reset the plotter to power-on state (ESC.R / IN)."""
         with self._lock:
@@ -163,7 +189,6 @@ class VirtualPlotter:
             self.active_pen = 0
             self.pen_down = False
             self.pos_units = (0, 0)
-            self.buffer_used = 0
             self.status_byte = 16
             self.error_code = 0
             self.lcd_message = ""
@@ -174,26 +199,51 @@ class VirtualPlotter:
             self._flush_current_polyline()
             self.pen_down = False
             self.buffer_used = 0
+            self._xoff_sent = False
             self._rx_accumulator.clear()
+            if self.flow_control:
+                self._send_raw(b"\x11")
             if self.on_event:
                 self.on_event("abort", {})
+
+    def _send_raw(self, raw_bytes: bytes) -> None:
+        self.stats.bytes_sent += len(raw_bytes)
+        if self.on_response:
+            self.on_response(raw_bytes)
+
+    def _send_response(self, text: str, inquiry_cmd: str = "") -> None:
+        """Send response string to host terminated with CR."""
+        resp = (text + "\r").encode("ascii")
+        self._send_raw(resp)
+        if self.on_event and inquiry_cmd:
+            self.on_event("inquiry", {"cmd": inquiry_cmd, "response": text})
+
+    def _check_flow_control(self) -> None:
+        if not self.flow_control:
+            return
+        if not self._xoff_sent and self.buffer_used >= self._high_water_mark:
+            self._xoff_sent = True
+            self._send_raw(b"\x13")
+            if self.on_event:
+                self.on_event("flow_control", {"state": "XOFF", "buffer_used": self.buffer_used, "buffer_size": self.buffer_size})
+        elif self._xoff_sent and self.buffer_used <= self._low_water_mark:
+            self._xoff_sent = False
+            self._send_raw(b"\x11")
+            if self.on_event:
+                self.on_event("flow_control", {"state": "XON", "buffer_used": self.buffer_used, "buffer_size": self.buffer_size})
 
     def receive_bytes(self, data: bytes) -> None:
         """Push incoming raw bytes into the plotter input."""
         with self._lock:
             self.stats.bytes_received += len(data)
-            self.buffer_used = min(self.buffer_size, self.buffer_used + len(data))
+            self.buffer_used += len(data)
             self._rx_accumulator.extend(data)
-            self._process_rx_buffer()
+            self._check_flow_control()
 
-    def _send_response(self, text: str, inquiry_cmd: str = "") -> None:
-        """Send response string to host terminated with CR."""
-        resp = (text + "\r").encode("ascii")
-        self.stats.bytes_sent += len(resp)
-        if self.on_response:
-            self.on_response(resp)
-        if self.on_event and inquiry_cmd:
-            self.on_event("inquiry", {"cmd": inquiry_cmd, "response": text})
+            if self.realtime and self._rx_cond:
+                self._rx_cond.notify_all()
+            elif not self.realtime:
+                self._process_rx_buffer()
 
     def _flush_current_polyline(self) -> None:
         if self._current_polyline and len(self._current_polyline) >= 2:
@@ -212,64 +262,107 @@ class VirtualPlotter:
                 })
         self._current_polyline.clear()
 
-    def _process_rx_buffer(self) -> None:
-        """Parse commands from incoming accumulator."""
+    def _pop_next_command(self) -> Optional[tuple[str, any, int]]:
+        """Extract next command from _rx_accumulator if complete.
+
+        Returns:
+            ("esc", (cmd_char, params), consumed_bytes)
+            ("hpgl", cmd_str, consumed_bytes)
+            None if incomplete
+        """
         while self._rx_accumulator:
             # Check for Escape sequences: \x1b.[A-Z@](...):?
             if self._rx_accumulator[0] == 0x1B:
                 if len(self._rx_accumulator) < 2:
-                    break  # Wait for more bytes
+                    return None
                 if self._rx_accumulator[1] == ord("."):
                     if len(self._rx_accumulator) < 3:
-                        break
+                        return None
                     cmd_char = chr(self._rx_accumulator[2])
-                    # Check if command has parameter ending in ':'
                     if cmd_char in ("@", "H", "I", "M", "N", "P", "Q", "S", "T"):
-                        # Needs closing ':'
                         colon_pos = self._rx_accumulator.find(b":", 3)
                         if colon_pos == -1:
-                            break  # Incomplete
+                            return None
                         params = self._rx_accumulator[3:colon_pos].decode("ascii", errors="replace")
-                        del self._rx_accumulator[:colon_pos + 1]
-                        self._execute_escape_cmd(cmd_char, params)
-                        continue
+                        consumed = colon_pos + 1
+                        del self._rx_accumulator[:consumed]
+                        return ("esc", (cmd_char, params), consumed)
                     else:
-                        # 3-byte escape command e.g. ESC.B, ESC.K, ESC.R, ESC.L, ESC.O, ESC.E, ESC.A
                         del self._rx_accumulator[:3]
-                        self._execute_escape_cmd(cmd_char, "")
-                        continue
+                        return ("esc", (cmd_char, ""), 3)
                 else:
-                    # Lone ESC or unknown escape sequence -> discard ESC byte
                     del self._rx_accumulator[0]
+                    self.buffer_used = max(0, self.buffer_used - 1)
                     continue
 
             # Skip leading whitespace or semicolons
             b = self._rx_accumulator[0]
             if b in (ord(" "), ord("\r"), ord("\n"), ord("\t"), ord(";")):
                 del self._rx_accumulator[0]
-                if self.buffer_used > 0:
-                    self.buffer_used -= 1
+                self.buffer_used = max(0, self.buffer_used - 1)
                 continue
 
             # Look for command end: ';' or newline
             match = re.search(rb"[;\r\n]", self._rx_accumulator)
             if not match:
-                # If accumulator is getting large without terminator, check if next 2 chars are letters
-                if len(self._rx_accumulator) >= 4 and chr(self._rx_accumulator[0]).isalpha() and chr(self._rx_accumulator[1]).isalpha():
-                    # Might be concatenated without semicolons, wait or check
-                    pass
-                break  # Incomplete command
+                break
 
             end_idx = match.start()
             cmd_bytes = self._rx_accumulator[:end_idx]
-            # Remove command and terminator
             consumed = end_idx + 1
             del self._rx_accumulator[:consumed]
-            self.buffer_used = max(0, self.buffer_used - consumed)
-
             cmd_str = cmd_bytes.decode("ascii", errors="replace").strip()
-            if cmd_str:
-                self._execute_hpgl_cmd(cmd_str)
+            return ("hpgl", cmd_str, consumed)
+
+        return None
+
+    def _process_rx_buffer(self) -> None:
+        """Parse commands synchronously from incoming accumulator (non-realtime mode)."""
+        while True:
+            cmd_info = self._pop_next_command()
+            if cmd_info is None:
+                break
+            cmd_type, payload, consumed = cmd_info
+            self.buffer_used = max(0, self.buffer_used - consumed)
+            self._check_flow_control()
+
+            if cmd_type == "esc":
+                char, params = payload
+                self._execute_escape_cmd(char, params)
+            elif cmd_type == "hpgl":
+                if payload:
+                    self._execute_hpgl_cmd(payload)
+
+    def _realtime_execution_loop(self) -> None:
+        """Worker thread executing commands at realistic mechanical speed."""
+        while self._worker_running:
+            cmd_info = None
+            with self._lock:
+                while self._worker_running:
+                    cmd_info = self._pop_next_command()
+                    if cmd_info is not None:
+                        break
+                    if self._rx_cond:
+                        self._rx_cond.wait(timeout=0.05)
+
+                if not self._worker_running or cmd_info is None:
+                    continue
+
+                cmd_type, payload, consumed = cmd_info
+                self.buffer_used = max(0, self.buffer_used - consumed)
+                self._check_flow_control()
+
+            # Execute command OUTSIDE lock so receiving new bytes and XOFF is never blocked
+            if self.baudrate:
+                baud_sec = (consumed * 10.0) / (self.baudrate * self.speedup)
+                time.sleep(baud_sec)
+
+            if cmd_type == "esc":
+                char, params = payload
+                self._execute_escape_cmd(char, params)
+            elif cmd_type == "hpgl":
+                if payload:
+                    self._execute_hpgl_cmd(payload)
 
     def _execute_escape_cmd(self, cmd: str, params: str) -> None:
         self.stats.commands_executed += 1

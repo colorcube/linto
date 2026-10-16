@@ -17,11 +17,12 @@ Dieser Leitfaden führt Sie Schritt für Schritt von einer vorhandenen Vektordat
 
 ### Variante B: Schneller Test mit dem Software-Simulator
 Wenn Sie noch keine Hardware aufgebaut haben:
-1. Öffnen Sie ein Terminal und starten Sie den integrierten Emulator:
+1. Öffnen Sie ein Terminal und starten Sie den integrierten Emulator (z. B. mit realistischer Zeichenzeit-Simulation):
    ```bash
-   python3 -m plotter_studio.emulator --tcp 9999
+   python3 -m plotter_studio.emulator --tcp 9999 --realtime
    ```
 2. Wählen Sie in der oberen Leiste von Plotter Studio als Gerät **Mutoh XP-500 Simulator (TCP)** aus.
+3. **Flusssteuerung (Handshake):** Da virtuelle Pseudoterminals (PTY) und TCP-Sockets keine physikalischen Hardware-Pins (RTS/CTS) besitzen, verwendet der Emulator **Software-Handshake (`XON / XOFF`)**. Das Profil *Mutoh XP-500 Simulator (TCP)* ist bereits ab Werk darauf eingestellt. Falls Sie ein eigenes Profil für den Emulator anlegen (z. B. für `./virtual_plotter`), stellen Sie unter *Plotter-Geräte konfigurieren* die Flusssteuerung stets auf **Software (XON / XOFF)**.
 
 ---
 
