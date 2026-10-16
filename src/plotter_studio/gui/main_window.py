@@ -4,7 +4,7 @@ from __future__ import annotations
 import os
 import copy
 import math
-from typing import Optional
+from typing import Optional, Any
 from PySide6.QtCore import Qt, QPointF, QTimer
 from PySide6.QtGui import QAction, QKeySequence, QIcon, QUndoStack, QActionGroup
 from PySide6.QtWidgets import (
@@ -903,14 +903,29 @@ class MainWindow(QMainWindow):
         if not fpath:
             return
 
-        margin_key = "exp"
-        emitter_opts = {}
-        if hasattr(self, "plot_dock"):
-            if hasattr(self.plot_dock, "combo_margins"):
-                margin_key = self.plot_dock.combo_margins.currentData() or "exp"
-            if hasattr(self.plot_dock, "get_emitter_options"):
-                emitter_opts = self.plot_dock.get_emitter_options()
         profile = get_default_profile()
+        margin_key = "exp"
+        emitter_opts: dict[str, Any] = {}
+
+        # 1. Base on active configured device if available
+        dev = self.device_manager.get_active_device() if hasattr(self, "device_manager") and self.device_manager else None
+        if dev:
+            profile = dev.get_profile()
+            margin_key = getattr(dev, "margin_profile", "exp")
+            emitter_opts = {
+                "rotation_deg": getattr(dev, "rotation", 0),
+                "swap_xy": getattr(dev, "swap_xy", False),
+                "invert_x": getattr(dev, "invert_x", False),
+                "invert_y": getattr(dev, "invert_y", False),
+            }
+
+        # 2. Allow active GUI overrides from plot_dock
+        if hasattr(self, "plot_dock") and self.plot_dock:
+            if hasattr(self.plot_dock, "combo_margins") and self.plot_dock.combo_margins.currentData():
+                margin_key = self.plot_dock.combo_margins.currentData()
+            if hasattr(self.plot_dock, "get_emitter_options"):
+                emitter_opts.update(self.plot_dock.get_emitter_options())
+
         emitter = HPGLEmitter(profile, margin_profile=margin_key, **emitter_opts)
         hpgl_content = emitter.emit_string(self._current_job, self.doc)
 

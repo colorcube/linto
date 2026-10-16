@@ -366,4 +366,56 @@ def test_toolbar_zoom_actions_and_ordering(qapp):
         win.cleanup()
 
 
+def test_export_hpgl_uses_active_device_and_options(qapp, tmp_path, monkeypatch):
+    """Verify that export_hpgl_dialog respects active device profile and emitter options."""
+    from plotter_studio.device import ConfiguredDevice
+
+    doc = Document()
+    doc.page.apply_preset("A4", "landscape")
+    win = MainWindow(doc)
+    win.show()
+
+    svg_content = """<svg width="50mm" height="50mm" viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg">
+      <line x1="10" y1="10" x2="40" y2="10" stroke="#000000"/>
+    </svg>"""
+    test_svg = str(tmp_path / "line.svg")
+    with open(test_svg, "w", encoding="utf-8") as f:
+        f.write(svg_content)
+    win.import_svg_file(test_svg)
+    win.switch_to_plot_mode()
+
+    # Configure active device with bottom-left origin (generic flatbed) and rotation
+    custom_dev = ConfiguredDevice(
+        id="generic_flatbed",
+        name="Generic Flatbed",
+        model_id="hpgl_generic",
+        rotation=90,
+    )
+    win.device_manager.add_device(custom_dev)
+    win.device_manager.set_active_device(custom_dev.id)
+    win.plot_dock.apply_configured_device(custom_dev)
+
+    hpgl_out = str(tmp_path / "custom_out.hpgl")
+    monkeypatch.setattr(
+        "PySide6.QtWidgets.QFileDialog.getSaveFileName",
+        lambda *args, **kwargs: (hpgl_out, "HP-GL (*.hpgl)")
+    )
+    win.export_hpgl_dialog()
+
+    assert os.path.exists(hpgl_out)
+    with open(hpgl_out, "r", encoding="ascii") as f:
+        content = f.read()
+
+    # Generic HP-GL profile has bottom-left origin and 40 units/mm.
+    # With 90 deg rotation, coordinates are transformed accordingly.
+    assert "IN;" in content
+    assert "SP1;" in content
+    # Coordinates must not be negative center-relative coords (-5540)
+    assert "-5540" not in content
+
+    win.close()
+    win.cleanup()
+
+
+
 
