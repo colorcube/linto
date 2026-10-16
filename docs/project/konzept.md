@@ -1,7 +1,8 @@
-# Plotter Studio – Konzept v2.2
+# Plotter Studio – Konzept v2.3
 
-Stand: 2026-10-14 · Status: **Entwurf, Entscheidungen teils offen** (markiert mit ⟨Q-xx⟩, siehe [offene-fragen.md](offene-fragen.md)).
+Stand: 2026-10-16 · Status: **Gelebte Architektur & Systementwurf v2.3**
 Gerätedokumentation: [devices/mutoh-xp500/](../devices/mutoh-xp500/README.md).
+Roadmap & Aufgaben: [TODO.md](TODO.md).
 
 Änderungen zu v2.1:
 - **Multi-Geräte-Architektur geschärft:** Vollständig getrennter Kern (`core`, `pipeline`, `plotd`), ansteuerbar für beliebige Stiftplotter (HP-GL, MH-GL, HP-GL/2, Roland, G-Code/GRBL wie AxiDraw). Mutoh XP-500 ist Referenz- und Erstzielgerät.

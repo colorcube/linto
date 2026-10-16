@@ -1,6 +1,6 @@
 # Plotter Studio – Todo & Roadmap
 
-Zentrale Aufgabenliste für die Weiterentwicklung von Plotter Studio. Detaillierte Spezifikationen und Hintergründe finden sich in [docs/project/arbeitspakete.md](docs/project/arbeitspakete.md) und [docs/project/konzept.md](docs/project/konzept.md).
+Zentrale Aufgabenliste für die Weiterentwicklung von Plotter Studio. Detaillierte Spezifikationen und Systemarchitektur finden sich in [konzept.md](konzept.md).
 
 ---
 

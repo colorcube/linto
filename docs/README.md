@@ -34,10 +34,9 @@ Hardware-Dokumentation, Spezifikationen und Schnittstellenbeschreibungen:
 
 ## 3. [Projekt- & Konzeptdokumente](project/konzept.md) (`docs/project/`)
 Architektur, Systementwurf und Projektorganisation:
-* **[Konzept v2.2](project/konzept.md):** Architektur, Datenmodell, Koordinatensysteme, Pipeline, Streaming-Dienst `plotd`, Stiftmodelle.
-* **[Arbeitspakete & Meilensteine](project/arbeitspakete.md):** Phasen M0 bis M3, Aufwände und Abhängigkeiten.
-* **[Offene Fragen & Entscheidungen](project/offene-fragen.md):** Laufendes Protokoll technischer Entscheidungen (D-01…D-15).
+* **[Todo & Roadmap](project/TODO.md):** Zentrale Aufgabenliste für Weiterentwicklung, Packaging und Hardware-Tests.
+* **[Konzept v2.3](project/konzept.md):** Architektur, Datenmodell, Koordinatensysteme, Pipeline, Streaming und Stiftmodelle.
 * **[User Stories](project/user-stories.md):** Anwendungsfälle US-01 bis US-10.
 * **[Analyse MutohPlot](project/analyse-mutohplot.md):** Untersuchung des Referenzprojekts für den Mutoh XP-500.
 * **[Analyse InkCut](project/analyse-inkcut.md):** Untersuchung von Treibern, Protokollen (DMPL, CAMM-GL, G-Code) und Schleppmesser-Filtern.
-* **[Projekt-TODO](../TODO.md):** Offene Punkte für Tests am Gerät.
+

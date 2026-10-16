@@ -1,7 +1,7 @@
 # Mutoh XP-500 – Testplan am Gerät (AP0)
 
 Checkliste für den nächsten Termin am Plotter. Ergebnisse bitte direkt hier eintragen.
-Gesammelte Gesamtliste aller offenen Punkte: [TODO.md](../../../TODO.md).
+Gesammelte Gesamtliste aller offenen Punkte: [TODO.md](../../project/TODO.md).
 
 ## 1. Ablesen (ohne Plot)
 
