@@ -320,3 +320,97 @@ def test_streamer_flow_control_options():
 
         server.stop()
 
+
+def test_emitter_step_index_sync_with_job_steps():
+    """Verify that HPGLEmitter increments global_step_idx for PU commands to match job.steps."""
+    profile = get_default_profile()
+    emitter = HPGLEmitter(profile, points_per_cmd=16)
+
+    doc = Document()
+    doc.page.width = 420.0
+    doc.page.height = 297.0
+
+    # 3 polylines:
+    # Line 1: 3 vertices (2 draw segments)
+    # Line 2: 2 vertices (1 draw segment)
+    # Line 3: 4 vertices (3 draw segments)
+    paths = [
+        VectorPath(points=np.array([[50.0, 50.0], [60.0, 50.0], [70.0, 60.0]]), pen_id=1),
+        VectorPath(points=np.array([[100.0, 100.0], [120.0, 100.0]]), pen_id=1),
+        VectorPath(points=np.array([[150.0, 150.0], [160.0, 150.0], [170.0, 160.0], [180.0, 160.0]]), pen_id=1),
+    ]
+    doc.items.append(ImportItem(name="Paths", paths=paths))
+
+    job = compile_document_to_plot_job(doc, PipelineConfig(sort_paths=False))
+    # In job.steps:
+    # Line 1: 1 TRAVEL + 2 DRAW = 3 steps (indices 0, 1, 2)
+    # Line 2: 1 TRAVEL + 1 DRAW = 2 steps (indices 3, 4)
+    # Line 3: 1 TRAVEL + 3 DRAW = 4 steps (indices 5, 6, 7, 8)
+    # Total job.steps = 9
+    assert len(job.steps) == 9
+    travel_steps = [s for s in job.steps if s.action == "TRAVEL"]
+    draw_steps = [s for s in job.steps if s.action == "DRAW"]
+    assert len(travel_steps) == 3
+    assert len(draw_steps) == 6
+
+    cmds = emitter.emit_commands(job, doc)
+    # Filter to motion commands (PU / PD)
+    pu_cmds = [c for c in cmds if c.hpgl.startswith("PU") and not c.hpgl.startswith("PU;")]
+    pd_cmds = [c for c in cmds if c.hpgl.startswith("PD")]
+
+    assert len(pu_cmds) == 3
+    assert len(pd_cmds) == 3
+
+    # Check step indices:
+    # PU 1 -> step 0 (TRAVEL)
+    # PD 1 -> step 1 (DRAW steps 1 and 2)
+    # PU 2 -> step 3 (TRAVEL step 3, NOT 2!)
+    # PD 2 -> step 4 (DRAW step 4)
+    # PU 3 -> step 5 (TRAVEL step 5, NOT 3!)
+    # PD 3 -> step 6 (DRAW steps 6, 7, 8)
+    assert pu_cmds[0].step_index == 0
+    assert pd_cmds[0].step_index == 1
+    assert pu_cmds[1].step_index == 3
+    assert pd_cmds[1].step_index == 4
+    assert pu_cmds[2].step_index == 5
+    assert pd_cmds[2].step_index == 6
+
+    # End command should reflect total step count
+    end_cmd = cmds[-1]
+    assert "PU;SP0;" in end_cmd.hpgl
+    assert end_cmd.step_index == len(job.steps)
+
+
+def test_serial_streamer_write_timeout(monkeypatch):
+    """Verify write_timeout is accepted and passed to serial.Serial."""
+    import serial
+    recorded_kwargs = {}
+
+    class MockSerial:
+        def __init__(self, *args, **kwargs):
+            recorded_kwargs.update(kwargs)
+            self.is_open = False
+
+        def reset_input_buffer(self):
+            pass
+
+        def reset_output_buffer(self):
+            pass
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(serial, "Serial", MockSerial)
+
+    streamer = SerialStreamer(write_timeout=4.2)
+    assert streamer.write_timeout == 4.2
+
+    # Verify write_timeout passed through to Serial
+    streamer._run_stream(
+        port="/dev/ttyUSB0",
+        commands=[],
+        baudrate=19200,
+        write_timeout=4.2,
+    )
+    assert recorded_kwargs.get("write_timeout") == 4.2
+

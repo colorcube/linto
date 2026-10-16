@@ -167,6 +167,7 @@ class HPGLEmitter:
                         dist_mm=0.0,
                     )
                 )
+                global_step_idx += 1
 
                 # Segment into coordinate chains (PD x1,y1, x2,y2, ...)
                 remaining_pts = poly[1:]

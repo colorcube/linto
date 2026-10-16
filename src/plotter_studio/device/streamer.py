@@ -43,10 +43,12 @@ class SerialStreamer:
         on_progress: Optional[Callable[[int, int, float, int, float], None]] = None,
         on_status: Optional[Callable[[StreamerState, str], None]] = None,
         on_finished: Optional[Callable[[bool, str], None]] = None,
+        write_timeout: float = 5.0,
     ):
         self.on_progress = on_progress
         self.on_status = on_status
         self.on_finished = on_finished
+        self.write_timeout = write_timeout
 
         self.state = StreamerState.IDLE
         self._thread: Optional[threading.Thread] = None
@@ -74,6 +76,7 @@ class SerialStreamer:
         xonxoff_userspace: Optional[bool] = None,
         rtscts: Optional[bool] = None,
         dsrdtr: Optional[bool] = None,
+        write_timeout: Optional[float] = None,
     ) -> bool:
         """Start streaming commands in a background thread."""
         with self._lock:
@@ -85,9 +88,11 @@ class SerialStreamer:
             self._xoff_paused = False
             self._pause_event.set()
 
+            eff_write_timeout = self.write_timeout if write_timeout is None else write_timeout
+
             self._thread = threading.Thread(
                 target=self._run_stream,
-                args=(port, commands, baudrate, inter_command_delay_s, flow_control, xonxoff_userspace, rtscts, dsrdtr),
+                args=(port, commands, baudrate, inter_command_delay_s, flow_control, xonxoff_userspace, rtscts, dsrdtr, eff_write_timeout),
                 daemon=True,
                 name="PlotStreamWorker",
             )
@@ -179,6 +184,7 @@ class SerialStreamer:
         xonxoff_userspace: Optional[bool] = None,
         rtscts: Optional[bool] = None,
         dsrdtr: Optional[bool] = None,
+        write_timeout: float = 5.0,
     ) -> None:
         port_clean = port.strip()
         total_commands = len(commands)
@@ -212,6 +218,7 @@ class SerialStreamer:
                     dsrdtr=effective_dsrdtr,
                     xonxoff=False,
                     timeout=0.1 if effective_xonxoff else 2.0,
+                    write_timeout=write_timeout,
                 )
                 self._serial.reset_input_buffer()
                 self._serial.reset_output_buffer()

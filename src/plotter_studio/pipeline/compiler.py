@@ -229,10 +229,9 @@ def compile_document_to_plot_job(
         for idx, line in enumerate(opt_lines):
             # Travel step
             t_from, t_to = travels[idx]
-            if math.hypot(t_to[0] - t_from[0], t_to[1] - t_from[1]) > 1e-4:
-                t_arr = np.array([t_from, t_to], dtype=np.float64)
-                job.steps.append(PlotStep(action="TRAVEL", points=t_arr, pen_id=pen_id, step_index=step_counter))
-                step_counter += 1
+            t_arr = np.array([t_from, t_to], dtype=np.float64)
+            job.steps.append(PlotStep(action="TRAVEL", points=t_arr, pen_id=pen_id, step_index=step_counter))
+            step_counter += 1
 
             # Draw steps: segment by segment
             for seg_idx in range(len(line) - 1):
