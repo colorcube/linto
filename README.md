@@ -1,136 +1,120 @@
 # Plotter Studio
 
-> **Die modulare Steuer-, Layout- und Slicer-Software für klassische und moderne Vektor-Stiftplotter.**
+> **Language / Sprache:** [English](README.md) | [Deutsch](README.de.md)
 
-Plotter Studio bereitet Vektorgrafiken für echte Stiftplotter auf, optimiert Fahrwege, simuliert den Zeichenvorgang interaktiv am Bildschirm und sendet die Daten sicher und ohne Pufferüberlauf an das Gerät.
+> **The modular slicer, layout editor, and streaming controller for physical vector pen plotters.**
 
----
-
-## Ein Blick in das Programm
-
-### Layout-Modus: Grafiken anordnen, skalieren und Stiften zuweisen
-![Plotter Studio Layout Modus](docs/images/ui_overview_layout.png)
-
-### Ausgabe-Modus: Pfadoptimierung, Leerfahrten-Visualisierung & Simulation
-![Plotter Studio Ausgabe Modus mit Simulation](docs/images/ui_overview_plot.png)
+Plotter Studio prepares vector graphics for real pen plotters: it optimizes pen paths (saving 40% to 70% of pen-up travel time), simulates the drawing process interactively on screen, and streams commands reliably with hardware flow control directly to your machine.
 
 ---
 
-## Was ist Plotter Studio – und kann ich es brauchen?
+## Visual Tour
 
-### Wofür ist Plotter Studio gedacht?
-Wenn Sie mit einem **physischen Stiftplotter** zeichnen (egal ob Oldtimer wie Mutoh XP-500, HP 7585B, Roland DXY oder moderne Pen Plotter) und Ihre Grafiken aus Programmen wie **Inkscape, Illustrator, CAD oder generativen Python/Processing-Skripten** stammen, ist Plotter Studio das fehlende Bindeglied:
-* Sie können Grafiken direkt auf Standard-Papierformaten (DIN A4 bis DIN A0) oder freien Abmessungen platzieren, numerisch skalieren, zentrieren und drehen.
-* Sie sehen genau, wie viel Rand der Plotter für den Vorschub benötigt (asymmetrische Rollenränder) oder können das eingespannte Papier per Knopfdruck direkt vom Plotter abfragen.
-* Die Software arbeitet wie ein **Slicer** beim 3D-Druck: Sie verbindet aneinanderliegende Linien, glättet überflüssige Stützpunkte und sortiert alle Vektoren mit einem **2-Opt-Algorithmus (TSP)** so um, dass die Stift-Leerfahrten in der Luft um **40 % bis 70 %** sinken.
-* Bevor ein einziger Tropfen Tinte auf das Papier gelangt, können Sie den gesamten Plot mit einer **Zeitleiste (Scrubber)** sekundengenau vor- und zurückspulen.
-* Das Senden erfolgt im Hintergrund über serielle Schnittstellen oder Netzwerk mit echtem **Hardware-Handshake (RTS/CTS)**, sodass der Speicher des Plotters nie überläuft und der Stift bei einem Abbruch sofort sicher abgehoben und geparkt wird.
+### Layout Mode: Arrange, scale, and map vector artwork to pens
+![Plotter Studio Layout Mode](docs/images/ui_overview_layout.png)
 
-### Was ist Plotter Studio gar nicht?
-* **Kein Druckertreiber für Tintenstrahl-Großformatdrucker:** Großformatdrucker (z.B. HP DesignJet, Canon imagePROGRAF oder Epson SureColor) werden in der Praxis oft fälschlicherweise als „Plotter“ bezeichnet. Dabei handelt es sich jedoch um Pixel-Rasterdrucker mit Tintenpatronen. Plotter Studio steuert ausschließlich echte **mechanische Stiftplotter** an, die echte Schreibstifte über Papier führen.
-* **Keine Schneideplotter-Software (Cutter):** Plotter Studio ist für **Stiftplotter** ausgelegt. Reine Schneideplotter mit Schleppmesser (Vinyl-Cutter) werden noch nicht unterstützt, da die dafür nötige Klingen-Offset-Kompensation noch fehlt (viele Cutter lassen sich jedoch mit einem Stifteinsatz als Stiftplotter nutzen).
-* **Kein Zeichenprogramm:** Plotter Studio ersetzt weder Inkscape noch Adobe Illustrator oder CAD-Software. Sie zeichnen und entwerfen weiterhin in Ihrer gewohnten Software. Plotter Studio ist die nachgeschaltete Werkbank zum Vorbereiten, Prüfen und Ausführen des Plots.
-
-### Was kann die Software heute schon?
-* **Vektor-Import:** Schneller Import von SVG-Vektordateien per Drag & Drop oder Dateidialog.
-* **Automatisches Farb-Clustering:** Grafikelemente werden anhand ihrer Strichfarbe automatisch auf die Stifte 1 bis 8 gruppiert.
-* **Layout & Transformation:** Numerische Positionierung mit Bezugswahl (Blatt/Plottbereich), proportionale Skalierung mit Zoom-Schritten (+/- 10%), 1:1-Originalgröße, Einpassen mit Randabstand, Zentrieren, Drehen und Spiegeln.
-* **Objekt- & Ebenenverwaltung:** Z-Order (Zeichenreihenfolge per Drag & Drop ändern), Sichtbarkeit umschalten und Bearbeitung sperren.
-* **Slicer-Pipeline & 2-Opt Pfadoptimierung:** Drastische Verkürzung der Plotzeiten durch Verbinden von Linienenden und Eliminierung unnötiger Eilgangswege.
-* **Interaktive Simulation:** Zeitstrahl-Scrubber mit Play/Pause, 1x–10x Geschwindigkeit, türkisfarbener Visualisierung aller Leerfahrten (`Pen Up`) und Aufsetzpunkte.
-* **Pre-Flight-Statistiken:** Exakte Berechnung von Zeichenweg, Leerweg, Ersparnis, Stiftwechseln und geschätzter Plotdauer.
-* **Stift-Filterung:** Gezieltes Aktivieren einzelner Stifte (z.B. für manuelle Stiftwechsel oder Testdurchläufe).
-* **Sicheres Live-Streaming:** Übertragung via RS-232 (USB-Adapter) oder TCP mit RTS/CTS-Handshake, Pause/Fortsetzen, Live-Werkzeugkopf im Canvas und Notfallabbruch (`ESC.K`, `PU;`, `SP0;`).
-* **Multi-Plotter-Unterstützung:** Modular über lesbare YAML-Profile (`resources/devices/*.yaml`). 26 Profile sind vorinstalliert: Neben Mutoh XP-500 und Generic Flatbed wurden **24 Geräteprofile direkt aus InkCut übernommen** (Roland Stika/CAMM, Graphtec, US Cutter, Secabo, Summa, Sekonic etc.).
-* **Hardware-Diagnose & Kalibrierung:** Eigenständiges Terminal-Diagnosetool (`tools/xp500_probe.py`) und offizielles Kalibriermuster (`resources/calibration_plot_a3.svg`).
-* **Integrierter Software-Emulator:** Vollwertiger virtueller Plotter (`VirtualPlotter`) zum sofortigen Testen ohne Hardware.
-
-### Was kann Plotter Studio (noch) nicht bzw. was steht auf der Roadmap?
-* **Schneideplotter / Schleppmesser-Kompensation (Drag-Knife Offset):** Das Schneiden von Vinylfolien mit Messerklingen wird noch nicht unterstützt; derzeit liegt der Fokus rein auf Stiftplottern.
-* **HP-GL/PLT-Import:** Das Einlesen bestehender HP-GL-Plotdateien ist für eine spätere Version geplant; aktuell dient SVG als universelles Quellformat, während HP-GL das optimierte Ausgabe- und Exportformat ist.
-* **Direkter DXF-Import:** CAD-Dateien im DXF-Format müssen aktuell vor dem Import in Inkscape, QCAD oder LibreCAD als SVG gespeichert werden.
-* **Eigenständiges Binärpaket (Single-File Executable / AppImage):** Bündelung der Anwendung (z.B. per PyInstaller oder als Linux-AppImage / Windows-`.exe`), sodass Plotter Studio ohne vorinstalliertes Python direkt per Klick gestartet werden kann.
-* **G-Code-Plotter (Marlin / Grbl):** Die direkte Erzeugung von CNC-G-Code für 3D-Drucker oder Fräsen mit Stifthalter befindet sich in Planung; aktuell wird der Industriestandard HP-GL / MH-GL ausgegeben.
+### Output Mode: Path optimization, pen-up travel visualization & simulation
+![Plotter Studio Plot Mode with Simulation](docs/images/ui_overview_plot.png)
 
 ---
 
-## Quickstart: In 5 Schritten zum ersten Plot
+## What is Plotter Studio?
 
-Sie müssen nicht warten, bis Ihre serielle Verkabelung steht: Mit dem integrierten Software-Emulator können Sie Plotter Studio sofort ausprobieren.
+If you draw with a **physical pen plotter** (from vintage workhorses like the Mutoh XP-500, HP 7585B, or Roland DXY to modern DIY drawing robots) and create your artwork in **Inkscape, Illustrator, CAD, or generative Python/Processing scripts**, Plotter Studio is the bridge to your hardware:
+
+* **True Millimeter Layout:** Position artwork on standard paper sizes (DIN A4 to A0) or custom sheets. See real hardware margin constraints (such as asymmetric roller feed margins) or probe physical sheet boundaries directly from plotter optical sensors (`OH;`).
+* **Slicer Pipeline & 2-Opt TSP:** Much like a 3D-printing slicer, Plotter Studio merges collinear line segments, simplifies redundant nodes, and reorders vectors using a **2-Opt Traveling Salesperson Problem (TSP)** heuristic. This typically cuts pen-up air travel by **40% to 70%**.
+* **Interactive Simulation Scrubber:** Before dropping ink on expensive paper, scrub forward and backward through the entire plot timeline. Inspect pen-down strokes, travel paths (`Pen Up`), and touchdown nodes.
+* **Safe Live Streaming:** Streams commands over RS-232 serial or TCP with strict **RTS/CTS hardware flow control** to prevent plotter buffer overflows. Supports pause, resume, and immediate abort (`ESC.K`, `PU;`, `SP0;`) that parks the pen safely in the carousel.
+
+### What Plotter Studio is Not
+* **Not an inkjet printer driver:** Großformat photo printers (e.g. HP DesignJet, Epson SureColor) are raster printers. Plotter Studio exclusively drives mechanical vector machines moving physical pens.
+* **Not a vinyl cutting suite:** Focused strictly on pen plotting. Drag-knife offset compensation is on the roadmap.
+* **Not an illustration tool:** You continue designing in your favorite software (Inkscape, Blender, code). Plotter Studio handles the preparation, slicing, and machine execution.
+
+---
+
+## Core Features
+
+* **Vector Import:** Opens SVG (`.svg`) and HP-GL (`.hpgl`, `.plt`) files via drag & drop or file dialog.
+* **Pen Palette & Color Clustering:** Automatically clusters stroke colors to 8 logical pens using perceptual Delta-E in CIE-Lab color space. Configurable pen speed (`VS` in cm/s) and force (`FS` in grams).
+* **Precise Transformation:** Numerical positioning (sheet or plottable area reference), proportional scaling with zoom presets, 1:1 original size, margin-aware fitting, free rotation, and flipping.
+* **Layers & Z-Order:** Reorder drawing sequence via drag & drop, lock layers against accidental edits, or toggle visibility.
+* **Multi-Plotter Support:** Modular YAML profiles (`resources/devices/*.yaml`). Ships with 26 profiles: Mutoh XP-500, Generic Flatbed, and **24 profiles adapted from InkCut** (Roland, Graphtec, Summa, US Cutter, Silhouette, etc.).
+* **Hardware Diagnostics & Emulator:** Standalone terminal probing tool (`tools/xp500_probe.py`), calibration pattern (`resources/calibration_plot_a3.svg`), and a complete software emulator (`VirtualPlotter`) for instant headless testing without hardware.
+
+---
+
+## Quickstart: First Plot in 5 Steps
+
+You don't need hardware connected to try Plotter Studio—the built-in emulator lets you explore immediately:
 
 ```
-[ 1. Plotter verbinden ] -> [ 2. Blatt einrichten ] -> [ 3. SVG platzieren ] -> [ 4. Simulieren ] -> [ 5. Plotten ]
+[ 1. Connect ] -> [ 2. Page Setup ] -> [ 3. Import Vector ] -> [ 4. Simulate ] -> [ 5. Plot ]
 ```
 
-1. **Plotter verbinden oder Simulator starten:**
-   * *Mit Hardware:* Schließen Sie den Plotter per RS-232-Nullmodemkabel an.  
-     -> Siehe **[Kapitel 4: Hardware-Setup & Verkabelung](docs/anleitung/4-hardware-setup-und-test.md)**
-   * *Ohne Hardware (Simulator):* Starten Sie den Simulator im Terminal mit `python3 -m plotter_studio.emulator --tcp 9999` und wählen Sie in Plotter Studio oben `Mutoh XP-500 Simulator (TCP)` aus.  
-     -> Siehe **[Kapitel 1: Schnellstart mit Emulator](docs/anleitung/1-schnellstart-und-workflow.md#variante-b-schneller-test-mit-dem-software-simulator)**
-2. **Blattgröße und Randprofil wählen:**
-   * Klicken Sie auf **[ Seiteneinrichtung... ]**, wählen Sie z.B. DIN A3 Querformat und das Randprofil `EXP`. Ist ein Plotter verbunden, liest **[ Plotter abfragen ]** das Papierformat automatisch aus.  
-     -> Siehe **[Kapitel 2: Blatt- & Seiteneinrichtung](docs/anleitung/2-layout-und-objektverwaltung.md#2-blatt--seiteneinrichtung)**
-3. **Zeichnung importieren und ausrichten:**
-   * Ziehen Sie eine beliebige `.svg`-Datei per Drag & Drop in das Fenster.
-   * Nutzen Sie im Dock *Transformation* die Schnelltasten **[ Einpassen ]** oder **[ Zentrieren ]**.  
-     -> Siehe **[Kapitel 2: Transformation & Objektverwaltung](docs/anleitung/2-layout-und-objektverwaltung.md#5-dock-transformation)**
-4. **Plot simulieren und Fahrwege prüfen:**
-   * Wechseln Sie oben in den Reiter **Ausgabe**.
-   * Ziehen Sie den Schieberegler der Simulationsleiste oder klicken Sie auf Play: Überprüfen Sie den Toolhead-Cursor und die türkis gestrichelten Leerfahrten.  
-     -> Siehe **[Kapitel 3: Ausgabe-Modus & Simulation](docs/anleitung/3-ausgabe-simulation-export.md#3-die-simulation-mit-dem-scrubber)**
-5. **Plotten oder exportieren:**
-   * Klicken Sie auf **[ Plot senden ]** für die direkte Ausgabe oder auf **[ Plotdatei (.hpgl) exportieren... ]**, um eine fertige HP-GL-Datei zu speichern.  
-     -> Siehe **[Kapitel 3: Live-Plotten auf der Hardware](docs/anleitung/3-ausgabe-simulation-export.md#5-live-plotten-auf-der-hardware)**
+1. **Connect plotter or launch emulator:**
+   * *With hardware:* Connect your plotter via RS-232 null-modem cable (see [Chapter 4: Hardware Setup](docs/anleitung/4-hardware-setup-und-test.md)).
+   * *Without hardware:* Launch the emulator in a terminal with `python3 -m plotter_studio.emulator --tcp 9999` and select `Mutoh XP-500 Simulator (TCP)` in the top toolbar.
+2. **Configure sheet and margin profile:**
+   * Click **[ Page Setup... ]**, choose your format (e.g. `DIN A3 Landscape`) and margin profile (e.g. `EXP`). Click **[ Query Plotter ]** to read sensor boundaries automatically.
+3. **Import and place vector artwork:**
+   * Drag and drop an `.svg` or `.hpgl` file into the window.
+   * Use **[ Fit to Sheet ]** or **[ Center ]** in the *Transform* dock.
+4. **Simulate the plot:**
+   * Switch to the **Output** tab at the top.
+   * Scrub the simulation slider or press Play to review pen travel and sequence before drawing.
+5. **Plot or export:**
+   * Click **[ Send Plot ]** for live streaming, or export an optimized file via **[ Export Plot File (.hpgl)... ]**.
 
 ---
 
-## Vollständige Dokumentation
+## Documentation
 
-Das Handbuch ist in praxisorientierte Kapitel unterteilt:
+Comprehensive documentation is available in the [`docs/anleitung/`](docs/anleitung/README.md) directory:
 
-* **[Benutzerhandbuch Übersicht (docs/anleitung/)](docs/anleitung/README.md)**
-  * **[1. Schnellstart & Typischer Workflow](docs/anleitung/1-schnellstart-und-workflow.md):** Schritt-für-Schritt-Anleitung von SVG bis Stiftbewegung.
-  * **[2. Layout-Modus & Objektverwaltung](docs/anleitung/2-layout-und-objektverwaltung.md):** Canvas, Werkzeuge, Seiteneinrichtung, Z-Order, Skalierung & Stifte.
-  * **[3. Ausgabe-Modus, Simulation & Export](docs/anleitung/3-ausgabe-simulation-export.md):** Pipeline-Tuning, Pre-Flight-Statistiken, Scrubber-Simulation, Stift-Filterung & Live-Streaming.
-  * **[4. Hardware-Setup, Kalibrierung & Diagnose](docs/anleitung/4-hardware-setup-und-test.md):** Nullmodem-Pinbelegung (RS-232 mit RTS/CTS), USB-Adapter, Hardware-Diagnosetool `xp500_probe.py`, der offizielle Kalibrierplot (`resources/calibration_plot_a3.svg`) und Anbindung weiterer Plotter.
-  * **[5. Leitfaden: Vektorformate, Quellen & Workflows](docs/anleitung/5-vektorformate-und-workflows.md):** Best Practices für eigene SVG-Skripte, Inkscape, Blender, HP-GL und DXF.
-  * **[6. Hintergrund: Konzepte, Algorithmen & Architektur (Deep-Dive)](docs/anleitung/6-konzepte-und-architektur.md):** Detaillierter Einblick in Slicer-Mathematik, 2-Opt TSP, Koordinatentransformationen und Streaming.
-  * **[7. Empfohlene Ressourcen, Tools & Community-Sammlungen](docs/anleitung/7-ressourcen-tools-und-community.md):** Kuratierte Sammlung spezialisierter Software (vpype, vsketch, ln, Turtletoy), Hershey-Einlinienschriften und Community-Hubs (Awesome Plotters, Drawingbots, Reddit).
-* **[Gerätedokumentation Mutoh XP-500](docs/devices/mutoh-xp500/README.md):** Befehlssatz MH-GL, Escape-Sequenzen, DIP-Schalter und Register.
+* **[1. Quickstart & Workflow](docs/anleitung/1-schnellstart-und-workflow.md):** Step-by-step guide with hardware or emulator.
+* **[2. Layout Mode & Object Management](docs/anleitung/2-layout-und-objektverwaltung.md):** Canvas navigation, rulers, page setup, Z-order, and pen docks.
+* **[3. Output Mode, Simulation & Streaming](docs/anleitung/3-ausgabe-simulation-export.md):** Pipeline tuning, pre-flight stats, simulation scrubber, and serial streaming.
+* **[4. Hardware Setup, Calibration & Diagnostics](docs/anleitung/4-hardware-setup-und-test.md):** RS-232 null-modem pinout (RTS/CTS), FTDI adapters, diagnostic probe, and calibration sheet.
+* **[5. Vector Formats, Sources & Workflows](docs/anleitung/5-vektorformate-und-workflows.md):** Custom SVG scripts (mm units, pen color codes), Inkscape, Blender, HP-GL, and DXF.
+* **[6. Technical Concepts & Architecture](docs/anleitung/6-konzepte-und-architektur.md):** Deep-dive into slicer math, 2-Opt TSP, coordinate transformations, and streaming.
+* **[7. Recommended Resources, Tools & Community](docs/anleitung/7-ressourcen-tools-und-community.md):** Curated tools (vpype, vsketch, ln, Turtletoy), single-line Hershey fonts, and communities.
+* **[Mutoh XP-500 Device Reference](docs/devices/mutoh-xp500/README.md):** Manual transcription, MH-GL command set, escape sequences, and DIP registers.
 
 ---
 
-## Schnellstart für Entwickler
+## Developer Setup
 
 ```bash
-# Virtuelle Umgebung und Installation
+# Create and activate virtual environment
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
 
-# Plotter Studio starten
+# Launch Plotter Studio
 plotter-studio
 
-# Automatische Tests ausführen (66 Tests)
+# Run test suite (107 tests)
 pytest
 ```
 
+---
+
+## Related Projects & Credits
+
+* **[InkCut](https://github.com/codelv/inkcut) (GPL-3.0-or-later):** 24 device profiles (Roland, Graphtec, Summa, US Cutter) adapted via `tools/import_inkcut_devices.py`, and inspiration for device abstraction.
+* **[vpype](https://github.com/abey79/vpype) (Antoine Beyeler, GPL-3.0-or-later):** Conceptual inspiration for the modular slicer pipeline and path optimization heuristics.
+* **[MutohPlot](https://github.com/oliver321/MutohPlot) (Oliver F., MIT License):** Valuable reference for Mutoh XP-500 hard-clip margins, HP-GL tokenizer, and 5×7 stroke font.
 
 ---
 
-## Verwandte Projekte, Inspiration
+## License
 
-* **InkCut (GPL-3.0-or-later):** Aus InkCut wurden 24 HP-GL-Geräteprofile (u.a. Roland, Graphtec, US Cutter, Summa, Sekonic) übernommen und für Plotter Studio aufbereitet (`tools/import_inkcut_devices.py`). Zudem diente es als Referenz für geräteunabhängige Treiberabstraktion.
-* **vpype (Antoine Beyeler, GPL-3.0-or-later):** Konzeptionelle Inspiration für die modulare Slicer-Pipeline (Linienzusammenfassung, RDP-Glättung und 2-Opt TSP-Pfadoptimierung zur Reduktion von Leerfahrten).
-* **MutohPlot (Oliver F., MIT-Lizenz):** Wertvolle Referenz für die gerätespezifischen Eigenheiten des Mutoh XP-500 (Hard-Clip-Fenster, Randprofile EXP/NORM, Achsen-Mapping).
+Licensed under the **GNU General Public License v3.0 or later (GPL-3.0-or-later)**. See [LICENSE.txt](LICENSE.txt).
 
 ---
 
-## Lizenz
+## Built with AI Collaboration
 
-Dieses Projekt ist unter der **GNU General Public License v3.0 or later (GPL-3.0-or-later)** lizenziert. Der vollständige Lizenztext befindet sich in der Datei [LICENSE.txt](LICENSE.txt).
-
-
-## Entstehungsprozess mit KI Nutzung
-
-Dieses Projekt entstand in einem kollaborativen Pair-Programming-Prozess zwischen einem menschlichen Entwickler und autonomen KI-Agenten.
+This project was built through pair-programming between a human developer and autonomous AI coding agents.

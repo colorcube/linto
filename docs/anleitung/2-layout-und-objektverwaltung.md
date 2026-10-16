@@ -1,6 +1,6 @@
 # 2. Layout-Modus & Objektverwaltung
 
-Der **Layout-Modus** ist die kreative Schaltzentrale von Plotter Studio. Hier arrangieren, skalieren und drehen Sie Ihre Vektorgrafiken auf dem gewählten Papierformat, weisen Stifte und Farben zu und prüfen die Abstände zu den Randbereichen des Plotters.
+Der **Layout-Modus** ist die kreative Schaltzentrale von Plotter Studio. Hier arrangierst, skalierst und drehst du deine Vektorgrafiken auf dem gewählten Papierformat, weist Stifte und Farben zu und prüfst die Abstände zu den Randbereichen des Plotters.
 
 ![Übersicht des Layout-Modus](../images/ui_overview_layout.png)
 
@@ -37,7 +37,8 @@ Die Arbeitsumgebung ist übersichtlich in funktionale Bereiche unterteilt:
 
 ## 2. Blatt- & Seiteneinrichtung
 
-Vor dem Platzieren von Grafiken sollten Sie das gewünschte Blattformat und Randprofil festlegen. Klicken Sie in der Werkzeugleiste auf **[ Seiteneinrichtung... ]**.
+Vor dem Platzieren von Grafiken solltest du das gewünschte Blattformat und Randprofil festlegen. Klicke in der Werkzeugleiste auf **[ Seiteneinrichtung... ]**.
+
 
 ![Dialog Seiteneinrichtung](../images/dialog_page_setup.png)
 
@@ -62,7 +63,7 @@ Plotter Studio unterstützt zwei direkt importierbare Vektorformate:
 * **HP-GL (`.hpgl`, `.plt`):** Direkter Import bestehender Plotter-Dateien (inklusive Stiftwahl `SP1`–`SP8`, Kreisen `CI`, Bögen `AA`/`AR`, Rechtecken `EA`/`RA` sowie `LB`-Textbeschriftungen über den integrierten 5×7-Vektorzeichensatz).
 
 ### Import-Möglichkeiten:
-1. **Drag & Drop:** Ziehen Sie eine oder mehrere `.svg`-, `.hpgl`- oder `.plt`-Dateien direkt aus dem Dateimanager in das Canvas-Fenster.
+1. **Drag & Drop:** Ziehe eine oder mehrere `.svg`-, `.hpgl`- oder `.plt`-Dateien direkt aus dem Dateimanager in das Canvas-Fenster.
 2. **Datei öffnen (`Strg+O`):** Öffnet ein bestehendes Plotter-Studio-Projekt oder eine Vektordatei direkt als neues Dokument. Entsprechen die Abmessungen einer SVG-Datei keinem Standard-DIN-Format (z. B. 10×10 cm), wird das Blattformat automatisch als passendes benutzerdefiniertes Format eingerichtet.
 3. **Importieren (`Strg+I`):** Lädt weitere Vektorgrafiken als zusätzliche Objekte in das bereits geöffnete Layout hinzu.
 
@@ -83,8 +84,8 @@ Das Dock **Objekte & Ebenen** listet alle geladenen Zeichnungselemente hierarchi
 * **Sperren (Schloss-Symbol):** Schützt das Objekt vor versehentlichem Verschieben, Transformieren oder Löschen im Canvas.
 * **Z-Reihenfolge (Zeichenabfolge):**
   * Objekte, die in der Liste weiter oben stehen, werden im Canvas über den darunter liegenden Objekten dargestellt.
-  * Über die Schaltflächen **[ Nach oben ]** und **[ Nach unten ]** können Sie die Reihenfolge ändern.
-  * *Praxistipp:* Bestimmen Sie so, welche Objekte zuerst oder zuletzt gezeichnet werden.
+  * Über die Schaltflächen **[ Nach oben ]** und **[ Nach unten ]** kannst du die Reihenfolge ändern.
+  * *Praxistipp:* Bestimme so, welche Objekte zuerst oder zuletzt gezeichnet werden.
 * **Verwaltung:**
   * **Doppelklick auf Namen:** Benennt das Objekt direkt um.
   * **[ Duplizieren ] (`Strg+D`):** Erstellt eine leicht versetzte Kopie des ausgewählten Objekts.
@@ -126,7 +127,7 @@ Das Dock **Transformation** erlaubt die millimetergenaue Positionierung, Drehung
 
 ## 6. Stiftpalette & Farbzuweisung
 
-Im Dock **Stifte & Farben** verwalten Sie die 8 logischen Stiftkanäle des Plotters (inklusive Strichstärke, Zeichengeschwindigkeit `VS` in `cm/s` und Anpressdruck `FS` in `g`):
+Im Dock **Stifte & Farben** verwaltest du die 8 logischen Stiftkanäle des Plotters (inklusive Strichstärke, Zeichengeschwindigkeit `VS` in `cm/s` und Anpressdruck `FS` in `g`):
 
 | Stift | Standardfarbe | Hex-Code | Empfohlene Verwendung |
 |---|---|---|---|
@@ -139,14 +140,15 @@ Im Dock **Stifte & Farben** verwalten Sie die 8 logischen Stiftkanäle des Plott
 | **Stift 7** | Cyan | `#0097a7` | Entwürfe |
 | **Stift 8** | Gelb | `#fbc02d` | Marker / Akzente |
 
-Durch Rechtsklick auf ein Objekt im Canvas oder Auswahl im Stifte-Dock kann jedem Objekt jederzeit eine andere Stiftnummer zugewiesen werden.
+Durch Rechtsklick auf ein Objekt im Canvas oder Auswahl im Stifte-Dock kannst du jedem Objekt jederzeit eine andere Stiftnummer zuweisen.
 
 ---
 
 > [!TIP]
-> Ausführliche Anleitungen zur optimalen Vorbereitung eigener SVG-Skripte (Maßeinheiten, Farbcodes für Stifte), dem Einsatz von Inkscape und Blender als Vektorgeneratoren sowie Tipps zu HP-GL und DXF finden Sie im eigenständigen **[Kapitel 5: Leitfaden: Vektorformate, Quellen & Workflows](5-vektorformate-und-workflows.md)**.
+> Ausführliche Anleitungen zur optimalen Vorbereitung eigener SVG-Skripte (Maßeinheiten, Farbcodes für Stifte), dem Einsatz von Inkscape und Blender als Vektorgeneratoren sowie Tipps zu HP-GL und DXF findest du im eigenständigen **[Kapitel 5: Leitfaden: Vektorformate, Quellen & Workflows](5-vektorformate-und-workflows.md)**.
 > 
 > Eine kuratierte Sammlung empfohlener Community-Tools (Awesome Plotters, Drawingbots, vpype, vsketch, Single-Line-Schriften) bietet **[Kapitel 7: Empfohlene Ressourcen, Tools & Community-Sammlungen](7-ressourcen-tools-und-community.md)**.
+
 
 
 

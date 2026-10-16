@@ -1,6 +1,6 @@
 # 3. Ausgabe-Modus, Simulation & Export
 
-Im **Ausgabe-Modus** (Plot-Modus) wird die Zeichnung für die physikalische Hardware aufbereitet. Sie sehen die optimierten Werkzeugwege inklusive aller Stift-Leerfahrten, können den Plot mit einer Zeitleiste simulieren, Statistiken zur Zeitersparnis prüfen und den Plot direkt an das Gerät senden oder als Datei exportieren.
+Im **Ausgabe-Modus** (Plot-Modus) wird die Zeichnung für die physikalische Hardware aufbereitet. Du siehst die optimierten Werkzeugwege inklusive aller Stift-Leerfahrten, kannst den Plot mit einer Zeitleiste simulieren, Statistiken zur Zeitersparnis prüfen und den Plot direkt an das Gerät senden oder als Datei exportieren.
 
 ![Übersicht des Ausgabe-Modus mit Simulation](../images/ui_overview_plot.png)
 
@@ -8,7 +8,7 @@ Im **Ausgabe-Modus** (Plot-Modus) wird die Zeichnung für die physikalische Hard
 
 ## 1. Die Optimierungs-Pipeline (Tuning)
 
-Im oberen Bereich des Docks **Ausgabe** konfigurieren Sie die Algorithmen, die aus Rohvektoren effiziente Maschinenbewegungen machen (per Klick auf den Pfeil bzw. die Überschrift ein- und ausklappbar, standardmäßig für eine kompakte Ansicht eingeklappt):
+Im oberen Bereich des Docks **Ausgabe** konfigurierst du die Algorithmen, die aus Rohvektoren effiziente Maschinenbewegungen machen (per Klick auf den Pfeil bzw. die Überschrift ein- und ausklappbar, standardmäßig für eine kompakte Ansicht eingeklappt):
 
 ![Dock Ausgabe](../images/dock_ausgabe.png)
 
@@ -53,15 +53,15 @@ Unterhalb des Haupt-Canvas befindet sich die interaktive **Simulationsleiste**:
 
 ### Canvas-Visualisierung im Ausgabe-Modus:
 * **Farbige Linien:** Zeichnen die tatsächlichen Striche in den zugewiesenen Stiftfarben nach.
-* **Türkis / Cyan gestrichelte Linien:** Stellen die **Eilgang-Leerfahrten** (`Pen Up`) dar. So erkennen Sie auf einen Blick, wie der Kopf zwischen den Elementen springt.
+* **Türkis / Cyan gestrichelte Linien:** Stellen die **Eilgang-Leerfahrten** (`Pen Up`) dar. So erkennst du auf einen Blick, wie der Kopf zwischen den Elementen springt.
 * **Gelbe / Orange Markierungen:** Heben die Aufsetz- und Abhebepunkte hervor.
 * **Toolhead-Cursor (Fadenkreuz):** Zeigt die exakte Position des Stifts zum aktuellen Zeitschritt.
 
 ### Steuerungsfunktionen:
-* **Schieberegler (Scrubber):** Ziehen Sie den Regler mit der Maus, um den gesamten Plotprozess in beliebiger Geschwindigkeit vor- oder zurückzuspulen.
+* **Schieberegler (Scrubber):** Ziehe den Regler mit der Maus, um den gesamten Plotprozess in beliebiger Geschwindigkeit vor- oder zurückzuspulen.
 * **[ Play ] / [ Pause ]:** Startet oder stoppt eine flüssige Animation des Plotvorgangs.
 * **Geschwindigkeitsauswahl:** Umschaltbar zwischen **1x**, **2x**, **5x** und **10x** Abspielgeschwindigkeit.
-* **Schrittweises Vor-/Zurückspringen:** Prüfen Sie kritische Stellen Vektor für Vektor.
+* **Schrittweises Vor-/Zurückspringen:** Prüfe kritische Stellen Vektor für Vektor.
 
 ---
 
@@ -72,8 +72,8 @@ In der Sektion **Stifte** des Ausgabe-Docks verfügt jeder Stift über eine eige
 * **Stift aktivieren / deaktivieren:**
   * Ist das Häkchen entfernt, werden alle Linien dieses Stifts aus dem aktuellen Plot-Auftrag ausgeschlossen.
 * **Typische Anwendungsfälle:**
-  * **Manueller Stiftwechsel:** Besitzt Ihr Plotter nur einen einzigen Stifthalter, deaktivieren Sie alle Stifte bis auf Stift 1. Nach dem Plotten wechseln Sie den Stift physisch, aktivieren Stift 2 und plotten die nächste Farbe.
-  * **Testplots & Probedrucke:** Testen Sie z.B. nur die Rahmenlinien oder eine feine Schraffur, bevor der gesamte mehrfarbige Plot gestartet wird.
+  * **Manueller Stiftwechsel:** Besitzt dein Plotter nur einen einzigen Stifthalter, deaktiviere alle Stifte bis auf Stift 1. Nach dem Plotten wechselst du den Stift physisch, aktivierst Stift 2 und plottest die nächste Farbe.
+  * **Testplots & Probedrucke:** Teste z.B. nur die Rahmenlinien oder eine feine Schraffur, bevor der gesamte mehrfarbige Plot gestartet wird.
 
 ---
 
@@ -82,14 +82,14 @@ In der Sektion **Stifte** des Ausgabe-Docks verfügt jeder Stift über eine eige
 Die Sektion **Plotter-Verbindung & Ausgabe** steuert den physikalischen Datentransfer:
 
 ### Schritt 1: Verbindung & Hardware-Inquiry
-1. Wählen Sie den gewünschten Anschluss (z.B. `/dev/ttyUSB0` unter Linux oder `COM3` unter Windows bzw. `tcp://...`).
-2. Klicken Sie auf **[ Plotter prüfen (Inquiry) ]**.
+1. Wähle den gewünschten Anschluss (z.B. `/dev/ttyUSB0` unter Linux oder `COM3` unter Windows bzw. `tcp://...`).
+2. Klicke auf **[ Plotter prüfen (Inquiry) ]**.
 3. Plotter Studio sendet `OI;` (Modellabfrage) und `OH;` (Hard-Clip-Abfrage) an das Gerät.
 4. Bei erfolgreicher Rückmeldung leuchtet das Banner grün auf:
    `7585B (A3, 40 U/mm) • Hard-Clip: 390x287 mm`.
 
 ### Schritt 2: Plot starten
-* Klicken Sie auf **[ Plot senden ]**.
+* Klicke auf **[ Plot senden ]**.
 * Der Auftrag wird im Hintergrund über den `SerialStreamer` gestreamt.
 * Ein Fortschrittsbalken zeigt den Prozentsatz gesendeter Befehle an.
 * Im Canvas wandert der Toolhead-Cursor synchron mit dem realen Plotterkopf über das virtuelle Blatt.
@@ -105,9 +105,10 @@ Die Sektion **Plotter-Verbindung & Ausgabe** steuert den physikalischen Datentra
 
 ## 6. Datei-Export
 
-Möchten Sie den optimierten Plot für später archivieren oder auf einem separaten Steuerungsrechner ausführen:
+Möchtest du den optimierten Plot für später archivieren oder auf einem separaten Steuerungsrechner ausführen:
 
 * **[ Plotdatei (.hpgl) exportieren... ]:**
   Erzeugt eine saubere, standardkonforme HP-GL/PLT-Datei. Alle Koordinaten sind exakt auf das Zielgerät, den Nullpunkt und die Stiftwechsel abgestimmt.
 * **[ Plot-Vektoren (.svg) exportieren... ]:**
   Exportiert das Ergebnis der Optimierung als SVG-Vektordatei. Die Pfade sind sauber nach Stiftfarben in SVG-Gruppen (`<g id="pen_1">` etc.) strukturiert.
+

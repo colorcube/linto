@@ -1,6 +1,6 @@
 # 7. Empfohlene Ressourcen, Tools & Community-Sammlungen
 
-Für kreatives Arbeiten, generative Kunst, algorithmisches Design und den praktischen Erfahrungsaustausch mit Stiftplottern gibt es eine lebendige, weltweite Open-Source- und Maker-Community. Auf dieser Seite finden Sie die wichtigsten Anlaufstellen, kuratierte Sammlungen, Software-Werkzeuge und Foren.
+Für kreatives Arbeiten, generative Kunst, algorithmisches Design und den praktischen Erfahrungsaustausch mit Stiftplottern gibt es eine lebendige, weltweite Open-Source- und Maker-Community. Hier findest du die wichtigsten Anlaufstellen, kuratierte Sammlungen, Software-Werkzeuge und Foren.
 
 ---
 

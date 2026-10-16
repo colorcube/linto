@@ -1,6 +1,6 @@
 # 4. Hardware-Setup, Kalibrierung & Diagnose
 
-In diesem Kapitel erfahren Sie, wie Sie Ihren Stiftplotter physikalisch mit dem Computer verbinden, die Schnittstellenparameter und Panel-Einstellungen konfigurieren, die Verbindung mit dem integrierten Diagnosetool testen, den offiziellen Kalibrierplot durchführen und beliebige weitere Plottermodelle einbinden.
+Hier erfährst du, wie du deinen Stiftplotter physikalisch mit dem Computer verbindest, die Schnittstellenparameter und Panel-Einstellungen konfigurierst, die Verbindung mit dem integrierten Diagnosetool testest, den offiziellen Kalibrierplot durchführst und beliebige weitere Plottermodelle einbindest.
 
 ---
 
@@ -9,7 +9,7 @@ In diesem Kapitel erfahren Sie, wie Sie Ihren Stiftplotter physikalisch mit dem 
 Klassische Plotter nutzen serielle RS-232-Schnittstellen (meist 25-polige DB-25-Buchsen oder 9-polige DB-9-Buchsen). Moderne Computer verfügen in der Regel über keine nativen COM-Ports mehr, weshalb ein USB-zu-Seriell-Adapter verwendet wird.
 
 ### Empfohlene USB-Seriell-Adapter
-* **Chipsatz:** Verwenden Sie Adapter mit Original-Chipsätzen von **FTDI** (z.B. FT232R, FT2232) oder **Silicon Labs** (CP2102).
+* **Chipsatz:** Verwende Adapter mit Original-Chipsätzen von **FTDI** (z.B. FT232R, FT2232) oder **Silicon Labs** (CP2102).
 * **Vorsicht:** Billige Nachbauten ohne echten RTS/CTS-Hardware-Handshake führen bei größeren Vektordaten unweigerlich zu Pufferüberläufen und Datenverlust.
 
 ### Nullmodem-Verkabelung mit echtem Hardware-Handshake
@@ -28,13 +28,13 @@ Für eine zuverlässige Kommunikation ist ein vollbeschaltetes Nullmodem-Kabel (
 > **Wichtig:** Eine einfache 3-Draht-Verbindung (nur TxD, RxD, GND) ohne RTS/CTS funktioniert bei Stiftplottern nicht sicher, da der Plotter bei komplexen Kurvenfahrten den PC anhalten können muss.
 
 ### Alternative: TCP / Ethernet Device Server
-Statt eines USB-Kabels können Sie auch Serial-to-Ethernet-Boxen (z.B. Moxa NPort, USR-TCP232) oder einen Raspberry Pi mit `socat` verwenden. Plotter Studio unterstützt TCP-Sockets nativ über die Portangabe `tcp://<IP-Adresse>:<Port>` (z.B. `tcp://192.168.1.150:4001`).
+Statt eines USB-Kabels kannst du auch Serial-to-Ethernet-Boxen (z.B. Moxa NPort, USR-TCP232) oder einen Raspberry Pi mit `socat` verwenden. Plotter Studio unterstützt TCP-Sockets nativ über die Portangabe `tcp://<IP-Adresse>:<Port>` (z.B. `tcp://192.168.1.150:4001`).
 
 ---
 
 ## 2. Bedienfeld- und Panel-Setup (Beispiel Mutoh XP-500)
 
-Stellen Sie am Bedienfeld oder den DIP-Schaltern des Plotters folgende Parameter ein:
+Stelle am Bedienfeld oder den DIP-Schaltern des Plotters folgende Parameter ein:
 
 * **Emulation:** HP-7585B oder MH-GL.
 * **Baudrate:** `19200` Baud (oder `9600` Baud bei langen Kabelwegen).
@@ -47,7 +47,7 @@ Stellen Sie am Bedienfeld oder den DIP-Schaltern des Plotters folgende Parameter
 
 ## 3. Hardware-Diagnose mit `tools/xp500_probe.py`
 
-Plotter Studio liefert ein eigenständiges Terminal-Diagnosewerkzeug mit, mit dem Sie die Schnittstelle und alle Rückmeldungen auf Bit- und Byte-Ebene prüfen können:
+Plotter Studio liefert ein eigenständiges Terminal-Diagnosewerkzeug mit, mit dem du die Schnittstelle und alle Rückmeldungen auf Bit- und Byte-Ebene prüfen kannst:
 
 ```bash
 # Aufruf über USB-Seriell:
@@ -83,7 +83,7 @@ Target: /dev/ttyUSB0 (19200 baud, 8N1, RTS/CTS)
 Result: Plotter is ONLINE, RESPONSIVE and READY FOR PLOTTING!
 ```
 
-Erscheint hier ein Timeout, überprüfen Sie die Leitungen CTS/RTS und die Baudrate am Plotterbedienfeld.
+Erscheint hier ein Timeout, überprüfe die Leitungen CTS/RTS und die Baudrate am Plotterbedienfeld.
 
 ---
 
@@ -102,7 +102,7 @@ Im Verzeichnis `resources/` liegen vorbereitete Kalibriermuster für DIN A4 und 
    * *Prüfung:* Wurde die Schrift kopfstehend oder gespiegelt gezeichnet? Falls ja, muss im Geräteprofil `invert_x`, `invert_y` oder `rotation_deg` angepasst werden.
 2. **Präzisions-Messstrecke (400 mm bei A3 / 200 mm bei A4):**
    * Eine lange durchgezogene Messlinie mit präzisen Endstrichen.
-   * *Prüfung:* Messen Sie die gezeichnete Linie mit einem hochwertigen **Stahllineal** nach.
+   * *Prüfung:* Miss die gezeichnete Linie mit einem hochwertigen **Stahllineal** nach.
    * Ist die Linie z.B. exakt 400,0 mm lang, arbeitet die Schrittmotorübersetzung perfekt mit 40,0 Units/mm. Bei Abweichungen kann der Faktor im Geräteprofil (`units_per_mm`) feinjustiert werden.
 3. **Äußerer Begrenzungsrahmen (Hard-Clip Check):**
    * Zeichnet ein Rechteck genau an den äußersten plottbaren Grenzen des Papiers.
@@ -121,11 +121,11 @@ Im Verzeichnis `resources/` liegen vorbereitete Kalibriermuster für DIN A4 und 
 
 ## 5. Anbindung weiterer Plottermodelle
 
-Plotter Studio beschränkt sich nicht auf den Mutoh XP-500. Sie können beliebige Plotter in der Konfiguration hinzufügen.
+Plotter Studio beschränkt sich nicht auf den Mutoh XP-500. Du kannst beliebige Plotter in der Konfiguration hinzufügen.
 
 ### Dialog "Geräte-Einstellungen"
 
-Öffnen Sie über die obere Leiste oder das Menü **Geräte -> Einstellungen...** den Konfigurationsdialog:
+Öffne über die obere Leiste oder das Menü **Geräte -> Einstellungen...** den Konfigurationsdialog:
 
 ![Dialog Geräte-Einstellungen](../images/dialog_device_settings.png)
 
@@ -138,7 +138,7 @@ Plotter Studio beschränkt sich nicht auf den Mutoh XP-500. Sie können beliebig
   * **Randprofil:** Gewünschtes Standard-Margin-Profil.
 
 ### Eigene Geräteprofile als YAML anlegen
-Geräteprofile werden unter `resources/devices/<name>.yaml` gespeichert. Sie können einfach eine neue Profildatei anlegen:
+Geräteprofile werden unter `resources/devices/<name>.yaml` gespeichert. Du kannst einfach eine neue Profildatei anlegen:
 
 ```yaml
 model_id: "roland_dxy"
@@ -176,7 +176,7 @@ Sobald die Datei im Verzeichnis `resources/devices/` abgelegt ist, steht das neu
 
 ### Geräte-Import aus InkCut
 
-Plotter Studio liefert ein Import-Werkzeug mit, mit dem Sie alle HP-GL-Gerätetreiber aus einer InkCut-Installation (`manifest.enaml`) direkt in gebrauchsfertige Plotter-Studio-Profile konvertieren können:
+Plotter Studio liefert ein Import-Werkzeug mit, mit dem du alle HP-GL-Gerätetreiber aus einer InkCut-Installation (`manifest.enaml`) direkt in gebrauchsfertige Plotter-Studio-Profile konvertieren kannst:
 
 ```bash
 # Geräte aus InkCut einlesen und auflisten:

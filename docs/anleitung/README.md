@@ -1,6 +1,6 @@
 # Plotter Studio – Benutzerhandbuch
 
-Willkommen im offiziellen Benutzerhandbuch von **Plotter Studio**. Dieses Handbuch führt Sie von den ersten Schritten und dem typischen Arbeitsablauf über die Detailbedienung aller Werkzeuge bis hin zum Anschluss, der Kalibrierung und den mathematischen Hintergründen.
+Willkommen im offiziellen Benutzerhandbuch von **Plotter Studio**. Dieses Handbuch führt dich von den ersten Schritten und dem typischen Arbeitsablauf über die Detailbedienung aller Werkzeuge bis hin zum Anschluss, der Kalibrierung und den mathematischen Hintergründen.
 
 ---
 
@@ -12,7 +12,8 @@ Plotter Studio ist ein spezialisierter **Slicer und Arbeitsbereich für Vektor-S
 ### Was ist es gar nicht?
 * **Kein Druckertreiber für Tintenstrahl-Großformatdrucker:** Großformatige Fotodrucker (z.B. HP DesignJet, Epson SureColor, Canon imagePROGRAF) werden in Büros umgangssprachlich oft als „Plotter“ bezeichnet, sind aber Pixel-Rasterdrucker. Plotter Studio steuert ausschließlich echte **Vektor-Stiftplotter** an, die physische Stifte über Papier bewegen.
 * **Keine Schneideplotter-Software (Cutter):** Plotter Studio ist für **Stiftplotter** konzipiert. Reine Schneideplotter mit Messerklingen (Vinyl-Cutter) werden noch nicht unterstützt, da die dafür nötige Klingen-Offset-Kompensation noch fehlt (viele Cutter lassen sich jedoch mit Stifteinsatz als Stiftplotter nutzen).
-* **Kein Vektor-Zeichenprogramm:** Plotter Studio ersetzt weder Inkscape noch Adobe Illustrator. Sie erstellen Ihre Kunstwerke, CAD-Pläne oder Algorithmen in Ihrem gewohnten Werkzeug und exportieren sie als Standard-SVG. Plotter Studio übernimmt dann das Layouten, Skalieren, Pfadoptimieren und Plotten.
+* **Kein Vektor-Zeichenprogramm:** Plotter Studio ersetzt weder Inkscape noch Adobe Illustrator. Du erstellst deine Kunstwerke, CAD-Pläne oder Algorithmen in deinem gewohnten Werkzeug und exportierst sie als Standard-SVG. Plotter Studio übernimmt dann das Layouten, Skalieren, Pfadoptimieren und Plotten.
+
 
 ### Was kann Plotter Studio heute schon?
 * SVG- und HP-GL/PLT-Vektordateien laden, platzieren, numerisch skalieren (50%, 100%, 200%, Proportions-Sperre), drehen (90°-Schritte oder freier Winkel) und auf dem Papier zentrieren.

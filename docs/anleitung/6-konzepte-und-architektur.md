@@ -59,7 +59,7 @@ Plotter Studio fungiert für Stiftplotter ähnlich wie ein **Slicer** in der 3D-
 
 ## 3. Koordinatensysteme und Nullpunkte
 
-In Plotter Studio arbeiten Sie immer mit intuitiven **Blattkoordinaten**:
+In Plotter Studio arbeitest du immer mit intuitiven **Blattkoordinaten**:
 * Einheit: Millimeter (mm).
 * Nullpunkt: Oben links an der Papierkante.
 * X-Achse nach rechts, Y-Achse nach unten.
