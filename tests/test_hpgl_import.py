@@ -100,3 +100,22 @@ def test_load_hpgl_file_and_gui_integration(tmp_path: Path, qapp):
     assert cb is not None
     assert pb.contains_box(cb)
     win.close()
+
+
+def test_load_classic_examples():
+    """Verify that bundled classic HP-GL example files load properly."""
+    examples_dir = Path(__file__).parent.parent / "examples"
+    shuttle = examples_dir / "space-columbia.hpgl"
+    if shuttle.is_file():
+        item = load_hpgl(str(shuttle))
+        assert len(item.paths) > 500
+        pens = {p.pen_id for p in item.paths}
+        assert len(pens) >= 5
+        assert item.original_bounds is not None
+        assert item.original_bounds.width > 20.0
+
+    walker = examples_dir / "imperial-walker.hpgl"
+    if walker.is_file():
+        item_w = load_hpgl(str(walker))
+        assert len(item_w.paths) > 400
+
