@@ -60,16 +60,16 @@ Noch offen. Zuerst Panel und Handbuch, dann mit Skript `tools/xp500_probe.py` (p
 | alle | passende Tests | Referenzfälle |
 
 ## AP1 – Core: Polylinien & Geometrie (M)
-- **Schlanker numpy/scipy-Kern (Entscheidung D-15):** Eigener Polylinien-Datentyp (`ndarray`). Algorithmen (Bézier-Diskretisierung, Endpunkt-Merge, KD-Tree 2-Opt) orientieren sich an den Konzepten von vpype/MutohPlot als Ideen- und Algorithmen-Ressource, jedoch ohne externe Monster-Abhängigkeiten.
+- **Schlanker numpy-Kern (Entscheidung D-15):** Eigener Polylinien-Datentyp (`ndarray`) und native Kurvensegmente. Algorithmen (Bézier-Diskretisierung, vektorisiertes Endpunkt-Merge, Nearest-Neighbor + 2-Opt) orientieren sich an den Konzepten von vpype/MutohPlot als Ideen- und Algorithmen-Ressource, jedoch ohne externe Schwergewichte wie `scipy` oder `shapely`.
 - Polylinien-Datentyp (numpy), Stift-Zuordnung.
 - Adaptive Bézier-/Bogen-Diskretisierung mit Sehnentoleranz.
 - Affine Transformationen, Bounding Boxes, Statistik (Längen, Leerweg).
-- Unit-Tests (pytest + hypothesis).
+- Unit-Tests (pytest).
 
 **Abnahme:** Kreis r = 100 mm bei 0,05 mm Toleranz → max. Abweichung ≤ 0,05 mm, minimale Punktzahl.
 
 ## AP2 – Device: Profil, Abbildung, Blatterkennung, HPGL-Emitter (M) – ✅ Umgesetzt
-- YAML-Profil + Pydantic-Validierung (`resources/devices/mutoh_xp500.yaml`, `src/plotter_studio/device/profile.py`).
+- YAML-Profil (`resources/devices/mutoh_xp500.yaml`, `src/plotter_studio/device/profile.py`).
 - Abbildung Papier-mm → Units nach konzept.md §4 (Center-Origin, asymmetrische Ränder EXP/NORM/TYPE1/TYPE3).
 - Blatterkennung aus `OH` (Format + Lage).
 - Emitter (7585B): `IN`, `SP`, `VS`, `FS`, `PU`, `PD` mit Koordinatenketten und Schritt-Indizes.
@@ -83,7 +83,7 @@ Noch offen. Zuerst Panel und Handbuch, dann mit Skript `tools/xp500_probe.py` (p
 
 ## AP4 – Pipeline, Optimierer, Import, Schätzer (M) – ✅ Umgesetzt
 - SVG-Import mit Stiftzuordnung und Einheitenumrechnung.
-- Pipeline: Adaptive Bézier-Glättung, Endpunkt-Merge, RDP-Vereinfachung, KD-Tree Greedy + 2-Opt-Wegoptimierung, optionales Clipping.
+- Pipeline: Adaptive Bézier-Glättung, Endpunkt-Merge, RDP-Vereinfachung, vektorisierte Greedy + 2-Opt-Wegoptimierung, optionales Clipping.
 - Pre-Flight-Statistiken: Zeichenweg, Leerweg, Sortier-Ersparnis, Stiftwechsel, Dauer.
 - HP-GL- und Plot-SVG-Export.
 

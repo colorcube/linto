@@ -8,76 +8,78 @@ import numpy as np
 
 def merge_polylines(lines: List[np.ndarray], tolerance_mm: float = 0.1) -> List[np.ndarray]:
     """
-    Merge polylines whose endpoints are within tolerance_mm.
+    Merge polylines whose endpoints are within tolerance_mm using vectorized NumPy lookup.
     Can reverse lines if orientation matches.
     """
     if len(lines) <= 1:
         return lines
 
-    # Keep a pool of available lines
     pool = [l for l in lines if len(l) >= 2]
     if not pool:
         return []
 
+    n = len(pool)
+    starts = np.array([l[0] for l in pool], dtype=float)
+    ends = np.array([l[-1] for l in pool], dtype=float)
+    active = np.ones(n, dtype=bool)
+    tol_sq = tolerance_mm * tolerance_mm
+
     merged: List[np.ndarray] = []
 
-    while pool:
-        current = pool.pop(0)
-        extended = True
+    for seed_idx in range(n):
+        if not active[seed_idx]:
+            continue
+        active[seed_idx] = False
+        chunks = [pool[seed_idx]]
+        cur_start = starts[seed_idx].copy()
+        cur_end = ends[seed_idx].copy()
 
-        while extended:
-            extended = False
-            cur_start = current[0]
-            cur_end = current[-1]
+        while True:
+            rem_indices = np.flatnonzero(active)
+            if len(rem_indices) == 0:
+                break
 
-            best_idx = -1
-            best_type = ""  # "append", "append_rev", "prepend", "prepend_rev"
-            min_dist = tolerance_mm
+            cand_starts = starts[rem_indices]
+            cand_ends = ends[rem_indices]
 
-            for idx, candidate in enumerate(pool):
-                cand_start = candidate[0]
-                cand_end = candidate[-1]
+            # Squared distances to candidate endpoints:
+            # 0: cur_end -> cand_start (append)
+            # 1: cur_end -> cand_end   (append_rev)
+            # 2: cur_start -> cand_end (prepend)
+            # 3: cur_start -> cand_start (prepend_rev)
+            d0 = np.sum((cand_starts - cur_end) ** 2, axis=1)
+            d1 = np.sum((cand_ends - cur_end) ** 2, axis=1)
+            d2 = np.sum((cand_ends - cur_start) ** 2, axis=1)
+            d3 = np.sum((cand_starts - cur_start) ** 2, axis=1)
 
-                # Check dist(cur_end, cand_start) -> append candidate
-                d1 = math.hypot(cur_end[0] - cand_start[0], cur_end[1] - cand_start[1])
-                if d1 < min_dist:
-                    min_dist = d1
-                    best_idx = idx
-                    best_type = "append"
+            all_dists = np.vstack((d0, d1, d2, d3))
+            min_flat = int(np.argmin(all_dists))
+            best_mode, local_idx = divmod(min_flat, len(rem_indices))
+            best_dist_sq = all_dists[best_mode, local_idx]
 
-                # Check dist(cur_end, cand_end) -> append candidate reversed
-                d2 = math.hypot(cur_end[0] - cand_end[0], cur_end[1] - cand_end[1])
-                if d2 < min_dist:
-                    min_dist = d2
-                    best_idx = idx
-                    best_type = "append_rev"
+            if best_dist_sq >= tol_sq:
+                break
 
-                # Check dist(cur_start, cand_end) -> prepend candidate
-                d3 = math.hypot(cur_start[0] - cand_end[0], cur_start[1] - cand_end[1])
-                if d3 < min_dist:
-                    min_dist = d3
-                    best_idx = idx
-                    best_type = "prepend"
+            cand_idx = int(rem_indices[local_idx])
+            active[cand_idx] = False
+            cand = pool[cand_idx]
 
-                # Check dist(cur_start, cand_start) -> prepend candidate reversed
-                d4 = math.hypot(cur_start[0] - cand_start[0], cur_start[1] - cand_start[1])
-                if d4 < min_dist:
-                    min_dist = d4
-                    best_idx = idx
-                    best_type = "prepend_rev"
+            if best_mode == 0:  # append
+                chunks.append(cand[1:])
+                cur_end = ends[cand_idx].copy()
+            elif best_mode == 1:  # append_rev
+                chunks.append(cand[::-1][1:])
+                cur_end = starts[cand_idx].copy()
+            elif best_mode == 2:  # prepend
+                chunks.insert(0, cand[:-1])
+                cur_start = starts[cand_idx].copy()
+            else:  # prepend_rev
+                chunks.insert(0, cand[::-1][:-1])
+                cur_start = ends[cand_idx].copy()
 
-            if best_idx != -1:
-                cand = pool.pop(best_idx)
-                if best_type == "append":
-                    current = np.vstack((current, cand[1:]))
-                elif best_type == "append_rev":
-                    current = np.vstack((current, cand[::-1][1:]))
-                elif best_type == "prepend":
-                    current = np.vstack((cand[:-1], current))
-                elif best_type == "prepend_rev":
-                    current = np.vstack((cand[::-1][:-1], current))
-                extended = True
-
-        merged.append(current)
+        if len(chunks) == 1:
+            merged.append(chunks[0])
+        else:
+            merged.append(np.vstack(chunks))
 
     return merged

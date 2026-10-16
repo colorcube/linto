@@ -74,9 +74,9 @@ Abhängigkeitsregel: `gui → (core, device, plotd-Client)`, niemals umgekehrt. 
 
 ### Technologie
 - **Lizenz: GPLv3** (entschieden).
-- Python ≥ 3.12, **numpy**, **shapely** (Clipping), **svgelements** (SVG-Parsing), **pyserial** (headless statt QSerialPort), **pydantic** (Profil- und Konfigurations-Validierung), **pytest**.
+- Python ≥ 3.11, **numpy** (vektorisierte Geometrie, Clipping & Pfadoptimierung), **svgelements** (SVG-Parsing), **pyserial** (headless statt QSerialPort), **pyyaml** (Profil- und Konfigurations-Persistenz), **pytest**.
 - GUI: **PySide6** (offizielles Qt-Binding).
-- **vpype:** Wird **nicht** als Bibliothek eingebunden (zu schwergewichtig, kein nativer Library-Modus). Dient stattdessen als **Ideen- und Algorithmen-Ressource** für den schlanken, eigenen Geometriekern (`numpy`/`scipy`).
+- **vpype:** Wird **nicht** als Bibliothek eingebunden (zu schwergewichtig, kein nativer Library-Modus). Dient stattdessen als **Ideen- und Algorithmen-Ressource** für den schlanken, eigenen Geometriekern (`numpy`).
 - **MutohPlot** (MIT): Gerätewissen und Algorithmen (HP-GL-Parser, Hard-Clip-Berechnungen, Kalibrierung, Userspace-XON/XOFF) werden portiert (mit Erhalt des MIT-Lizenzhinweises), ohne externe Paketabhängigkeit. Details: [analyse-mutohplot.md](analyse-mutohplot.md).
 
 
@@ -289,7 +289,7 @@ Eine Zeichnung **darf jederzeit ganz oder teilweise über das Papier bzw. den pl
    - Elemente, die über den plottbaren Bereich hinausragen, werden im Canvas deutlich optisch markiert (z. B. rote Schraffur oder Warnfarbe).
    - Der Pre-Flight-Dialog warnt vor dem Senden: *„Achtung: Zeichnung ragt um 14,2 mm über den plottbaren Bereich hinaus.“*
 2. **Korrektes Plotten trotz Überstand (Wählbare Ausgabe-Strategie):**
-   - **Software-Clipping (empfohlen):** Die Pipeline schneidet Pfade an den Grenzen des Hard-Clips bzw. Blattrands sauber ab (`shapely.clip`). Außerhalb liegende Linien werden gar nicht erst an den Plotter gesendet. Dies schützt Stift und Mechanik zuverlässig.
+   - **Software-Clipping (empfohlen):** Die Pipeline schneidet Pfade an den Grenzen des Hard-Clips bzw. Blattrands sauber ab (Cohen-Sutherland-Rechteck-Clipping). Außerhalb liegende Linien werden gar nicht erst an den Plotter gesendet. Dies schützt Stift und Mechanik zuverlässig.
    - **Unbeschnitten senden (Hardware-Clipping):** Befehle werden ungekürzt gesendet; viele Plotter (darunter der XP-500) ignorieren Koordinaten außerhalb ihres physikalischen Hard-Clip-Fensters hardwareseitig.
    - **Auto-Fit-Vorschlag:** Die GUI bietet auf Knopfdruck an: *„Auf plottbaren Bereich einpassen“*.
 
@@ -303,11 +303,11 @@ Jeder Schritt ist eine reine Funktion `Lines → Lines`, einzeln konfigurier- un
 |---|---|---|
 | 1 | **Compile** | Quell-Objekte → Polylinien. Bézier/Bögen adaptiv mit Sehnentoleranz (Default 0,05 mm ≈ 2 Units). |
 | 2 | **Transform** | Objekt-Transformationen anwenden (in mm). |
-| 3 | **Clip** | an Hard-Clip bzw. Benutzerrand (shapely). |
+| 3 | **Clip** | an Hard-Clip bzw. Benutzerrand (Cohen-Sutherland). |
 | 4 | **Merge** | Endpunkte mit Abstand < `merge_tolerance` verbinden (auch umgekehrte Richtung). |
 | 5 | **Simplify** | Douglas-Peucker mit Toleranz ≤ halbe Stiftbreite, redundante Stützpunkte entfernen. |
 | 6 | **Dedupe** (opt.) | doppelt übereinanderliegende Linien entfernen. |
-| 7 | **Sort** | je Stift: Greedy (KD-Baum) + optional 2-Opt. **Offene Pfade umkehrbar, geschlossene Pfade mit frei wählbarem Startpunkt.**<br>⚠️ **Hardware-Voraussetzung (XP-500):** Am Bedienfeld muss `Sort: Off` eingestellt sein (siehe [konfiguration.md](../devices/mutoh-xp500/konfiguration.md)), damit die Firmware die optimierte Reihenfolge nicht überschreibt! |
+| 7 | **Sort** | je Stift: Vektorisiertes Greedy Nearest-Neighbor (`numpy`) + optional 2-Opt. **Offene Pfade umkehrbar, geschlossene Pfade mit frei wählbarem Startpunkt.**<br>⚠️ **Hardware-Voraussetzung (XP-500):** Am Bedienfeld muss `Sort: Off` eingestellt sein (siehe [konfiguration.md](../devices/mutoh-xp500/konfiguration.md)), damit die Firmware die optimierte Reihenfolge nicht überschreibt! |
 | 8 | **Pen-Order** | Reihenfolge der Stifte (manuell; Default hell → dunkel). |
 | 9 | **Emit** | Überführung in gerätespezifischen Befehlsstrom (`Emitter`-Interface). |
 
