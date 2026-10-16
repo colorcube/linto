@@ -188,3 +188,47 @@ def test_load_standard_svg_as_project():
             os.remove(tmp_out)
 
 
+def test_project_curve_preservation_roundtrip():
+    """Verify that exporting and reloading a project preserves native C and Q Bézier curves."""
+    from plotter_studio.core.geometry import CubicBezierSegment, QuadraticBezierSegment
+
+    svg_curves = """<svg width="100mm" height="100mm" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <path d="M 10 50 C 20 10, 80 10, 90 50" stroke="#000000" fill="none"/>
+      <path d="M 10 80 Q 50 20, 90 80" stroke="#d32f2f" fill="none"/>
+    </svg>"""
+    item = load_svg(svg_curves, name="CurvesItem")
+    item.transform = AffineTransform.translation(15.0, 25.0).multiply(AffineTransform.scale(1.5))
+
+    doc = Document()
+    doc.items.append(item)
+
+    with tempfile.NamedTemporaryFile(suffix=".svg", delete=False) as f:
+        tmp_path = f.name
+
+    try:
+        export_document_to_svg(doc, tmp_path)
+        raw_xml = Path(tmp_path).read_text(encoding="utf-8")
+        # Exported SVG must contain native C and Q commands, not flattened L chains
+        assert " C " in raw_xml
+        assert " Q " in raw_xml
+
+        reloaded = load_document_from_svg(tmp_path)
+        assert len(reloaded.items) == 1
+        r_item = reloaded.items[0]
+        assert len(r_item.paths) == 2
+        assert isinstance(r_item.paths[0].segments[0], CubicBezierSegment)
+        assert isinstance(r_item.paths[1].segments[0], QuadraticBezierSegment)
+
+        # Verify restored local control points match original before transform
+        orig_c = item.paths[0].segments[0]
+        rest_c = r_item.paths[0].segments[0]
+        assert np.allclose(orig_c.start, rest_c.start, atol=1e-3)
+        assert np.allclose(orig_c.control1, rest_c.control1, atol=1e-3)
+        assert np.allclose(orig_c.control2, rest_c.control2, atol=1e-3)
+        assert np.allclose(orig_c.end, rest_c.end, atol=1e-3)
+    finally:
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
+
+
+

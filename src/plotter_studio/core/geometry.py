@@ -249,17 +249,36 @@ class ArcSegment:
         sx = math.hypot(t.a, t.b)
         sy = math.hypot(t.c, t.d)
         det = t.a * t.d - t.b * t.c
-        rot_offset = math.atan2(t.b, t.a)
+        ortho = abs(t.a * t.c + t.b * t.d)
         new_cubics = tuple(c.transformed(t) for c in self.cubics)
+        # Parametric arc (rx, ry, start_angle, sweep_angle) is preserved under
+        # orientation-preserving similarity transforms (translation + rotation + uniform scale)
+        is_similarity = det > 1e-12 and abs(sx - sy) <= 1e-6 * max(1.0, sx) and ortho <= 1e-6 * max(1.0, sx * sy)
+        if is_similarity:
+            rot_offset = math.atan2(t.b, t.a)
+            return ArcSegment(
+                start=t.transform_xy(*self.start),
+                end=t.transform_xy(*self.end),
+                center=t.transform_xy(*self.center),
+                rx=self.rx * sx,
+                ry=self.ry * sy,
+                rotation_rad=self.rotation_rad + rot_offset,
+                start_angle_rad=self.start_angle_rad,
+                sweep_angle_rad=self.sweep_angle_rad,
+                large_arc=self.large_arc,
+                sweep=self.sweep,
+                cubics=new_cubics,
+            )
+        # Under non-uniform scale, shear, or reflection, fall back to affine-invariant cubics
         return ArcSegment(
             start=t.transform_xy(*self.start),
             end=t.transform_xy(*self.end),
             center=t.transform_xy(*self.center),
-            rx=self.rx * sx,
-            ry=self.ry * sy,
-            rotation_rad=self.rotation_rad + rot_offset,
-            start_angle_rad=self.start_angle_rad if det >= 0 else -self.start_angle_rad,
-            sweep_angle_rad=self.sweep_angle_rad if det >= 0 else -self.sweep_angle_rad,
+            rx=0.0,
+            ry=0.0,
+            rotation_rad=0.0,
+            start_angle_rad=0.0,
+            sweep_angle_rad=0.0,
             large_arc=self.large_arc,
             sweep=self.sweep if det >= 0 else (not self.sweep),
             cubics=new_cubics,

@@ -65,3 +65,30 @@ def test_merge_polylines():
     assert len(merged[0]) == 3
     assert np.allclose(merged[0][0], [0.0, 0.0])
     assert np.allclose(merged[0][-1], [20.0, 0.0])
+
+
+def test_merge_polylines_all_four_orientations():
+    """Verify append, append_rev, prepend, and prepend_rev modes in vectorized merge_polylines."""
+    # Seed: (10, 0) -> (20, 0)
+    seed = np.array([[10.0, 0.0], [20.0, 0.0]])
+    # 1. append_rev: (30, 0) -> (20.02, 0) (cand_end near cur_end)
+    c_append_rev = np.array([[30.0, 0.0], [20.02, 0.0]])
+    # 2. prepend: (0, 0) -> (9.98, 0) (cand_end near cur_start)
+    c_prepend = np.array([[0.0, 0.0], [9.98, 0.0]])
+    # 3. prepend_rev: (0.02, 0) -> (-10, 0) (cand_start near new cur_start (0,0))
+    c_prepend_rev = np.array([[0.02, 0.0], [-10.0, 0.0]])
+    # 4. append: (30.03, 0) -> (40, 0) (cand_start near new cur_end (30,0))
+    c_append = np.array([[30.03, 0.0], [40.0, 0.0]])
+    # 5. Unrelated distant segment
+    distant = np.array([[100.0, 100.0], [110.0, 100.0]])
+
+    merged = merge_polylines(
+        [seed, c_append_rev, c_prepend, c_prepend_rev, c_append, distant],
+        tolerance_mm=0.1,
+    )
+    assert len(merged) == 2
+    main_chain = merged[0]
+    assert np.allclose(main_chain[0], [-10.0, 0.0])
+    assert np.allclose(main_chain[-1], [40.0, 0.0])
+    assert np.allclose(merged[1], distant)
+

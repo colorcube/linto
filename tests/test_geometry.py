@@ -78,3 +78,67 @@ def test_rotation_affine_transform():
     assert math.isclose(t.d, 1.0, abs_tol=1e-9)
     assert math.isclose(t.tx, 0.0, abs_tol=1e-9)
     assert math.isclose(t.ty, 0.0, abs_tol=1e-9)
+
+
+def test_analytical_curve_bounds():
+    """Verify compute_segments_bounds matches dense numerical evaluation for S-curves."""
+    from plotter_studio.core.geometry import (
+        CubicBezierSegment,
+        QuadraticBezierSegment,
+        compute_segments_bounds,
+    )
+    from plotter_studio.pipeline.flatten import flatten_segment
+
+    cubic = CubicBezierSegment(
+        start=(10.0, 50.0),
+        control1=( -30.0, 120.0),
+        control2=(130.0, -40.0),
+        end=(90.0, 50.0),
+    )
+    quad = QuadraticBezierSegment(
+        start=(10.0, 10.0),
+        control=(50.0, 90.0),
+        end=(90.0, 10.0),
+    )
+
+    for seg in (cubic, quad):
+        b = compute_segments_bounds([seg])
+        assert b is not None
+        dense_pts = np.array(flatten_segment(seg, tolerance=0.001))
+        assert math.isclose(b.min_x, float(np.min(dense_pts[:, 0])), abs_tol=0.02)
+        assert math.isclose(b.max_x, float(np.max(dense_pts[:, 0])), abs_tol=0.02)
+        assert math.isclose(b.min_y, float(np.min(dense_pts[:, 1])), abs_tol=0.02)
+        assert math.isclose(b.max_y, float(np.max(dense_pts[:, 1])), abs_tol=0.02)
+
+
+def test_segment_transformations_including_non_uniform_arc():
+    """Verify PathSegment.transformed under rotation, reflection, and non-uniform scaling."""
+    from plotter_studio.core.svg_import import load_svg
+    from plotter_studio.pipeline.flatten import flatten_path_segments
+
+    svg_circle = """<svg width="100mm" height="100mm" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="50" cy="50" r="30" stroke="#000000" fill="none"/>
+    </svg>"""
+    item = load_svg(svg_circle)
+    segs = item.paths[0].segments
+
+    # 1. Similarity transform (rotation + uniform scale + translation)
+    t_sim = AffineTransform.translation(15.0, -25.0).multiply(
+        AffineTransform.rotation(35.0, 50.0, 50.0)
+    ).multiply(AffineTransform.scale(2.0))
+    pts_sim = flatten_path_segments(segs, tolerance=0.01, transform=t_sim)
+    pts_raw_transformed = t_sim.transform_coords(flatten_path_segments(segs, tolerance=0.01))
+    assert math.isclose(float(np.min(pts_sim[:, 0])), float(np.min(pts_raw_transformed[:, 0])), abs_tol=0.1)
+    assert math.isclose(float(np.max(pts_sim[:, 0])), float(np.max(pts_raw_transformed[:, 0])), abs_tol=0.1)
+    assert math.isclose(float(np.min(pts_sim[:, 1])), float(np.min(pts_raw_transformed[:, 1])), abs_tol=0.1)
+    assert math.isclose(float(np.max(pts_sim[:, 1])), float(np.max(pts_raw_transformed[:, 1])), abs_tol=0.1)
+
+    # 2. Non-uniform scale + reflection (ellipse with flipped X)
+    t_non_uni = AffineTransform.scale(-2.0, 0.5)
+    pts_non_uni = flatten_path_segments(segs, tolerance=0.01, transform=t_non_uni)
+    pts_expected = t_non_uni.transform_coords(flatten_path_segments(segs, tolerance=0.01))
+    assert math.isclose(float(np.min(pts_non_uni[:, 0])), float(np.min(pts_expected[:, 0])), abs_tol=0.1)
+    assert math.isclose(float(np.max(pts_non_uni[:, 0])), float(np.max(pts_expected[:, 0])), abs_tol=0.1)
+    assert math.isclose(float(np.min(pts_non_uni[:, 1])), float(np.min(pts_expected[:, 1])), abs_tol=0.1)
+    assert math.isclose(float(np.max(pts_non_uni[:, 1])), float(np.max(pts_expected[:, 1])), abs_tol=0.1)
+

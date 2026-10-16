@@ -376,3 +376,35 @@ def test_main_window_open_project(qapp, tmp_path):
         assert win.paper_dock.spin_height.value() == 100.0
 
     win.close()
+
+
+def test_graphics_item_paints_native_curves_and_duplicates(qapp):
+    """Verify GraphicsImportItem.paint renders Q, C, and Arc segments via QPainterPath and duplicate_item preserves segments."""
+    from PySide6.QtGui import QImage, QPainter
+    from PySide6.QtWidgets import QStyleOptionGraphicsItem
+
+    svg_curves = """<svg width="100mm" height="100mm" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <path d="M 10 20 L 40 20 Q 60 5, 80 20 C 95 35, 95 65, 80 80 Z" stroke="#000000" fill="none"/>
+      <circle cx="50" cy="50" r="25" stroke="#d32f2f" fill="none"/>
+    </svg>"""
+    doc = Document()
+    item = load_svg(svg_curves, name="Curves")
+    doc.items.append(item)
+
+    dup = doc.duplicate_item(item, offset_mm=15.0)
+    assert len(dup.paths) == len(item.paths)
+    assert dup.paths[0].has_curves is True
+    assert dup.paths[1].has_curves is True
+
+    win = MainWindow(doc)
+    win.canvas.rebuild_items()
+    g_item = win.canvas._item_map[item.item_id]
+
+    img = QImage(200, 200, QImage.Format_ARGB32)
+    img.fill(0xFFFFFFFF)
+    painter = QPainter(img)
+    opt = QStyleOptionGraphicsItem()
+    g_item.paint(painter, opt, None)
+    painter.end()
+    win.close()
+

@@ -1,3 +1,4 @@
+import math
 import pytest
 import numpy as np
 from plotter_studio.pipeline.sort import (
@@ -55,3 +56,44 @@ def test_sort_random_order():
     )
     assert final_travel < unsorted
     assert len(opt_lines) == 5
+
+
+def test_sort_no_reverse():
+    """Verify allow_reverse=False preserves original line directions."""
+    l0 = np.array([[0.0, 0.0], [100.0, 0.0]])
+    l1 = np.array([[0.0, 10.0], [100.0, 10.0]])
+    opt_lines, travels, travel_mm, _ = sort_and_optimize_lines(
+        [l0, l1], start_pos=(0.0, 0.0), allow_reverse=False, use_2opt=False
+    )
+    assert np.allclose(opt_lines[0][0], [0.0, 0.0])
+    assert np.allclose(opt_lines[1][0], [0.0, 10.0])
+    assert travel_mm > 100.0
+
+
+def test_2opt_uncrosses_paths_and_maintains_endpoints():
+    """Verify optimize_paths_2opt resolves crossed travels and keeps travel list consistent."""
+    from plotter_studio.pipeline.sort import optimize_paths_2opt
+
+    # Construct a deliberately sub-optimal order with crossing travel moves:
+    # 0: (0,0)->(10,0), 1: (30,0)->(20,0), 2: (20,0)->(10,0), 3: (30,0)->(40,0)
+    # Reversing block [1..2] turns it into (10,0)->(20,0) and (20,0)->(30,0) with 0 travel!
+    lines = [
+        np.array([[0.0, 0.0], [10.0, 0.0]]),
+        np.array([[30.0, 0.0], [20.0, 0.0]]),
+        np.array([[20.0, 0.0], [10.0, 0.0]]),
+        np.array([[30.0, 0.0], [40.0, 0.0]]),
+    ]
+    init_travel = compute_unsorted_travel_distance(lines, start_pos=(0.0, 0.0))
+    assert math.isclose(init_travel, 40.0, abs_tol=1e-4)
+    opt_lines, travels, new_travel = optimize_paths_2opt(
+        lines, [], init_travel, start_pos=(0.0, 0.0)
+    )
+    assert new_travel < init_travel
+    assert math.isclose(new_travel, 0.0, abs_tol=1e-4)
+    # Verify travels match actual start/end points of opt_lines
+    cur = (0.0, 0.0)
+    for idx, line in enumerate(opt_lines):
+        assert travels[idx][0] == cur
+        assert np.allclose(travels[idx][1], line[0])
+        cur = (float(line[-1, 0]), float(line[-1, 1]))
+
