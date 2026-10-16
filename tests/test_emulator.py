@@ -13,6 +13,7 @@ from plotter_studio.emulator import (
     VirtualPlotter,
     PtyServer,
     TcpServer,
+    BytePacer,
     export_plotter_svg,
 )
 
@@ -226,3 +227,68 @@ def test_tcp_server_e2e():
             assert b"7585B\r" in data
     finally:
         server.stop()
+
+
+def test_byte_pacer():
+    """Verify BytePacer math and timing calculations for various baud rates."""
+    # 300 baud: 30 bytes/s -> 1 byte = 33.33ms, 3 bytes = 100ms
+    pacer_300 = BytePacer(300)
+    assert pacer_300.is_throttled is True
+    assert pacer_300.bytes_per_sec == 30.0
+    assert pacer_300.chunk_size == 3
+    assert abs(pacer_300.delay_for_bytes(30) - 1.0) < 1e-6
+    assert abs(pacer_300.delay_for_bytes(3) - 0.1) < 1e-6
+
+    # 9600 baud: 960 bytes/s
+    pacer_9600 = BytePacer(9600)
+    assert pacer_9600.is_throttled is True
+    assert pacer_9600.bytes_per_sec == 960.0
+    assert abs(pacer_9600.delay_for_bytes(960) - 1.0) < 1e-6
+
+    # 19200 baud
+    pacer_19200 = BytePacer(19200)
+    assert pacer_19200.is_throttled is True
+    assert pacer_19200.bytes_per_sec == 1920.0
+
+    # Unthrottled (None or 0)
+    pacer_none = BytePacer(None)
+    assert pacer_none.is_throttled is False
+    assert pacer_none.delay_for_bytes(100) == 0.0
+    assert pacer_none.chunk_size == 4096
+
+    pacer_zero = BytePacer(0)
+    assert pacer_zero.is_throttled is False
+    assert pacer_zero.delay_for_bytes(100) == 0.0
+
+    # Verify actual pacing sleep duration for a small byte count
+    t0 = time.perf_counter()
+    pacer_300.pace(3)  # 3 bytes at 300 baud = 100 ms
+    elapsed = time.perf_counter() - t0
+    assert 0.08 <= elapsed <= 0.20
+
+
+def test_tcp_server_baudrate_pacing():
+    """Verify that TcpServer throttles incoming data according to baudrate."""
+    plotter = VirtualPlotter(paper="A3", baudrate=2400)
+    server = TcpServer(plotter, host="127.0.0.1", port=19877)
+    server.start()
+
+    try:
+        time.sleep(0.05)
+        # 2400 baud = 240 bytes/s -> 48 bytes takes ~0.20 s
+        payload = b"IN; SP1; PU 0,0; PD 100,100; PU; SP0;\r"  # 37 bytes
+        with socket.create_connection(("127.0.0.1", 19877), timeout=2.0) as sock:
+            t0 = time.perf_counter()
+            sock.sendall(payload)
+            # Wait for plotter to process incoming data
+            deadline = time.time() + 2.0
+            while plotter.stats.bytes_received < len(payload) and time.time() < deadline:
+                time.sleep(0.02)
+            elapsed = time.perf_counter() - t0
+
+            # 37 bytes at 2400 baud (240 bytes/s) takes ~0.154 s
+            assert plotter.stats.bytes_received == len(payload)
+            assert elapsed >= 0.10
+    finally:
+        server.stop()
+

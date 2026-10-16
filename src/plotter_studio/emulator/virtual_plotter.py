@@ -74,6 +74,7 @@ class VirtualPlotter:
         default_speed_cm_s: float = 40.0,
         realtime: bool = False,
         speedup: float = 1.0,
+        baudrate: Optional[int] = None,
         on_response: Optional[Callable[[bytes], None]] = None,
         on_event: Optional[Callable[[str, dict], None]] = None,
     ):
@@ -87,6 +88,7 @@ class VirtualPlotter:
             default_speed_cm_s: Default pen speed in cm/s
             realtime: If True, simulates mechanical delay according to pen speed
             speedup: Acceleration factor for realtime simulation (e.g. 10.0 = 10x faster)
+            baudrate: Simulated serial baud rate (e.g. 300, 1200, 9600, 19200; None for unthrottled)
             on_response: Callback invoked whenever the plotter sends response bytes to the host
         """
         self.paper = paper.upper()
@@ -103,6 +105,7 @@ class VirtualPlotter:
         self.default_speed_cm_s = default_speed_cm_s
         self.realtime = realtime
         self.speedup = max(0.1, speedup)
+        self.baudrate = int(baudrate) if (baudrate is not None and int(baudrate) > 0) else None
         self.on_response = on_response
         self.on_event = on_event
 

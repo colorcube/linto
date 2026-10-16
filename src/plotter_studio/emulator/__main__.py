@@ -70,6 +70,12 @@ def main() -> int:
         help="Realtime motion speedup multiplier (default: 5.0)",
     )
     parser.add_argument(
+        "--baudrate",
+        type=int,
+        default=None,
+        help="Simulated serial baud rate for data transfer throttling (e.g. 300, 1200, 9600, 19200; default: unlimited)",
+    )
+    parser.add_argument(
         "--svg-output",
         type=str,
         default="./emulator_output.svg",
@@ -142,14 +148,15 @@ def main() -> int:
         resolution_mm=args.unit,
         realtime=args.realtime,
         speedup=args.speedup,
+        baudrate=args.baudrate,
         on_event=on_plotter_event,
     )
 
     if args.tcp:
-        server = TcpServer(plotter, port=args.tcp)
+        server = TcpServer(plotter, port=args.tcp, baudrate=args.baudrate)
         conn_str = server.start()
     else:
-        server = PtyServer(plotter, symlink_path=args.symlink)
+        server = PtyServer(plotter, symlink_path=args.symlink, baudrate=args.baudrate)
         conn_str = server.start()
 
     print("=" * 64)
@@ -159,6 +166,11 @@ def main() -> int:
     print(f" Ränder (Profil):  {args.margin} ({plotter.plottable_width_mm:.1f} x {plotter.plottable_height_mm:.1f} mm Hard-Clip)")
     print(f" Auflösung:        {args.unit} mm/Unit ({plotter.units_per_mm:.0f} Units/mm)")
     print(f" Puffer:           {args.buffer.upper()} ({plotter.buffer_size:,} Bytes)")
+    if args.baudrate:
+        bps = args.baudrate / 10.0
+        print(f" Baudrate:         {args.baudrate} Baud (~{bps:.0f} Bytes/s, 8N1)")
+    else:
+        print(f" Baudrate:         Unbegrenzt (Memory Speed)")
     print(f" Verbindung:       {conn_str}")
     if args.realtime:
         print(f" Mechanik:         Echtzeit-Simulation ({args.speedup:.1f}x Speedup)")

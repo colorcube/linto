@@ -38,6 +38,16 @@ head -n 1 < ./virtual_plotter
 # Antwort: 7585B
 ```
 
+### Langsame Schnittstelle simulieren (z. B. 300 Baud)
+Um serielle Übertragungen historisch authentisch oder für Time-out- und Puffer-Stresstests zu verlangsamen:
+```bash
+# 300 Baud (~30 Bytes/Sekunde bei 8N1) über TCP
+python -m plotter_studio.emulator --tcp 9999 --baudrate 300 --realtime
+
+# 1200 Baud über virtuelles PTY
+python -m plotter_studio.emulator --baudrate 1200
+```
+
 ---
 
 ## 2. CLI-Optionen
@@ -52,6 +62,7 @@ head -n 1 < ./virtual_plotter
 | `--tcp` | Port (z. B. `9999`) | Startet TCP-Server statt Linux-PTY |
 | `--realtime` | Flag (Default: aus) | Simuliert echte mechanische Verfahr- und Stiftwechselzeiten |
 | `--speedup` | Zahl (Default: `5.0`) | Beschleunigungsfaktor für die Echtzeit-Simulation |
+| `--baudrate` | Zahl (z. B. `300`, `1200`, `9600`, `19200`) | Drosselt serielle Übertragung exakt nach Baudrate (8N1, z. B. 30 Bytes/s bei 300 Baud) |
 | `--svg-output` | Pfad (Default: `./emulator_output.svg`) | Speichert beim Beenden (Strg+C) alle gezeichneten Vektoren als SVG |
 
 ---

@@ -1,7 +1,7 @@
 """Mutoh XP-500 Software Emulator (HP-7585B emulation)."""
 
 from .virtual_plotter import VirtualPlotter, EmulatorStats, RecordedPolyline
-from .server import PtyServer, TcpServer
+from .server import PtyServer, TcpServer, BytePacer
 from .svg_recorder import export_plotter_svg
 
 __all__ = [
@@ -10,5 +10,6 @@ __all__ = [
     "RecordedPolyline",
     "PtyServer",
     "TcpServer",
+    "BytePacer",
     "export_plotter_svg",
 ]

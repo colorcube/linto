@@ -13,12 +13,59 @@ import select
 import socket
 import termios
 import threading
+import time
 from pathlib import Path
 from typing import Optional
 
 from .virtual_plotter import VirtualPlotter
 
 logger = logging.getLogger("plotter_studio.emulator")
+
+
+class BytePacer:
+    """Calculates transmission pacing delays for serial baud rates (8N1).
+
+    8N1 framing: 1 start bit + 8 data bits + 1 stop bit = 10 bits per character.
+    Examples:
+    - 300 baud: 30 bytes/s -> ~33.3 ms per byte
+    - 1200 baud: 120 bytes/s -> ~8.3 ms per byte
+    - 9600 baud: 960 bytes/s -> ~1.04 ms per byte
+    - 19200 baud: 1920 bytes/s -> ~0.52 ms per byte
+    """
+
+    def __init__(self, baudrate: Optional[int] = None):
+        self.baudrate = int(baudrate) if (baudrate is not None and int(baudrate) > 0) else None
+
+    @property
+    def is_throttled(self) -> bool:
+        return self.baudrate is not None and self.baudrate > 0
+
+    @property
+    def bytes_per_sec(self) -> float:
+        if not self.is_throttled or not self.baudrate:
+            return float("inf")
+        return self.baudrate / 10.0
+
+    @property
+    def chunk_size(self) -> int:
+        """Target chunk size to balance realistic pacing with system call overhead (~20-100 ms)."""
+        if not self.is_throttled or not self.baudrate:
+            return 4096
+        # At 300 baud: 30 bytes/s -> chunk of 1 to 3 bytes (33-100 ms)
+        # At 19200 baud: 1920 bytes/s -> chunk of 96-128 bytes
+        return max(1, min(128, int(self.baudrate / 100)))
+
+    def delay_for_bytes(self, byte_count: int) -> float:
+        """Return delay in seconds for given number of bytes at configured baud rate."""
+        if not self.is_throttled or not self.baudrate or byte_count <= 0:
+            return 0.0
+        return (byte_count * 10.0) / self.baudrate
+
+    def pace(self, byte_count: int) -> None:
+        """Sleep for the duration required to transmit byte_count bytes."""
+        d = self.delay_for_bytes(byte_count)
+        if d > 0.0:
+            time.sleep(d)
 
 
 class PtyServer:
@@ -28,9 +75,12 @@ class PtyServer:
         self,
         plotter: VirtualPlotter,
         symlink_path: Optional[str | Path] = None,
+        baudrate: Optional[int] = None,
     ):
         self.plotter = plotter
         self.symlink_path = Path(symlink_path).resolve() if symlink_path else None
+        self.baudrate = baudrate if baudrate is not None else getattr(plotter, "baudrate", None)
+        self.pacer = BytePacer(self.baudrate)
 
         self.master_fd: Optional[int] = None
         self.slave_fd: Optional[int] = None
@@ -100,23 +150,31 @@ class PtyServer:
 
         while self._running:
             try:
-                # Write any queued responses first
+                # Write any queued responses first (paced according to baudrate)
                 with self._queue_lock:
                     pending = list(self._out_queue)
                     self._out_queue.clear()
 
                 for chunk in pending:
-                    try:
-                        os.write(self.master_fd, chunk)
-                    except (BlockingIOError, OSError):
-                        pass
+                    offset = 0
+                    while offset < len(chunk) and self._running:
+                        piece = chunk[offset : offset + self.pacer.chunk_size]
+                        try:
+                            os.write(self.master_fd, piece)
+                        except (BlockingIOError, OSError):
+                            pass
+                        self.pacer.pace(len(piece))
+                        offset += len(piece)
 
                 # Wait for incoming data with timeout
-                r, _, _ = select.select([self.master_fd], [], [], 0.02)
+                timeout = 0.01 if self.pacer.is_throttled else 0.02
+                r, _, _ = select.select([self.master_fd], [], [], timeout)
                 if r and self._running:
                     try:
-                        data = os.read(self.master_fd, 4096)
+                        read_size = self.pacer.chunk_size
+                        data = os.read(self.master_fd, read_size)
                         if data:
+                            self.pacer.pace(len(data))
                             self.plotter.receive_bytes(data)
                     except (BlockingIOError, OSError):
                         pass
@@ -155,10 +213,18 @@ class PtyServer:
 class TcpServer:
     """Provides a virtual serial-over-TCP port."""
 
-    def __init__(self, plotter: VirtualPlotter, host: str = "127.0.0.1", port: int = 9999):
+    def __init__(
+        self,
+        plotter: VirtualPlotter,
+        host: str = "127.0.0.1",
+        port: int = 9999,
+        baudrate: Optional[int] = None,
+    ):
         self.plotter = plotter
         self.host = host
         self.port = port
+        self.baudrate = baudrate if baudrate is not None else getattr(plotter, "baudrate", None)
+        self.pacer = BytePacer(self.baudrate)
         self._server_sock: Optional[socket.socket] = None
         self._client_sock: Optional[socket.socket] = None
         self._running = False
@@ -171,7 +237,12 @@ class TcpServer:
         with self._queue_lock:
             if self._client_sock:
                 try:
-                    self._client_sock.sendall(data)
+                    offset = 0
+                    while offset < len(data) and self._running:
+                        piece = data[offset : offset + self.pacer.chunk_size]
+                        self._client_sock.sendall(piece)
+                        self.pacer.pace(len(piece))
+                        offset += len(piece)
                 except OSError:
                     self._client_sock = None
 
@@ -198,9 +269,11 @@ class TcpServer:
 
                 while self._running and self._client_sock:
                     try:
-                        data = self._client_sock.recv(4096)
+                        read_size = self.pacer.chunk_size
+                        data = self._client_sock.recv(read_size)
                         if not data:
                             break
+                        self.pacer.pace(len(data))
                         self.plotter.receive_bytes(data)
                     except socket.timeout:
                         continue
