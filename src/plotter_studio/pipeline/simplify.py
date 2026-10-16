@@ -23,12 +23,13 @@ def ramer_douglas_peucker(points: np.ndarray, epsilon: float) -> np.ndarray:
         # Start and end are virtually identical
         dists = np.linalg.norm(points[1:-1] - start, axis=1)
     else:
-        # Distance from points to line segment
-        # Cross product in 2D gives area of parallelogram
-        # dist = |(P - start) x (end - start)| / |end - start|
+        # Distance from points to line segment (clamped projection)
+        # Prevents collinear / folded back paths from collapsing to 0
         d_vec = points[1:-1] - start
-        cross = np.abs(d_vec[:, 0] * line_vec[1] - d_vec[:, 1] * line_vec[0])
-        dists = cross / np.sqrt(line_len_sq)
+        t = np.dot(d_vec, line_vec) / line_len_sq
+        t_clamped = np.clip(t, 0.0, 1.0)
+        proj = start + t_clamped[:, np.newaxis] * line_vec
+        dists = np.linalg.norm(points[1:-1] - proj, axis=1)
 
     if len(dists) == 0:
         return points

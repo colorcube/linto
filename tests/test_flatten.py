@@ -43,6 +43,20 @@ def test_simplify_douglas_peucker():
     assert np.allclose(simplified[-1], [5.0, 10.0])
 
 
+def test_simplify_douglas_peucker_collinear_folded():
+    """Verify that collinear paths with sharp reversals/folds are preserved."""
+    # Path goes 100mm out along X and returns nearly to origin (0.1, 0)
+    line = np.array([
+        [0.0, 0.0],
+        [100.0, 0.0],
+        [0.1, 0.0],
+    ])
+    simplified = ramer_douglas_peucker(line, epsilon=0.5)
+    # The peak at (100, 0) must be preserved because it is 99.9mm away from segment [(0,0), (0.1,0)]
+    assert len(simplified) == 3
+    assert np.allclose(simplified[1], [100.0, 0.0])
+
+
 def test_merge_polylines():
     l1 = np.array([[0.0, 0.0], [10.0, 0.0]])
     l2 = np.array([[10.05, 0.0], [20.0, 0.0]])  # 0.05mm gap
