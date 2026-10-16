@@ -108,9 +108,6 @@ def compile_document_to_plot_job(
         if not item.visible:
             continue
         for path in item.paths:
-            if len(path.points) < 2:
-                continue
-
             pen = pens_dict.get(path.pen_id)
             if pen is None:
                 # Fallback to default pen 1
@@ -121,7 +118,12 @@ def compile_document_to_plot_job(
                 continue
 
             eff_id = pen.effective_pen_id
-            pts = item.transform.transform_coords(path.points)
+            pts = path.to_polyline(
+                tolerance_mm=cfg.flatten_tolerance_mm,
+                transform=item.transform,
+            )
+            if len(pts) < 2:
+                continue
 
             # Check overhang
             min_x, min_y = float(np.min(pts[:, 0])), float(np.min(pts[:, 1]))

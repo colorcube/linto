@@ -5,9 +5,15 @@ import copy
 import math
 from typing import Optional, TYPE_CHECKING
 from PySide6.QtCore import Qt, QRectF, QPointF
-from PySide6.QtGui import QPainter, QPen, QColor, QBrush, QPolygonF, QTransform
+from PySide6.QtGui import QPainter, QPainterPath, QPen, QColor, QBrush, QPolygonF, QTransform
 from PySide6.QtWidgets import QGraphicsItem, QGraphicsSceneMouseEvent, QGraphicsSceneHoverEvent
-from ..core.geometry import Point
+from ..core.geometry import (
+    Point,
+    LineSegment,
+    QuadraticBezierSegment,
+    CubicBezierSegment,
+    ArcSegment,
+)
 
 if TYPE_CHECKING:
     from ..core.document import Document, ImportItem
@@ -224,7 +230,38 @@ class GraphicsImportItem(QGraphicsItem):
             painter.setPen(qpen)
             painter.setBrush(Qt.NoBrush)
 
-            if len(path.points) >= 2:
+            if path.segments:
+                qpath = QPainterPath()
+                first_start = path.segments[0].start
+                qpath.moveTo(first_start[0], first_start[1])
+                for seg in path.segments:
+                    if isinstance(seg, LineSegment):
+                        qpath.lineTo(seg.end[0], seg.end[1])
+                    elif isinstance(seg, QuadraticBezierSegment):
+                        qpath.quadTo(
+                            seg.control[0], seg.control[1],
+                            seg.end[0], seg.end[1],
+                        )
+                    elif isinstance(seg, CubicBezierSegment):
+                        qpath.cubicTo(
+                            seg.control1[0], seg.control1[1],
+                            seg.control2[0], seg.control2[1],
+                            seg.end[0], seg.end[1],
+                        )
+                    elif isinstance(seg, ArcSegment):
+                        if seg.cubics:
+                            for c in seg.cubics:
+                                qpath.cubicTo(
+                                    c.control1[0], c.control1[1],
+                                    c.control2[0], c.control2[1],
+                                    c.end[0], c.end[1],
+                                )
+                        else:
+                            qpath.lineTo(seg.end[0], seg.end[1])
+                if path.closed:
+                    qpath.closeSubpath()
+                painter.drawPath(qpath)
+            elif len(path.points) >= 2:
                 poly = QPolygonF([QPointF(float(pt[0]), float(pt[1])) for pt in path.points])
                 if path.closed:
                     painter.drawPolygon(poly)

@@ -9,10 +9,18 @@ from pathlib import Path
 from typing import List, Tuple, Dict, Optional
 import numpy as np
 import svgelements
-from .geometry import Point, BoundingBox, AffineTransform
+from .geometry import (
+    Point,
+    BoundingBox,
+    AffineTransform,
+    PathSegment,
+    LineSegment,
+    QuadraticBezierSegment,
+    CubicBezierSegment,
+    ArcSegment,
+)
 from .document import VectorPath, ImportItem, DEFAULT_PENS
 from .color_cluster import cluster_colors_to_pens, rgb_to_hex
-from ..pipeline.flatten import flatten_cubic_bezier, flatten_quadratic_bezier
 
 
 # Conversion factor: 1 px at 96 DPI = 25.4 / 96.0 mm ≈ 0.26458333 mm
@@ -60,55 +68,124 @@ def extract_stroke_color(element: svgelements.SVGElement) -> str:
     return "#1a1a1a"
 
 
+def svg_segment_to_model(
+    seg: svgelements.PathSegment,
+    scale_mm: float = 1.0,
+) -> Optional[PathSegment]:
+    """Convert an svgelements PathSegment into a lossless millimeter PathSegment primitive."""
+    if isinstance(seg, svgelements.Line):
+        if seg.start is None or seg.end is None:
+            return None
+        p0 = (float(seg.start.x) * scale_mm, float(seg.start.y) * scale_mm)
+        p1 = (float(seg.end.x) * scale_mm, float(seg.end.y) * scale_mm)
+        if math.hypot(p1[0] - p0[0], p1[1] - p0[1]) < 1e-9:
+            return None
+        return LineSegment(start=p0, end=p1)
+    elif isinstance(seg, svgelements.QuadraticBezier):
+        if seg.start is None or seg.control is None or seg.end is None:
+            return None
+        return QuadraticBezierSegment(
+            start=(float(seg.start.x) * scale_mm, float(seg.start.y) * scale_mm),
+            control=(float(seg.control.x) * scale_mm, float(seg.control.y) * scale_mm),
+            end=(float(seg.end.x) * scale_mm, float(seg.end.y) * scale_mm),
+        )
+    elif isinstance(seg, svgelements.CubicBezier):
+        if seg.start is None or seg.control1 is None or seg.control2 is None or seg.end is None:
+            return None
+        return CubicBezierSegment(
+            start=(float(seg.start.x) * scale_mm, float(seg.start.y) * scale_mm),
+            control1=(float(seg.control1.x) * scale_mm, float(seg.control1.y) * scale_mm),
+            control2=(float(seg.control2.x) * scale_mm, float(seg.control2.y) * scale_mm),
+            end=(float(seg.end.x) * scale_mm, float(seg.end.y) * scale_mm),
+        )
+    elif isinstance(seg, svgelements.Arc):
+        if seg.start is None or seg.end is None:
+            return None
+        cubics = tuple(
+            CubicBezierSegment(
+                start=(float(c.start.x) * scale_mm, float(c.start.y) * scale_mm),
+                control1=(float(c.control1.x) * scale_mm, float(c.control1.y) * scale_mm),
+                control2=(float(c.control2.x) * scale_mm, float(c.control2.y) * scale_mm),
+                end=(float(c.end.x) * scale_mm, float(c.end.y) * scale_mm),
+            )
+            for c in seg.as_cubic_curves()
+        )
+        cx = float(seg.center.x) * scale_mm if getattr(seg, "center", None) is not None else 0.0
+        cy = float(seg.center.y) * scale_mm if getattr(seg, "center", None) is not None else 0.0
+        rx = float(seg.rx or 0.0) * scale_mm
+        ry = float(seg.ry or 0.0) * scale_mm
+        rot_rad = float(seg.get_rotation()) if hasattr(seg, "get_rotation") else 0.0
+        start_t = float(seg.get_start_t()) if hasattr(seg, "get_start_t") else 0.0
+        sweep_rad = float(seg.sweep or 0.0)
+        return ArcSegment(
+            start=(float(seg.start.x) * scale_mm, float(seg.start.y) * scale_mm),
+            end=(float(seg.end.x) * scale_mm, float(seg.end.y) * scale_mm),
+            center=(cx, cy),
+            rx=rx,
+            ry=ry,
+            rotation_rad=rot_rad,
+            start_angle_rad=start_t,
+            sweep_angle_rad=sweep_rad,
+            large_arc=abs(sweep_rad) > math.pi,
+            sweep=sweep_rad > 0.0,
+            cubics=cubics,
+        )
+    elif isinstance(seg, svgelements.Close):
+        if seg.start is not None and seg.end is not None:
+            p0 = (float(seg.start.x) * scale_mm, float(seg.start.y) * scale_mm)
+            p1 = (float(seg.end.x) * scale_mm, float(seg.end.y) * scale_mm)
+            if math.hypot(p1[0] - p0[0], p1[1] - p0[1]) > 1e-6:
+                return LineSegment(start=p0, end=p1)
+        return None
+    return None
+
+
 def segment_to_points(
     seg: svgelements.PathSegment,
     scale_mm: float,
     tolerance_mm: float = 0.05,
 ) -> List[Tuple[float, float]]:
     """Convert an svgelements path segment into a list of (x, y) coordinates in mm."""
-    if isinstance(seg, svgelements.Line):
-        return [
-            (seg.start.x * scale_mm, seg.start.y * scale_mm),
-            (seg.end.x * scale_mm, seg.end.y * scale_mm),
-        ]
-    elif isinstance(seg, svgelements.CubicBezier):
-        p0 = (seg.start.x * scale_mm, seg.start.y * scale_mm)
-        p1 = (seg.control1.x * scale_mm, seg.control1.y * scale_mm)
-        p2 = (seg.control2.x * scale_mm, seg.control2.y * scale_mm)
-        p3 = (seg.end.x * scale_mm, seg.end.y * scale_mm)
-        return flatten_cubic_bezier(p0, p1, p2, p3, tolerance=tolerance_mm)
-    elif isinstance(seg, svgelements.QuadraticBezier):
-        p0 = (seg.start.x * scale_mm, seg.start.y * scale_mm)
-        p1 = (seg.control.x * scale_mm, seg.control.y * scale_mm)
-        p2 = (seg.end.x * scale_mm, seg.end.y * scale_mm)
-        return flatten_quadratic_bezier(p0, p1, p2, tolerance=tolerance_mm)
-    elif isinstance(seg, svgelements.Arc):
-        # Sample arc based on chordal error e: step = 2 * acos(1 - e / R)
-        rx = getattr(seg, "rx", None)
-        ry = getattr(seg, "ry", None)
-        r_approx = max(float(rx or 10.0), float(ry or 10.0)) * scale_mm
-        cos_val = max(-1.0, min(1.0, 1.0 - (tolerance_mm / max(1.0, r_approx))))
-        step_angle = max(math.radians(2.0), min(math.radians(30.0), 2.0 * math.acos(cos_val)))
-        
-        # Estimate sweep angle from length
-        arc_len_mm = seg.length() * scale_mm
-        sweep_est = arc_len_mm / max(0.1, r_approx)
-        num_steps = max(4, min(360, int(math.ceil(sweep_est / step_angle))))
-        
-        pts: List[Tuple[float, float]] = []
-        for i in range(num_steps + 1):
-            t = i / float(num_steps)
-            pt = seg.point(t)
-            pts.append((pt.x * scale_mm, pt.y * scale_mm))
-        return pts
-    elif isinstance(seg, svgelements.Close):
-        if seg.start and seg.end:
-            return [
-                (seg.start.x * scale_mm, seg.start.y * scale_mm),
-                (seg.end.x * scale_mm, seg.end.y * scale_mm),
-            ]
+    model_seg = svg_segment_to_model(seg, scale_mm=scale_mm)
+    if model_seg is None:
         return []
-    return []
+    from ..pipeline.flatten import flatten_segment
+    return flatten_segment(model_seg, tolerance=tolerance_mm)
+
+
+def extract_subpath_segments(
+    p: svgelements.Path,
+    scale_mm: float = 1.0,
+) -> List[Tuple[List[PathSegment], bool]]:
+    """Extract subpaths from an svgelements.Path as lists of unflattened PathSegments."""
+    subpaths: List[Tuple[List[PathSegment], bool]] = []
+    current_segments: List[PathSegment] = []
+    is_closed = False
+
+    for seg in p:
+        if isinstance(seg, svgelements.Move):
+            if current_segments:
+                subpaths.append((current_segments, is_closed))
+            current_segments = []
+            is_closed = False
+        elif isinstance(seg, svgelements.Close):
+            close_seg = svg_segment_to_model(seg, scale_mm=scale_mm)
+            if close_seg is not None:
+                current_segments.append(close_seg)
+            if current_segments:
+                is_closed = True
+                subpaths.append((current_segments, is_closed))
+                current_segments = []
+                is_closed = False
+        else:
+            model_seg = svg_segment_to_model(seg, scale_mm=scale_mm)
+            if model_seg is not None:
+                current_segments.append(model_seg)
+
+    if current_segments:
+        subpaths.append((current_segments, is_closed))
+
+    return subpaths
 
 
 def load_svg(
@@ -118,7 +195,8 @@ def load_svg(
     pen_palette: Optional[List[Tuple[int, str]]] = None,
 ) -> ImportItem:
     """
-    Load an SVG file and convert into an ImportItem with VectorPaths in millimeters.
+    Load an SVG file and convert into an ImportItem with exact VectorPath curve segments
+    in millimeters (no premature curve flattening on import).
     """
     if os.path.exists(filepath_or_data):
         item_name = name or os.path.splitext(os.path.basename(filepath_or_data))[0]
@@ -148,8 +226,8 @@ def load_svg(
     # Default: svgelements coordinates are in pixels at 96 DPI
     scale_mm = PX_TO_MM
 
-    # Collect raw paths and their stroke colors
-    raw_subpaths: List[Tuple[List[Tuple[float, float]], str, bool]] = []
+    # Collect raw paths as native geometric segments and their stroke colors
+    raw_subpaths: List[Tuple[List[PathSegment], str, bool]] = []
     found_colors: List[str] = []
 
     for elem in svg.elements():
@@ -159,34 +237,8 @@ def load_svg(
             color = extract_stroke_color(elem)
             found_colors.append(color)
 
-            current_points: List[Tuple[float, float]] = []
-            is_closed = False
-
-            for seg in p:
-                if isinstance(seg, svgelements.Move):
-                    if len(current_points) >= 2:
-                        raw_subpaths.append((current_points, color, is_closed))
-                    current_points = [(seg.end.x * scale_mm, seg.end.y * scale_mm)]
-                    is_closed = False
-                elif isinstance(seg, svgelements.Close):
-                    if len(current_points) >= 2:
-                        pts = segment_to_points(seg, scale_mm, tolerance_mm)
-                        if pts:
-                            current_points.append(pts[-1])
-                        is_closed = True
-                        raw_subpaths.append((current_points, color, is_closed))
-                        current_points = []
-                else:
-                    pts = segment_to_points(seg, scale_mm, tolerance_mm)
-                    if pts:
-                        if not current_points:
-                            current_points.extend(pts)
-                        else:
-                            # Avoid duplicate start point
-                            current_points.extend(pts[1:])
-
-            if len(current_points) >= 2:
-                raw_subpaths.append((current_points, color, is_closed))
+            for segs, is_closed in extract_subpath_segments(p, scale_mm=scale_mm):
+                raw_subpaths.append((segs, color, is_closed))
 
     # Cluster colors to pens
     if pen_palette is None:
@@ -194,12 +246,11 @@ def load_svg(
 
     color_to_pen = cluster_colors_to_pens(found_colors, pen_palette, max_pens=8)
 
-    # Build VectorPaths
+    # Build VectorPaths with exact curve segments
     vector_paths: List[VectorPath] = []
-    for pts, col, closed in raw_subpaths:
+    for segs, col, closed in raw_subpaths:
         pen_id = color_to_pen.get(col, 1)
-        arr = np.array(pts, dtype=np.float64)
-        vector_paths.append(VectorPath(points=arr, pen_id=pen_id, closed=closed))
+        vector_paths.append(VectorPath(pen_id=pen_id, closed=closed, segments=segs))
 
     item = ImportItem(
         name=item_name,
@@ -207,3 +258,4 @@ def load_svg(
         source_path=source_path,
     )
     return item
+

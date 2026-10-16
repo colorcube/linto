@@ -4,9 +4,19 @@ from __future__ import annotations
 import copy
 import uuid
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional, Tuple, Sequence
+from typing import List, Dict, Optional, Tuple, Sequence, Any
 import numpy as np
-from .geometry import Point, BoundingBox, AffineTransform
+from .geometry import (
+    Point,
+    BoundingBox,
+    AffineTransform,
+    PathSegment,
+    LineSegment,
+    QuadraticBezierSegment,
+    CubicBezierSegment,
+    ArcSegment,
+    compute_segments_bounds,
+)
 
 
 PAPER_PRESETS: Dict[str, Tuple[float, float]] = {
@@ -165,25 +175,87 @@ DEFAULT_PENS: List[LogicalPen] = [
 ]
 
 
-@dataclass
 class VectorPath:
-    """A vector path as a sequence of (x, y) points in millimeters."""
-    points: np.ndarray  # Shape (N, 2), float64
-    pen_id: int = 1
-    closed: bool = False
+    """
+    A vector path in millimeters, storing either exact mathematical curve segments
+    (`segments`) or a discrete polyline (`points`).
+    When constructed with `segments`, curves remain unflattened in the model and are
+    only linearized on demand (e.g. during pipeline compilation).
+    """
+    def __init__(
+        self,
+        points: Optional[np.ndarray] = None,
+        pen_id: int = 1,
+        closed: bool = False,
+        segments: Optional[List[PathSegment]] = None,
+    ):
+        self.pen_id: int = pen_id
+        self.closed: bool = closed
+        self.segments: List[PathSegment] = list(segments) if segments else []
+        self._points: Optional[np.ndarray] = (
+            np.asarray(points, dtype=np.float64) if points is not None else None
+        )
+
+    @property
+    def has_curves(self) -> bool:
+        """Return True if this path contains Bézier or Arc segments."""
+        return any(
+            isinstance(s, (QuadraticBezierSegment, CubicBezierSegment, ArcSegment))
+            for s in self.segments
+        )
+
+    @property
+    def points(self) -> np.ndarray:
+        """Return polyline points (lazily flattened at default 0.05 mm if segments are stored)."""
+        if self._points is not None:
+            return self._points
+        if self.segments:
+            from ..pipeline.flatten import flatten_path_segments
+            self._points = flatten_path_segments(self.segments, tolerance=0.05)
+            return self._points
+        return np.empty((0, 2), dtype=np.float64)
+
+    @points.setter
+    def points(self, value: Optional[np.ndarray]):
+        self._points = np.asarray(value, dtype=np.float64) if value is not None else None
+
+    def to_polyline(
+        self,
+        tolerance_mm: float = 0.05,
+        transform: Optional[AffineTransform] = None,
+    ) -> np.ndarray:
+        """
+        Convert path to an (N, 2) polyline in millimeters.
+        If native segments are present, applies `transform` to the curve primitives first
+        and flattens with `tolerance_mm`.
+        """
+        if self.segments:
+            from ..pipeline.flatten import flatten_path_segments
+            return flatten_path_segments(self.segments, tolerance=tolerance_mm, transform=transform)
+        if self._points is None or len(self._points) == 0:
+            return np.empty((0, 2), dtype=np.float64)
+        if transform is not None:
+            return transform.transform_coords(self._points)
+        return self._points
 
     def transformed(self, transform: AffineTransform) -> VectorPath:
+        if self.segments:
+            new_segs = [s.transformed(transform) for s in self.segments]
+            return VectorPath(pen_id=self.pen_id, closed=self.closed, segments=new_segs)
         new_pts = transform.transform_coords(self.points)
         return VectorPath(points=new_pts, pen_id=self.pen_id, closed=self.closed)
 
     @property
     def bounds(self) -> Optional[BoundingBox]:
-        if len(self.points) == 0:
+        if self.segments:
+            return compute_segments_bounds(self.segments)
+        pts = self.points
+        if len(pts) == 0:
             return None
-        min_x = float(np.min(self.points[:, 0]))
-        min_y = float(np.min(self.points[:, 1]))
-        max_x = float(np.max(self.points[:, 0]))
-        max_y = float(np.max(self.points[:, 1]))
+        min_x = float(np.min(pts[:, 0]))
+        min_y = float(np.min(pts[:, 1]))
+        max_x = float(np.max(pts[:, 0]))
+        max_y = float(np.max(pts[:, 1]))
         return BoundingBox(min_x, min_y, max_x, max_y)
 
 
@@ -272,9 +344,10 @@ class Document:
         new_paths = []
         for p in item.paths:
             new_paths.append(VectorPath(
-                points=np.copy(p.points),
+                points=np.copy(p._points) if p._points is not None else None,
                 pen_id=p.pen_id,
                 closed=p.closed,
+                segments=list(p.segments) if p.segments else None,
             ))
         new_transform = copy.deepcopy(item.transform)
         new_transform.tx += offset_mm

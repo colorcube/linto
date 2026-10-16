@@ -80,3 +80,35 @@ def test_compile_overhang_warning_and_clipping():
     job_clipped = compile_document_to_plot_job(doc, PipelineConfig(clip_to_plottable=True))
     clipped_line = job_clipped.layers[1].lines[0]
     assert abs(clipped_line[-1, 0] - pb.max_x) < 1e-4
+
+
+def test_compile_dynamic_flatten_tolerance_and_scaling():
+    from plotter_studio.core.svg_import import load_svg
+
+    svg_sample = """<svg width="100mm" height="100mm" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <path d="M 10 50 C 20 5, 80 5, 90 50" stroke="#000000" fill="none"/>
+    </svg>"""
+    item = load_svg(svg_sample, name="Curve")
+    doc = Document()
+    doc.items.append(item)
+
+    # Coarse flattening vs fine flattening (with simplify disabled to measure raw subdivision)
+    job_coarse = compile_document_to_plot_job(
+        doc, PipelineConfig(flatten_tolerance_mm=0.5, simplify_tolerance_mm=0.0)
+    )
+    job_fine = compile_document_to_plot_job(
+        doc, PipelineConfig(flatten_tolerance_mm=0.01, simplify_tolerance_mm=0.0)
+    )
+    assert job_fine.total_points > job_coarse.total_points
+
+    # Scaling the item up by 5x increases the physical curve size and thus produces more subdivisions
+    item.transform = AffineTransform.scale(5.0)
+    job_scaled = compile_document_to_plot_job(
+        doc, PipelineConfig(flatten_tolerance_mm=0.05, simplify_tolerance_mm=0.0)
+    )
+    item.transform = AffineTransform.identity()
+    job_unscaled = compile_document_to_plot_job(
+        doc, PipelineConfig(flatten_tolerance_mm=0.05, simplify_tolerance_mm=0.0)
+    )
+    assert job_scaled.total_points > job_unscaled.total_points
+

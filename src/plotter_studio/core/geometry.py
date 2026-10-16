@@ -3,7 +3,7 @@
 from __future__ import annotations
 import math
 from dataclasses import dataclass, field
-from typing import List, Tuple, Optional, Sequence
+from typing import List, Tuple, Optional, Sequence, Union
 import numpy as np
 
 
@@ -146,6 +146,12 @@ class AffineTransform:
             ty=self.b * other.tx + self.d * other.ty + self.ty,
         )
 
+    def transform_xy(self, x: float, y: float) -> Tuple[float, float]:
+        return (
+            self.a * x + self.c * y + self.tx,
+            self.b * x + self.d * y + self.ty,
+        )
+
     def transform_point(self, pt: Point) -> Point:
         return Point(
             x=self.a * pt.x + self.c * pt.y + self.tx,
@@ -177,3 +183,168 @@ class AffineTransform:
             tx=(-self.d * self.tx + self.c * self.ty) * inv_det,
             ty=(self.b * self.tx - self.a * self.ty) * inv_det,
         )
+
+
+@dataclass(frozen=True)
+class LineSegment:
+    """Straight line segment from start to end in millimeters."""
+    start: Tuple[float, float]
+    end: Tuple[float, float]
+
+    def transformed(self, t: AffineTransform) -> LineSegment:
+        return LineSegment(
+            start=t.transform_xy(*self.start),
+            end=t.transform_xy(*self.end),
+        )
+
+
+@dataclass(frozen=True)
+class QuadraticBezierSegment:
+    """Quadratic Bézier curve segment in millimeters."""
+    start: Tuple[float, float]
+    control: Tuple[float, float]
+    end: Tuple[float, float]
+
+    def transformed(self, t: AffineTransform) -> QuadraticBezierSegment:
+        return QuadraticBezierSegment(
+            start=t.transform_xy(*self.start),
+            control=t.transform_xy(*self.control),
+            end=t.transform_xy(*self.end),
+        )
+
+
+@dataclass(frozen=True)
+class CubicBezierSegment:
+    """Cubic Bézier curve segment in millimeters."""
+    start: Tuple[float, float]
+    control1: Tuple[float, float]
+    control2: Tuple[float, float]
+    end: Tuple[float, float]
+
+    def transformed(self, t: AffineTransform) -> CubicBezierSegment:
+        return CubicBezierSegment(
+            start=t.transform_xy(*self.start),
+            control1=t.transform_xy(*self.control1),
+            control2=t.transform_xy(*self.control2),
+            end=t.transform_xy(*self.end),
+        )
+
+
+@dataclass(frozen=True)
+class ArcSegment:
+    """Elliptical/circular arc segment in millimeters."""
+    start: Tuple[float, float]
+    end: Tuple[float, float]
+    center: Tuple[float, float]
+    rx: float
+    ry: float
+    rotation_rad: float = 0.0
+    start_angle_rad: float = 0.0
+    sweep_angle_rad: float = 0.0
+    large_arc: bool = False
+    sweep: bool = True
+    cubics: Tuple[CubicBezierSegment, ...] = ()
+
+    def transformed(self, t: AffineTransform) -> ArcSegment:
+        sx = math.hypot(t.a, t.b)
+        sy = math.hypot(t.c, t.d)
+        det = t.a * t.d - t.b * t.c
+        rot_offset = math.atan2(t.b, t.a)
+        new_cubics = tuple(c.transformed(t) for c in self.cubics)
+        return ArcSegment(
+            start=t.transform_xy(*self.start),
+            end=t.transform_xy(*self.end),
+            center=t.transform_xy(*self.center),
+            rx=self.rx * sx,
+            ry=self.ry * sy,
+            rotation_rad=self.rotation_rad + rot_offset,
+            start_angle_rad=self.start_angle_rad if det >= 0 else -self.start_angle_rad,
+            sweep_angle_rad=self.sweep_angle_rad if det >= 0 else -self.sweep_angle_rad,
+            large_arc=self.large_arc,
+            sweep=self.sweep if det >= 0 else (not self.sweep),
+            cubics=new_cubics,
+        )
+
+
+PathSegment = Union[LineSegment, QuadraticBezierSegment, CubicBezierSegment, ArcSegment]
+
+
+def _quad_bezier_eval(p0: float, p1: float, p2: float, t: float) -> float:
+    mt = 1.0 - t
+    return mt * mt * p0 + 2.0 * mt * t * p1 + t * t * p2
+
+
+def _cubic_bezier_eval(p0: float, p1: float, p2: float, p3: float, t: float) -> float:
+    mt = 1.0 - t
+    return (
+        mt * mt * mt * p0
+        + 3.0 * mt * mt * t * p1
+        + 3.0 * mt * t * t * p2
+        + t * t * t * p3
+    )
+
+
+def _cubic_extrema_1d(p0: float, p1: float, p2: float, p3: float) -> List[float]:
+    vals = [p0, p3]
+    a = -p0 + 3.0 * p1 - 3.0 * p2 + p3
+    b = 2.0 * (p0 - 2.0 * p1 + p2)
+    c = p1 - p0
+    if abs(a) < 1e-12:
+        if abs(b) > 1e-12:
+            t = -c / b
+            if 0.0 < t < 1.0:
+                vals.append(_cubic_bezier_eval(p0, p1, p2, p3, t))
+    else:
+        disc = b * b - 4.0 * a * c
+        if disc >= 0.0:
+            sqrt_d = math.sqrt(disc)
+            for t in ((-b - sqrt_d) / (2.0 * a), (-b + sqrt_d) / (2.0 * a)):
+                if 0.0 < t < 1.0:
+                    vals.append(_cubic_bezier_eval(p0, p1, p2, p3, t))
+    return vals
+
+
+def compute_segments_bounds(segments: Sequence[PathSegment]) -> Optional[BoundingBox]:
+    """Compute exact analytical axis-aligned bounding box for a sequence of PathSegments."""
+    if not segments:
+        return None
+
+    xs: List[float] = []
+    ys: List[float] = []
+
+    for seg in segments:
+        if isinstance(seg, LineSegment):
+            xs.extend((seg.start[0], seg.end[0]))
+            ys.extend((seg.start[1], seg.end[1]))
+        elif isinstance(seg, QuadraticBezierSegment):
+            x0, y0 = seg.start
+            x1, y1 = seg.control
+            x2, y2 = seg.end
+            xs.extend((x0, x2))
+            ys.extend((y0, y2))
+            denom_x = x0 - 2.0 * x1 + x2
+            if abs(denom_x) > 1e-12:
+                tx = (x0 - x1) / denom_x
+                if 0.0 < tx < 1.0:
+                    xs.append(_quad_bezier_eval(x0, x1, x2, tx))
+            denom_y = y0 - 2.0 * y1 + y2
+            if abs(denom_y) > 1e-12:
+                ty = (y0 - y1) / denom_y
+                if 0.0 < ty < 1.0:
+                    ys.append(_quad_bezier_eval(y0, y1, y2, ty))
+        elif isinstance(seg, CubicBezierSegment):
+            xs.extend(_cubic_extrema_1d(seg.start[0], seg.control1[0], seg.control2[0], seg.end[0]))
+            ys.extend(_cubic_extrema_1d(seg.start[1], seg.control1[1], seg.control2[1], seg.end[1]))
+        elif isinstance(seg, ArcSegment):
+            if seg.cubics:
+                for c in seg.cubics:
+                    xs.extend(_cubic_extrema_1d(c.start[0], c.control1[0], c.control2[0], c.end[0]))
+                    ys.extend(_cubic_extrema_1d(c.start[1], c.control1[1], c.control2[1], c.end[1]))
+            else:
+                xs.extend((seg.start[0], seg.end[0]))
+                ys.extend((seg.start[1], seg.end[1]))
+
+    if not xs or not ys:
+        return None
+    return BoundingBox(min(xs), min(ys), max(xs), max(ys))
+

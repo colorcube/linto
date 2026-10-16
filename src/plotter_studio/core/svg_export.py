@@ -11,8 +11,19 @@ import numpy as np
 import svgelements
 
 from .document import Document, LogicalPen, ImportItem, VectorPath, Page, DEFAULT_PENS
-from .geometry import AffineTransform
-from .svg_import import segment_to_points, _clean_duplicate_attributes, load_svg
+from .geometry import (
+    AffineTransform,
+    LineSegment,
+    QuadraticBezierSegment,
+    CubicBezierSegment,
+    ArcSegment,
+)
+from .svg_import import (
+    segment_to_points,
+    extract_subpath_segments,
+    _clean_duplicate_attributes,
+    load_svg,
+)
 
 
 NS_PS = "https://plotter-studio.org/schema/v1"
@@ -78,22 +89,49 @@ def export_document_to_svg(doc: Document, output_path: str):
             g_item.set(f"{{{NS_PS}}}source", item.source_path)
 
         for p_idx, path in enumerate(item.paths):
-            if len(path.points) < 2:
-                continue
-
             pen = pens_dict.get(path.pen_id)
             color = pen.color_hex if pen else "#000000"
             stroke_width = pen.width_mm if pen else 0.35
 
-            # Apply item transform to points for standard SVG viewers
-            pts_transformed = item.transform.transform_coords(path.points)
-
-            # Build d string
-            d_parts = [f"M {pts_transformed[0, 0]:.3f},{pts_transformed[0, 1]:.3f}"]
-            for i in range(1, len(pts_transformed)):
-                d_parts.append(f"L {pts_transformed[i, 0]:.3f},{pts_transformed[i, 1]:.3f}")
-            if path.closed:
-                d_parts.append("Z")
+            d_parts: List[str] = []
+            if path.segments:
+                t_segs = [s.transformed(item.transform) for s in path.segments]
+                first = t_segs[0].start
+                d_parts.append(f"M {first[0]:.4f},{first[1]:.4f}")
+                for seg in t_segs:
+                    if isinstance(seg, LineSegment):
+                        d_parts.append(f"L {seg.end[0]:.4f},{seg.end[1]:.4f}")
+                    elif isinstance(seg, QuadraticBezierSegment):
+                        d_parts.append(
+                            f"Q {seg.control[0]:.4f},{seg.control[1]:.4f} {seg.end[0]:.4f},{seg.end[1]:.4f}"
+                        )
+                    elif isinstance(seg, CubicBezierSegment):
+                        d_parts.append(
+                            f"C {seg.control1[0]:.4f},{seg.control1[1]:.4f} "
+                            f"{seg.control2[0]:.4f},{seg.control2[1]:.4f} "
+                            f"{seg.end[0]:.4f},{seg.end[1]:.4f}"
+                        )
+                    elif isinstance(seg, ArcSegment):
+                        if seg.cubics:
+                            for c in seg.cubics:
+                                d_parts.append(
+                                    f"C {c.control1[0]:.4f},{c.control1[1]:.4f} "
+                                    f"{c.control2[0]:.4f},{c.control2[1]:.4f} "
+                                    f"{c.end[0]:.4f},{c.end[1]:.4f}"
+                                )
+                        else:
+                            d_parts.append(f"L {seg.end[0]:.4f},{seg.end[1]:.4f}")
+                if path.closed:
+                    d_parts.append("Z")
+            else:
+                if len(path.points) < 2:
+                    continue
+                pts_transformed = item.transform.transform_coords(path.points)
+                d_parts = [f"M {pts_transformed[0, 0]:.3f},{pts_transformed[0, 1]:.3f}"]
+                for i in range(1, len(pts_transformed)):
+                    d_parts.append(f"L {pts_transformed[i, 0]:.3f},{pts_transformed[i, 1]:.3f}")
+                if path.closed:
+                    d_parts.append("Z")
 
             ET.SubElement(g_item, "path", {
                 "d": " ".join(d_parts),
@@ -290,36 +328,9 @@ def load_document_from_svg(filepath_or_data: str) -> Document:
                 continue
 
             p = svgelements.Path(d)
-            cur_pts: List[Tuple[float, float]] = []
-            is_closed = False
-
-            for seg in p:
-                if isinstance(seg, svgelements.Move):
-                    if len(cur_pts) >= 2:
-                        pts_arr = inv_t.transform_coords(np.array(cur_pts, dtype=np.float64))
-                        item_paths.append(VectorPath(points=pts_arr, pen_id=pen_id, closed=is_closed))
-                    cur_pts = [(seg.end.x, seg.end.y)]
-                    is_closed = False
-                elif isinstance(seg, svgelements.Close):
-                    if len(cur_pts) >= 2:
-                        pts = segment_to_points(seg, scale_mm=1.0)
-                        if pts:
-                            cur_pts.append(pts[-1])
-                        is_closed = True
-                        pts_arr = inv_t.transform_coords(np.array(cur_pts, dtype=np.float64))
-                        item_paths.append(VectorPath(points=pts_arr, pen_id=pen_id, closed=is_closed))
-                        cur_pts = []
-                else:
-                    pts = segment_to_points(seg, scale_mm=1.0)
-                    if pts:
-                        if not cur_pts:
-                            cur_pts.extend(pts)
-                        else:
-                            cur_pts.extend(pts[1:])
-
-            if len(cur_pts) >= 2:
-                pts_arr = inv_t.transform_coords(np.array(cur_pts, dtype=np.float64))
-                item_paths.append(VectorPath(points=pts_arr, pen_id=pen_id, closed=is_closed))
+            for segs, is_closed in extract_subpath_segments(p, scale_mm=1.0):
+                local_segs = [s.transformed(inv_t) for s in segs]
+                item_paths.append(VectorPath(pen_id=pen_id, closed=is_closed, segments=local_segs))
 
         if item_paths:
             raw_id = item_id_attr[5:] if item_id_attr.startswith("item_") else str(uuid.uuid4())

@@ -33,13 +33,39 @@ def test_svg_load_shapes():
 
 
 def test_svg_load_quadratic_bezier():
+    from plotter_studio.core.geometry import QuadraticBezierSegment, CubicBezierSegment, ArcSegment
+
     svg_sample = """<svg width="100mm" height="100mm" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
       <path d="M 10 10 Q 50 90 90 10" stroke="#000000" fill="none"/>
     </svg>"""
     item = load_svg(svg_sample, name="TestQuadratic")
     assert len(item.paths) == 1
-    assert len(item.paths[0].points) > 2
+    path = item.paths[0]
+    # Geometry is stored unflattened as a single QuadraticBezierSegment
+    assert path._points is None
+    assert path.has_curves is True
+    assert len(path.segments) == 1
+    assert isinstance(path.segments[0], QuadraticBezierSegment)
     b = item.original_bounds
     assert b is not None
     assert math.isclose(b.min_x, 10.0, abs_tol=0.5)
     assert math.isclose(b.max_x, 90.0, abs_tol=0.5)
+    # Exact analytical peak of Q(10,10 -> 50,90 -> 90,10) at t=0.5 is y = 50.0
+    assert math.isclose(b.min_y, 10.0, abs_tol=0.1)
+    assert math.isclose(b.max_y, 50.0, abs_tol=0.1)
+    # Lazy polyline conversion still works on demand
+    assert len(path.points) > 2
+
+
+def test_svg_preserves_cubic_and_arc_segments():
+    from plotter_studio.core.geometry import CubicBezierSegment, ArcSegment
+
+    svg_sample = """<svg width="100mm" height="100mm" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <path d="M 10 50 C 20 10, 80 10, 90 50" stroke="#000000" fill="none"/>
+      <circle cx="50" cy="50" r="30" stroke="#ff0000" fill="none"/>
+    </svg>"""
+    item = load_svg(svg_sample, name="TestCurves")
+    assert len(item.paths) == 2
+    assert isinstance(item.paths[0].segments[0], CubicBezierSegment)
+    assert any(isinstance(s, ArcSegment) for s in item.paths[1].segments)
+
