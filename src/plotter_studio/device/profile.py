@@ -63,8 +63,8 @@ class DeviceProfile:
     ) -> tuple[float, float]:
         """Return (center_x, center_y) of hard-clip window in sheet coordinates (mm)."""
         top_m, bottom_m, left_m, right_m = self.get_margins(profile_name)
-        hard_clip_w = max(1.0, sheet_w_mm - (top_m + bottom_m))
-        hard_clip_h = max(1.0, sheet_h_mm - (left_m + right_m))
+        hard_clip_w = max(1.0, sheet_w_mm - (left_m + right_m))
+        hard_clip_h = max(1.0, sheet_h_mm - (top_m + bottom_m))
 
         center_x = left_m + (hard_clip_w / 2.0)
         center_y = top_m + (hard_clip_h / 2.0)

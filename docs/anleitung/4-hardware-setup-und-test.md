@@ -77,8 +77,8 @@ Target: /dev/ttyUSB0 (19200 baud, 8N1, RTS/CTS)
   Command 'OF;' -> Response: '40,40' (40 Plotter-Units per mm = 0.025 mm/step)
 
 [4/4] Querying Plottable Window (Hard-Clip)...
-  Command 'OH;' -> Response: '-7800,-5740,7800,5740'
-  Calculated printable area: 390.0 mm x 287.0 mm (Matches DIN A3)
+  Command 'OH;' -> Response: '-8200,-5340,8200,5340'
+  Calculated printable area: 410.0 mm x 267.0 mm (Matches DIN A3)
 
 Result: Plotter is ONLINE, RESPONSIVE and READY FOR PLOTTING!
 ```

@@ -32,11 +32,11 @@ def test_device_profile():
     assert m_exp == (25.0, 5.0, 5.0, 5.0)
 
     # Test center calculation for A3 (420 x 297 mm)
-    # Hard clip w = 420 - 30 = 390. center_x = 5 + 195 = 200
-    # Hard clip h = 297 - 10 = 287. center_y = 25 + 143.5 = 168.5
+    # Hard clip w = 420 - 10 = 410. center_x = 5 + 205 = 210
+    # Hard clip h = 297 - 30 = 267. center_y = 25 + 133.5 = 158.5
     cx, cy = profile.calculate_center_mm(420.0, 297.0, "exp")
-    assert pytest.approx(cx) == 200.0
-    assert pytest.approx(cy) == 168.5
+    assert pytest.approx(cx) == 210.0
+    assert pytest.approx(cy) == 158.5
 
 
 def test_hpgl_emitter():
@@ -47,9 +47,9 @@ def test_hpgl_emitter():
     doc.page.width = 420.0
     doc.page.height = 297.0
 
-    # 1 line with pen 1 from (200, 168.5) [center] to (225, 168.5) [+25mm]
+    # 1 line with pen 1 from (210, 158.5) [center] to (235, 158.5) [+25mm]
     path = VectorPath(
-        points=np.array([[200.0, 168.5], [225.0, 168.5]]),
+        points=np.array([[210.0, 158.5], [235.0, 158.5]]),
         pen_id=1,
     )
     doc.items.append(ImportItem(name="TestItem", paths=[path]))
@@ -61,9 +61,9 @@ def test_hpgl_emitter():
 
     assert "IN;" in hpgl_str
     assert "SP1;" in hpgl_str
-    # At center (200, 168.5), plotter units should be (0, 0)
+    # At center (210, 158.5), plotter units should be (0, 0)
     assert "PU0,0;" in hpgl_str
-    # At (225, 168.5) -> dx = +25mm * 40 = 1000 units in X
+    # At (235, 158.5) -> dx = +25mm * 40 = 1000 units in X
     assert "PD1000,0;" in hpgl_str
     assert "PU;SP0;" in hpgl_str
 
@@ -83,9 +83,9 @@ def test_device_probing():
             assert result.units_per_mm == 40.0
             assert result.detected_format == "A3"
             assert result.hard_clip_mm is not None
-            # 390 x 287 mm
-            assert pytest.approx(result.hard_clip_mm[0], rel=1e-2) == 390.0
-            assert pytest.approx(result.hard_clip_mm[1], rel=1e-2) == 287.0
+            # 410 x 267 mm
+            assert pytest.approx(result.hard_clip_mm[0], rel=1e-2) == 410.0
+            assert pytest.approx(result.hard_clip_mm[1], rel=1e-2) == 267.0
         finally:
             server.stop()
 
@@ -199,41 +199,41 @@ def test_streamer_abort():
 
 def test_axis_transformations():
     profile = get_default_profile()
-    # Center for A3 EXP is (200.0, 168.5)
-    # Point at center (200.0, 168.5) -> (0, 0)
-    # Point at +25mm X: (225.0, 168.5) -> dx=+25mm -> 1000 units
-    # Point at -10mm Y: (200.0, 158.5) -> y_mm is 10mm higher on sheet -> dy_c = +10mm (upwards) -> 400 units
+    # Center for A3 EXP is (210.0, 158.5)
+    # Point at center (210.0, 158.5) -> (0, 0)
+    # Point at +25mm X: (235.0, 158.5) -> dx=+25mm -> 1000 units
+    # Point at -10mm Y: (210.0, 148.5) -> y_mm is 10mm higher on sheet -> dy_c = +10mm (upwards) -> 400 units
 
     # 1. Standard (0 deg, no invert, no swap)
     e_std = HPGLEmitter(profile, margin_profile="exp")
-    assert e_std.to_plotter_units(200.0, 168.5, 420.0, 297.0) == (0, 0)
-    assert e_std.to_plotter_units(225.0, 168.5, 420.0, 297.0) == (1000, 0)
-    assert e_std.to_plotter_units(200.0, 158.5, 420.0, 297.0) == (0, 400)
+    assert e_std.to_plotter_units(210.0, 158.5, 420.0, 297.0) == (0, 0)
+    assert e_std.to_plotter_units(235.0, 158.5, 420.0, 297.0) == (1000, 0)
+    assert e_std.to_plotter_units(210.0, 148.5, 420.0, 297.0) == (0, 400)
 
     # 2. Invert X
     e_inv_x = HPGLEmitter(profile, margin_profile="exp", invert_x=True)
-    assert e_inv_x.to_plotter_units(225.0, 168.5, 420.0, 297.0) == (-1000, 0)
+    assert e_inv_x.to_plotter_units(235.0, 158.5, 420.0, 297.0) == (-1000, 0)
 
     # 3. Invert Y
     e_inv_y = HPGLEmitter(profile, margin_profile="exp", invert_y=True)
-    assert e_inv_y.to_plotter_units(200.0, 158.5, 420.0, 297.0) == (0, -400)
+    assert e_inv_y.to_plotter_units(210.0, 148.5, 420.0, 297.0) == (0, -400)
 
     # 4. Swap XY
     e_swap = HPGLEmitter(profile, margin_profile="exp", swap_xy=True)
-    assert e_swap.to_plotter_units(225.0, 168.5, 420.0, 297.0) == (0, 1000)
-    assert e_swap.to_plotter_units(200.0, 158.5, 420.0, 297.0) == (400, 0)
+    assert e_swap.to_plotter_units(235.0, 158.5, 420.0, 297.0) == (0, 1000)
+    assert e_swap.to_plotter_units(210.0, 148.5, 420.0, 297.0) == (400, 0)
 
     # 5. Rotation 90° (CCW in Cartesian: (1, 0) -> (0, 1))
     e_rot90 = HPGLEmitter(profile, margin_profile="exp", rotation_deg=90)
-    assert e_rot90.to_plotter_units(225.0, 168.5, 420.0, 297.0) == (0, 1000)
+    assert e_rot90.to_plotter_units(235.0, 158.5, 420.0, 297.0) == (0, 1000)
 
     # 6. Rotation 180°
     e_rot180 = HPGLEmitter(profile, margin_profile="exp", rotation_deg=180)
-    assert e_rot180.to_plotter_units(225.0, 168.5, 420.0, 297.0) == (-1000, 0)
+    assert e_rot180.to_plotter_units(235.0, 158.5, 420.0, 297.0) == (-1000, 0)
 
     # 7. Rotation 270°
     e_rot270 = HPGLEmitter(profile, margin_profile="exp", rotation_deg=270)
-    assert e_rot270.to_plotter_units(225.0, 168.5, 420.0, 297.0) == (0, -1000)
+    assert e_rot270.to_plotter_units(235.0, 158.5, 420.0, 297.0) == (0, -1000)
 
 
 def test_userspace_xon_xoff():

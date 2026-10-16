@@ -211,7 +211,7 @@ def test_plot_dock_device_controls(qapp, tmp_path):
         model="Mutoh XP-500",
         units_per_mm=40.0,
         detected_format="A3",
-        hard_clip_mm=(390.0, 287.0),
+        hard_clip_mm=(410.0, 267.0),
     )
     dock._on_probe_done(mock_res)
     assert "Mutoh XP-500" in dock.lbl_probe_status.text()

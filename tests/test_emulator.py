@@ -50,10 +50,10 @@ def test_inquiry_commands():
     plotter.receive_bytes(b"OE;")
     assert responses.pop(0) == b"0\r"
 
-    # 6. Hard-clip window for A3 with EXP margins (390 x 287 mm)
-    # 390 * 40 / 2 = 7800, 287 * 40 / 2 = 5740
+    # 6. Hard-clip window for A3 with EXP margins (410 x 267 mm)
+    # 410 * 40 / 2 = 8200, 267 * 40 / 2 = 5340
     plotter.receive_bytes(b"OH;")
-    assert responses.pop(0) == b"-7800,-5740,7800,5740\r"
+    assert responses.pop(0) == b"-8200,-5340,8200,5340\r"
 
     # 7. Escape sequence ESC.A (identification)
     plotter.receive_bytes(b"\x1b.A")

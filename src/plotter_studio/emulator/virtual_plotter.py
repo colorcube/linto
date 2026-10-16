@@ -114,10 +114,10 @@ class VirtualPlotter:
         self._lock = threading.RLock()
 
         # Hard-clip area calculation (Center-Origin)
-        # X: sheet_width - (m_top + m_bottom), Y: sheet_height - (m_left + m_right)
+        # X: sheet_width - (m_left + m_right), Y: sheet_height - (m_top + m_bottom)
         top_m, bottom_m, left_m, right_m = self.margins_mm
-        self.plottable_width_mm = max(10.0, self.sheet_width_mm - (top_m + bottom_m))
-        self.plottable_height_mm = max(10.0, self.sheet_height_mm - (left_m + right_m))
+        self.plottable_width_mm = max(10.0, self.sheet_width_mm - (left_m + right_m))
+        self.plottable_height_mm = max(10.0, self.sheet_height_mm - (top_m + bottom_m))
 
         self.hard_clip_xmin_units = int(- (self.plottable_width_mm * self.units_per_mm) / 2.0)
         self.hard_clip_xmax_units = int((self.plottable_width_mm * self.units_per_mm) / 2.0)
