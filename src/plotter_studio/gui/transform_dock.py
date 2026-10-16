@@ -72,7 +72,7 @@ class TransformDockWidget(QDockWidget):
     item_transformed = Signal()
 
     def __init__(self, doc: Document, parent=None):
-        super().__init__("Skalieren & Platzieren", parent)
+        super().__init__("Transformation", parent)
         self.setObjectName("TransformDockWidget")
         self.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
         self.doc = doc
@@ -108,13 +108,14 @@ class TransformDockWidget(QDockWidget):
         header_box.addWidget(self.lbl_locked_badge)
         self.main_layout.addLayout(header_box)
 
-        # 2. Gruppe "Transformation" (Numerische Maße, Position und Skalierung)
-        self.grp_transform = SectionGroup("Transformation")
+        # 2. Gruppe "Position" (Numerische Maße und Position)
+        self.grp_transform = SectionGroup("Position")
+        self.grp_position = self.grp_transform
 
         # Position Section (X / Y with Reference Mode)
         pos_header = QHBoxLayout()
         pos_header.setSpacing(6)
-        lbl_pos = QLabel("Position:")
+        lbl_pos = QLabel("Bezug:")
         lbl_pos.setStyleSheet("font-weight: 500; color: #4b5563;")
         pos_header.addWidget(lbl_pos)
 
@@ -192,39 +193,6 @@ class TransformDockWidget(QDockWidget):
         # Spalte 5 nimmt restlichen horizontalen Freiraum auf
         grid_pos_dim.setColumnStretch(5, 1)
         self.grp_transform.addLayout(grid_pos_dim)
-
-        # Scale Percentage
-        scale_box = QHBoxLayout()
-        scale_box.setContentsMargins(0, 0, 0, 0)
-        scale_box.setSpacing(6)
-        lbl_scale = QLabel("Skalierung:")
-        lbl_scale.setStyleSheet("font-weight: 500; color: #4b5563;")
-        scale_box.addWidget(lbl_scale)
-
-        self.spin_obj_scale = QDoubleSpinBox()
-        self.spin_obj_scale.setAlignment(Qt.AlignLeft)
-        self.spin_obj_scale.setRange(1.0, 5000.0)
-        self.spin_obj_scale.setDecimals(1)
-        self.spin_obj_scale.setSingleStep(5.0)
-        self.spin_obj_scale.setSuffix(" %")
-        self.spin_obj_scale.setValue(100.0)
-        self.spin_obj_scale.valueChanged.connect(self._on_scale_spin_changed)
-        scale_box.addWidget(self.spin_obj_scale)
-
-        self.btn_scale_down = QPushButton("-10%")
-        self.btn_scale_down.setFixedWidth(44)
-        self.btn_scale_down.setToolTip("Um 10% verkleinern")
-        self.btn_scale_down.clicked.connect(lambda: self.scale_relative(0.9))
-        scale_box.addWidget(self.btn_scale_down)
-
-        self.btn_scale_up = QPushButton("+10%")
-        self.btn_scale_up.setFixedWidth(44)
-        self.btn_scale_up.setToolTip("Um 10% vergrößern")
-        self.btn_scale_up.clicked.connect(lambda: self.scale_relative(1.1))
-        scale_box.addWidget(self.btn_scale_up)
-
-        scale_box.addStretch()
-        self.grp_transform.addLayout(scale_box)
         self.main_layout.addWidget(self.grp_transform)
 
         # 3. Gruppe "Rotation"
@@ -273,28 +241,66 @@ class TransformDockWidget(QDockWidget):
         self.grp_placement.addLayout(p_layout)
         self.main_layout.addWidget(self.grp_placement)
 
-        # 5. Gruppe "Skalieren"
-        self.grp_scaling = SectionGroup("Skalieren")
-        grid_scaling = QGridLayout()
-        grid_scaling.setContentsMargins(0, 0, 0, 0)
-        grid_scaling.setSpacing(6)
-        grid_scaling.setColumnStretch(0, 1)
-        grid_scaling.setColumnStretch(1, 1)
+        # 5. Gruppe "Skalierung"
+        self.grp_scaling = SectionGroup("Skalierung")
+
+        # Row 1: Zoom (ehemals Skalierung)
+        zoom_row = QHBoxLayout()
+        zoom_row.setContentsMargins(0, 0, 0, 0)
+        zoom_row.setSpacing(6)
+
+        lbl_zoom = QLabel("Zoom:")
+        lbl_zoom.setStyleSheet("font-weight: 500; color: #4b5563;")
+        zoom_row.addWidget(lbl_zoom)
+
+        self.spin_obj_scale = QDoubleSpinBox()
+        self.spin_obj_scale.setAlignment(Qt.AlignLeft)
+        self.spin_obj_scale.setRange(1.0, 5000.0)
+        self.spin_obj_scale.setDecimals(1)
+        self.spin_obj_scale.setSingleStep(5.0)
+        self.spin_obj_scale.setSuffix(" %")
+        self.spin_obj_scale.setValue(100.0)
+        self.spin_obj_scale.valueChanged.connect(self._on_scale_spin_changed)
+        zoom_row.addWidget(self.spin_obj_scale)
+
+        self.btn_scale_up = QPushButton("+")
+        self.btn_scale_up.setFixedWidth(28)
+        self.btn_scale_up.setStyleSheet("font-weight: bold; font-size: 13px;")
+        self.btn_scale_up.setToolTip("Um 10% vergrößern")
+        self.btn_scale_up.clicked.connect(lambda: self.scale_relative(1.1))
+        zoom_row.addWidget(self.btn_scale_up)
+
+        self.btn_scale_down = QPushButton("-")
+        self.btn_scale_down.setFixedWidth(28)
+        self.btn_scale_down.setStyleSheet("font-weight: bold; font-size: 13px;")
+        self.btn_scale_down.setToolTip("Um 10% verkleinern")
+        self.btn_scale_down.clicked.connect(lambda: self.scale_relative(0.9))
+        zoom_row.addWidget(self.btn_scale_down)
+
+        self.btn_original_size = QPushButton("Original")
+        self.btn_original_size.setIcon(get_icon("original-size", size=14))
+        self.btn_original_size.setToolTip("Auf Originalgröße (100% / 1:1) zurücksetzen")
+        self.btn_original_size.clicked.connect(self.reset_to_original_size)
+        zoom_row.addWidget(self.btn_original_size)
+
+        zoom_row.addStretch()
+        self.grp_scaling.addLayout(zoom_row)
+
+        # Row 2: Einpassen & Rand
+        fit_row = QHBoxLayout()
+        fit_row.setContentsMargins(0, 0, 0, 0)
+        fit_row.setSpacing(6)
 
         self.btn_fit = QPushButton("Einpassen")
         self.btn_fit.setIcon(get_icon("fit-page", size=16))
         self.btn_fit.setToolTip("Proportional auf Blatt/Plottbereich einpassen unter Beachtung des Randabstands")
         self.btn_fit.clicked.connect(lambda: self.fit_to_page())
-        grid_scaling.addWidget(self.btn_fit, 0, 0)
-
-        margin_box = QHBoxLayout()
-        margin_box.setContentsMargins(0, 0, 0, 0)
-        margin_box.setSpacing(6)
+        fit_row.addWidget(self.btn_fit)
 
         lbl_margin = QLabel("Rand:")
         lbl_margin.setStyleSheet("font-weight: 500; color: #4b5563;")
         lbl_margin.setToolTip("Sicherheitsabstand / Mindestabstand zum Blattrand bzw. Plottbereich beim Einpassen")
-        margin_box.addWidget(lbl_margin)
+        fit_row.addWidget(lbl_margin)
 
         self.spin_fit_margin = QDoubleSpinBox()
         self.spin_fit_margin.setAlignment(Qt.AlignLeft)
@@ -303,18 +309,10 @@ class TransformDockWidget(QDockWidget):
         self.spin_fit_margin.setValue(15.0)
         self.spin_fit_margin.setSuffix(" mm")
         self.spin_fit_margin.setToolTip("Sicherheitsabstand / Mindestabstand zum Blattrand bzw. Plottbereich beim Einpassen in mm")
-        margin_box.addWidget(self.spin_fit_margin)
-        margin_box.addStretch()
+        fit_row.addWidget(self.spin_fit_margin)
 
-        grid_scaling.addLayout(margin_box, 0, 1)
-
-        self.btn_original_size = QPushButton("1:1 Originalgröße")
-        self.btn_original_size.setIcon(get_icon("original-size", size=16))
-        self.btn_original_size.setToolTip("Auf Originalgröße (1:1 aus Quelldatei) zurücksetzen")
-        self.btn_original_size.clicked.connect(self.reset_to_original_size)
-        grid_scaling.addWidget(self.btn_original_size, 1, 0)
-
-        self.grp_scaling.addLayout(grid_scaling)
+        fit_row.addStretch()
+        self.grp_scaling.addLayout(fit_row)
 
         self.main_layout.addWidget(self.grp_scaling)
         self.main_layout.addStretch()

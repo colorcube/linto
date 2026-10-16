@@ -142,6 +142,21 @@ class MainWindow(QMainWindow):
         # In initial Layout mode, Plot dock is hidden
         self.plot_dock.hide()
 
+        # Connect dock signals to hide duplicate title bars when tabbed
+        self._all_docks = [
+            self.object_dock,
+            self.transform_dock,
+            self.pen_dock,
+            self.paper_dock,
+            self.plot_dock,
+        ]
+        for dock in self._all_docks:
+            dock.topLevelChanged.connect(lambda _: self._schedule_dock_title_update())
+            dock.dockLocationChanged.connect(lambda _: self._schedule_dock_title_update())
+            dock.visibilityChanged.connect(lambda _: self._schedule_dock_title_update())
+
+        self._update_dock_title_bars()
+
     def _setup_actions_and_menus(self):
         menu_bar = self.menuBar()
 
@@ -748,11 +763,50 @@ class MainWindow(QMainWindow):
 
     def showEvent(self, event):
         super().showEvent(event)
+        self._schedule_dock_title_update()
         if not getattr(self, "_initial_zoom_done", False):
             self._initial_zoom_done = True
             from PySide6.QtCore import QTimer
             self.canvas.zoom_to_fit()
             QTimer.singleShot(50, self.canvas.zoom_to_fit)
+
+    def _schedule_dock_title_update(self):
+        from PySide6.QtCore import QTimer
+        QTimer.singleShot(0, self._update_dock_title_bars)
+
+    def _update_dock_title_bars(self):
+        """Hide redundant dock title bars when docks are tabbed together."""
+        all_docks = getattr(self, "_all_docks", None)
+        if not all_docks:
+            all_docks = [
+                getattr(self, "object_dock", None),
+                getattr(self, "transform_dock", None),
+                getattr(self, "pen_dock", None),
+                getattr(self, "paper_dock", None),
+                getattr(self, "plot_dock", None),
+            ]
+            all_docks = [d for d in all_docks if d is not None]
+
+        for dock in all_docks:
+            is_tabbed = False
+            if not dock.isFloating() and not dock.isHidden():
+                siblings = [
+                    d for d in self.tabifiedDockWidgets(dock)
+                    if not d.isHidden() and not d.isFloating()
+                ]
+                is_tabbed = len(siblings) > 0
+
+            if is_tabbed:
+                cur_tb = dock.titleBarWidget()
+                if cur_tb is None or getattr(cur_tb, "_is_dummy_title_bar", False) is False:
+                    dummy = QWidget()
+                    dummy._is_dummy_title_bar = True
+                    dummy.setFixedHeight(0)
+                    dock.setTitleBarWidget(dummy)
+            else:
+                cur_tb = dock.titleBarWidget()
+                if cur_tb is not None and getattr(cur_tb, "_is_dummy_title_bar", False) is True:
+                    dock.setTitleBarWidget(None)
 
     def dragEnterEvent(self, event):
         if event.mimeData().hasUrls():
@@ -796,6 +850,7 @@ class MainWindow(QMainWindow):
         self.simulation_bar.show()
         self.plot_dock.show()
         self.plot_dock.raise_()
+        self._schedule_dock_title_update()
         self.lbl_info.setText("Ausgabe aktiv")
 
     def switch_to_layout_mode(self):
@@ -813,6 +868,7 @@ class MainWindow(QMainWindow):
         self.transform_dock.show()
         self.pen_dock.show()
         self.transform_dock.raise_()
+        self._schedule_dock_title_update()
         self.object_dock.refresh()
         self.transform_dock.refresh_item_fields()
         self.lbl_info.setText("Layout aktiv")

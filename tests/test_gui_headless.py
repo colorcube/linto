@@ -87,22 +87,30 @@ def test_docks_and_page_setup_dialog(qapp):
     assert win.transform_dock is not None
     assert win.pen_dock is not None
     assert win.object_dock.windowTitle() == "Objekte & Ebenen"
-    assert win.transform_dock.windowTitle() == "Skalieren & Platzieren"
+    assert win.transform_dock.windowTitle() == "Transformation"
     assert win.pen_dock.windowTitle() == "Stifte"
 
     # Verify group titles in TransformDock
-    assert win.transform_dock.grp_transform.title() == "Transformation"
+    assert win.transform_dock.grp_transform.title() == "Position"
     assert win.transform_dock.grp_rotation.title() == "Rotation"
     assert win.transform_dock.grp_placement.title() == "Platzieren"
-    assert win.transform_dock.grp_scaling.title() == "Skalieren"
+    assert win.transform_dock.grp_scaling.title() == "Skalierung"
+    assert win.transform_dock.btn_scale_up.text() == "+"
+    assert win.transform_dock.btn_scale_down.text() == "-"
+    assert win.transform_dock.btn_original_size.text() == "Original"
     assert not win.transform_dock.btn_center_h.icon().isNull()
     assert not win.transform_dock.btn_center_v.icon().isNull()
     assert not win.transform_dock.btn_center_both.icon().isNull()
     assert win.transform_dock.spin_fit_margin.minimumWidth() >= 75
 
-    # Verify that Transform and Pen docks are tabified
+    # Verify that Transform and Pen docks are tabified and title bars hidden
     tabified_with_transform = win.tabifiedDockWidgets(win.transform_dock)
     assert win.pen_dock in tabified_with_transform
+    win._update_dock_title_bars()
+    assert getattr(win.transform_dock.titleBarWidget(), "_is_dummy_title_bar", False) is True
+    assert getattr(win.pen_dock.titleBarWidget(), "_is_dummy_title_bar", False) is True
+    # Standalone object dock has native title bar
+    assert win.object_dock.titleBarWidget() is None
 
     # Verify toolbar paper setup button & status bar
     assert "DIN A3" in win.btn_page_setup.text()
