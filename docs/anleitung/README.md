@@ -15,23 +15,22 @@ Plotter Studio ist ein spezialisierter **Slicer und Arbeitsbereich für Vektor-S
 * **Kein Vektor-Zeichenprogramm:** Plotter Studio ersetzt weder Inkscape noch Adobe Illustrator. Sie erstellen Ihre Kunstwerke, CAD-Pläne oder Algorithmen in Ihrem gewohnten Werkzeug und exportieren sie als Standard-SVG. Plotter Studio übernimmt dann das Layouten, Skalieren, Pfadoptimieren und Plotten.
 
 ### Was kann Plotter Studio heute schon?
-* SVG-Vektordateien laden, platzieren, numerisch skalieren (50%, 100%, 200%, Proportions-Sperre), drehen und auf dem Papier zentrieren.
+* SVG- und HP-GL/PLT-Vektordateien laden, platzieren, numerisch skalieren (50%, 100%, 200%, Proportions-Sperre), drehen (90°-Schritte oder freier Winkel) und auf dem Papier zentrieren.
 * Randprofile für Rollen- und Flachbettplotter (z.B. EXP, NORM mit asymmetrischem Vorschubrand) und optische Papiererkennung (`OH;`).
-* Automatisches Farb-Clustering auf bis zu 8 Stifte.
+* Automatisches Farb-Clustering auf bis zu 8 Stifte (SVG) bzw. direkte Übernahme der Stiftnummern `SP1`–`SP8` und `LB`-Textbeschriftungen (HP-GL).
 * Multi-Objektverwaltung mit Z-Order (Zeichenabfolge), Sichtbarkeit und Bearbeitungssperre.
 * Intelligente Slicer-Pipeline: Pfade verbinden (Merge), Richtung optimieren (Reverse), Mikrostützpunkte glätten (Douglas-Peucker) und 2-Opt TSP Pfadoptimierung (40–70 % weniger Stift-Leerfahrten).
 * Interaktive Simulation mit Zeitleiste (Scrubber), variabler Geschwindigkeit und Visualisierung aller Leerfahrten (`Pen Up`).
 * Pre-Flight-Inspektion mit genauen Werten für Zeichenstrecke, Leerweg und geschätzter Laufzeit.
 * Stift-Filterung zum selektiven Plotten einzelner Farben (z.B. für manuelle Stiftwechsel).
-* Live-Streaming über RS-232 oder TCP mit striktem **RTS/CTS-Hardware-Handshake** (kein Pufferüberlauf).
+* Live-Streaming über RS-232 oder TCP mit striktem **RTS/CTS-Hardware-Handshake** (kein Pufferüberlauf) und optionaler automatischer Pause bei Stiftwechseln.
 * Sicherer Notfallabbruch (`ESC.K`, `PU;`, `SP0;`) schützt Papier und Stiftspitze.
 * Offene Multi-Plotter-Architektur (Center-Origin & Bottom-Left) über YAML-Profile mit 26 Profilen: Neben Mutoh XP-500 und Generic Flatbed wurden **24 Geräteprofile direkt aus InkCut übernommen** (Roland, Graphtec, US Cutter, Summa, Sekonic etc.) sowie das Konverter-Tool `tools/import_inkcut_devices.py` bereitgestellt.
 * Hardware-Diagnosetool (`tools/xp500_probe.py`), Kalibriermuster (`resources/calibration_plot_a3.svg`) und integrierter Software-Emulator (`VirtualPlotter`).
 
 ### Was kann Plotter Studio (noch) nicht bzw. was ist geplant?
 * **Schneideplotter / Schleppmesser-Kompensation (Drag-Knife Offset):** Das Schneiden von Vinylfolie mit Klingen wird noch nicht unterstützt; der Fokus liegt aktuell auf Stiftplottern.
-* **HP-GL/PLT-Import:** Das Einlesen bestehender HP-GL-Plotdateien ist für spätere Versionen geplant; aktuell dient SVG als universelles Quellformat, während HP-GL für die Ausgabe und den Export genutzt wird.
-* **Direkter DXF-Import:** Aktuell müssen CAD-Zeichnungen im DXF-Format vorab z.B. in Inkscape oder QCAD als SVG exportiert werden.
+* **Direkter DXF-Import:** Aktuell müssen CAD-Zeichnungen im DXF-Format vorab z.B. in Inkscape oder QCAD als SVG oder HP-GL exportiert werden.
 * **G-Code-Plotter (Marlin / Grbl):** Die direkte Generierung von CNC-G-Code für 3D-Drucker mit Stifthalter befindet sich in der Konzeption; aktuell werden Plotter mit HP-GL / MH-GL angesteuert.
 
 ---
@@ -44,8 +43,9 @@ Plotter Studio ist ein spezialisierter **Slicer und Arbeitsbereich für Vektor-S
 2. **[2. Layout-Modus & Objektverwaltung](2-layout-und-objektverwaltung.md)**
    * Benutzeroberfläche, Canvas, Millimeter-Lineale und Hard-Clip-Grenzen.
    * Seiteneinrichtung (DIN A4–A0, Randprofile EXP/NORM, optische Hard-Clip-Abfrage `OH;`).
-   * Vektor-Import & automatisches Farb-Clustering.
-   * Docks: *Objekte & Ebenen* (Z-Order, Sichtbarkeit, Sperren), *Transformation* (Proportions-Sperre, Schnelltasten, Drehen, Spiegeln) und *Stifte*.
+   * Vektor-Import (SVG & HP-GL/PLT) & automatisches Farb-Clustering.
+   * Docks: *Objekte & Ebenen* (Z-Order, Sichtbarkeit, Sperren), *Transformation* (Proportions-Sperre, Schnelltasten, Drehen, freie Winkel) und *Stifte*.
+   * **Leitfaden Vektorformate & Datenquellen:** Eigene Skripte (SVG), Inkscape als Universal-Konverter, Blender (3D zu 2D SVG), HP-GL und DXF.
 3. **[3. Ausgabe-Modus, Simulation & Export](3-ausgabe-simulation-export.md)**
    * Die Optimierungs-Pipeline (Merge, Reverse, RDP, 2-Opt Pfadoptimierung).
    * Pre-Flight-Statistiken (Zeichenweg, Eilgang-Ersparnis, Stiftwechsel, Dauer).

@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
 from ..core.document import Document, ImportItem
 from ..core.geometry import AffineTransform
 from ..core.svg_import import load_svg
+from ..core.hpgl_import import load_hpgl, is_hpgl_file
 from ..core.svg_export import (
     export_document_to_svg,
     export_plot_job_to_svg,
@@ -673,7 +674,10 @@ class MainWindow(QMainWindow):
 
     def open_project_dialog(self):
         fpath, _ = QFileDialog.getOpenFileName(
-            self, "Projekt oder SVG öffnen", "", "SVG-Dateien (*.svg);;Alle Dateien (*)"
+            self,
+            "Projekt oder Vektordatei öffnen",
+            "",
+            "Vektordateien (*.svg *.hpgl *.plt);;SVG-Dateien (*.svg);;HP-GL Plotdateien (*.hpgl *.plt);;Alle Dateien (*)",
         )
         if fpath:
             self.load_project_file(fpath)
@@ -707,20 +711,24 @@ class MainWindow(QMainWindow):
                 self.lbl_info.setText(f"Projekt geladen: {os.path.basename(fpath)} ({len(self.doc.items)} Objekt(e))")
             else:
                 num_paths = sum(len(it.paths) for it in self.doc.items)
-                self.lbl_info.setText(f"SVG geladen: {os.path.basename(fpath)} ({num_paths} Pfade)")
+                fmt_label = "HP-GL" if is_hpgl_file(fpath) else "SVG"
+                self.lbl_info.setText(f"{fmt_label} geladen: {os.path.basename(fpath)} ({num_paths} Pfade)")
         except Exception as e:
             QMessageBox.critical(self, "Fehler beim Öffnen der Datei", f"Konnte Datei nicht laden:\n{e}")
 
     def import_svg_dialog(self):
         fpath, _ = QFileDialog.getOpenFileName(
-            self, "SVG-Grafik importieren", "", "SVG Dateien (*.svg);;Alle Dateien (*)"
+            self,
+            "Vektorgrafik importieren",
+            "",
+            "Vektordateien (*.svg *.hpgl *.plt);;SVG Dateien (*.svg);;HP-GL Plotdateien (*.hpgl *.plt);;Alle Dateien (*)",
         )
         if fpath:
             self.import_svg_file(fpath)
 
     def import_svg_file(self, fpath: str):
         try:
-            if is_project_file(fpath):
+            if not is_hpgl_file(fpath) and is_project_file(fpath):
                 resp = QMessageBox.question(
                     self,
                     "Projektdatei erkannt",
@@ -735,8 +743,11 @@ class MainWindow(QMainWindow):
                     self.load_project_file(fpath)
                     return
 
-            pen_palette = [(p.pen_id, p.color_hex) for p in self.doc.pens]
-            item = load_svg(fpath, pen_palette=pen_palette)
+            if is_hpgl_file(fpath):
+                item = load_hpgl(fpath)
+            else:
+                pen_palette = [(p.pen_id, p.color_hex) for p in self.doc.pens]
+                item = load_svg(fpath, pen_palette=pen_palette)
 
             # Center item on page upon import
             pb = self.doc.page.plottable_box

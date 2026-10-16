@@ -65,7 +65,7 @@ Tests direkt am physischen Mutoh XP-500 Plotter mit [tools/xp500_probe.py](tools
 
 ## 4. Format- und Treiber-Roadmap
 
-- [ ] **HP-GL/PLT-Import (optional):** Bestehende `.hpgl`/`.plt`-Dateien als Vektorpfade in den Layout-Canvas einlesen (Dateidialog und Drag-&-Drop erlauben `.hpgl`/`.plt` bereits im Filter, leiten sie aber noch an `load_svg()` weiter). *Referenz:* Fertiger Parser & Tokenizer liegt bereits in `MutohPlot/src/mutohplot/hpgl/` (`HPGLParser`, `HPGLTokenizer`) sowie im `VirtualPlotter` vor.
+- [x] **HP-GL/PLT-Import (optional):** Bestehende `.hpgl`/`.plt`-Dateien als Vektorpfade in den Layout-Canvas einlesen (inkl. `LB`-Text, Kreisen `CI`, Bögen `AA`/`AR`, Rechtecken `EA`/`RA` und Stiftzuweisung `SP1`–`SP8`, übernommen aus `MutohPlot` in `src/plotter_studio/core/hpgl_import.py`).
 - [ ] **Schneideplotter-Unterstützung (Vinyl Cutter):** Klingen-Offset-Kompensation (Drag-Knife) implementieren, um Schnittecken bei Schleppmessern sauber auszufahren.
 - [ ] **DXF-Import:** Direkter Import von 2D-CAD-Dateien (unter Nutzung von `ezdxf`).
 - [ ] **G-Code-Treiber:** Emitter für DIY-Stiftplotter und Fräsen/3D-Drucker mit Marlin- oder Grbl-Firmware.

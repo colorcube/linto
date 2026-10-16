@@ -24,6 +24,7 @@ from .svg_import import (
     _clean_duplicate_attributes,
     load_svg,
 )
+from .hpgl_import import load_hpgl, is_hpgl_file
 
 
 NS_PS = "https://plotter-studio.org/schema/v1"
@@ -171,6 +172,16 @@ def load_document_from_svg(filepath_or_data: str) -> Document:
     and standard SVGs (which are loaded as an ImportItem on a matching or default page).
     """
     if not is_project_file(filepath_or_data):
+        if os.path.exists(filepath_or_data) and is_hpgl_file(filepath_or_data):
+            item = load_hpgl(filepath_or_data)
+            page = Page()
+            pb = page.plottable_box
+            if item.original_bounds:
+                ob = item.original_bounds
+                item.transform.tx = pb.min_x + (pb.width - ob.width) / 2.0 - ob.min_x
+                item.transform.ty = pb.min_y + (pb.height - ob.height) / 2.0 - ob.min_y
+            return Document(page=page, pens=copy.deepcopy(DEFAULT_PENS), items=[item] if item.paths else [])
+
         item = load_svg(filepath_or_data)
         page = Page()
         try:
