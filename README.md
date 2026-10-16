@@ -71,15 +71,15 @@ You don't need hardware connected to try Plotter Studio—the built-in emulator 
 
 ## Documentation
 
-Comprehensive documentation is available in the [`docs/anleitung/`](docs/anleitung/README.md) directory:
+Comprehensive documentation is available in the [`docs/guide/`](docs/guide/README.md) directory:
 
-* **[1. Quickstart & Workflow](docs/anleitung/1-schnellstart-und-workflow.md):** Step-by-step guide with hardware or emulator.
-* **[2. Layout Mode & Object Management](docs/anleitung/2-layout-und-objektverwaltung.md):** Canvas navigation, rulers, page setup, Z-order, and pen docks.
-* **[3. Output Mode, Simulation & Streaming](docs/anleitung/3-ausgabe-simulation-export.md):** Pipeline tuning, pre-flight stats, simulation scrubber, and serial streaming.
-* **[4. Hardware Setup, Calibration & Diagnostics](docs/anleitung/4-hardware-setup-und-test.md):** RS-232 null-modem pinout (RTS/CTS), FTDI adapters, diagnostic probe, and calibration sheet.
-* **[5. Vector Formats, Sources & Workflows](docs/anleitung/5-vektorformate-und-workflows.md):** Custom SVG scripts (mm units, pen color codes), Inkscape, Blender, HP-GL, and DXF.
-* **[6. Technical Concepts & Architecture](docs/anleitung/6-konzepte-und-architektur.md):** Deep-dive into slicer math, 2-Opt TSP, coordinate transformations, and streaming.
-* **[7. Recommended Resources, Tools & Community](docs/anleitung/7-ressourcen-tools-und-community.md):** Curated tools (vpype, vsketch, ln, Turtletoy), single-line Hershey fonts, and communities.
+* **[1. Quickstart & Workflow](docs/guide/1-quickstart-and-workflow.md):** Step-by-step guide with hardware or emulator.
+* **[2. Layout Mode & Object Management](docs/guide/2-layout-and-objects.md):** Canvas navigation, rulers, page setup, Z-order, and pen docks.
+* **[3. Output Mode, Simulation & Streaming](docs/guide/3-output-simulation-export.md):** Pipeline tuning, pre-flight stats, simulation scrubber, and serial streaming.
+* **[4. Hardware Setup, Calibration & Diagnostics](docs/guide/4-hardware-setup-and-diagnostics.md):** RS-232 null-modem pinout (RTS/CTS), FTDI adapters, diagnostic probe, and calibration sheet.
+* **[5. Vector Formats, Sources & Workflows](docs/guide/5-vector-formats-and-workflows.md):** Custom SVG scripts (mm units, pen color codes), Inkscape, Blender, HP-GL, and DXF.
+* **[6. Technical Concepts & Architecture](docs/guide/6-concepts-and-architecture.md):** Deep-dive into slicer math, 2-Opt TSP, coordinate transformations, and streaming.
+* **[7. Recommended Resources, Tools & Community](docs/guide/7-resources-tools-and-community.md):** Curated tools (vpype, vsketch, ln, Turtletoy), single-line Hershey fonts, and communities.
 * **[Mutoh XP-500 Device Reference](docs/devices/mutoh-xp500/README.md):** Manual transcription, MH-GL command set, escape sequences, and DIP registers.
 
 ---
