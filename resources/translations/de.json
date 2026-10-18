@@ -488,5 +488,16 @@
   "Center horizontally": "Horizontal zentrieren",
   "Center vertically": "Vertikal zentrieren",
   "Center on sheet": "Auf Blatt zentrieren",
-  "Rotate object (%1° %2)": "Objekt drehen (%1° %2)"
+  "Rotate object (%1° %2)": "Objekt drehen (%1° %2)",
+  "8 Data Bits": "8 Datenbits",
+  "7 Data Bits": "7 Datenbits",
+  "Serial data bits (default from device profile, e.g. 8 or 7)": "Serielle Datenbits (Vorgabe aus Geräteprofil, z. B. 8 oder 7)",
+  "None (N)": "Keine (N)",
+  "Even (E)": "Gerade (E)",
+  "Odd (O)": "Ungerade (O)",
+  "Serial parity check (None, Even, Odd)": "Serielle Paritätsprüfung (Keine, Gerade, Ungerade)",
+  "1 Stop Bit": "1 Stoppbit",
+  "2 Stop Bits": "2 Stoppbits",
+  "Serial stop bits (1 or 2)": "Serielle Stoppbits (1 oder 2)",
+  "Data Format:": "Datenformat:"
 }

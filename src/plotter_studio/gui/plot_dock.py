@@ -623,7 +623,8 @@ class PlotDockWidget(QDockWidget):
             "none": self.tr("None"),
         }
         flow_str = flow_names.get(getattr(dev, "flow_control", "rtscts"), "RTS/CTS")
-        baud_info = f" ({dev.baudrate} Baud, {flow_str})" if not dev.port.startswith("tcp://") else f" ({flow_str})"
+        framing_str = getattr(dev, "framing_label", "8N1")
+        baud_info = f" ({dev.baudrate} Baud, {framing_str}, {flow_str})" if not dev.port.startswith("tcp://") else f" ({flow_str})"
         dev_info_html = self.tr("Device: <b>%1</b><br>Port: <code>%2</code>%3").replace("%1", dev.name).replace("%2", dev.port).replace("%3", baud_info)
         self.lbl_active_device_info.setText(dev_info_html)
 
@@ -655,9 +656,9 @@ class PlotDockWidget(QDockWidget):
                     port = dev.port
                 baud = dev.baudrate
                 prof = dev.get_profile()
-                bytesize = prof.connection.bytesize
-                parity = prof.connection.parity
-                stopbits = prof.connection.stopbits
+                bytesize = int(getattr(dev, "bytesize", None) or prof.connection.bytesize)
+                parity = str(getattr(dev, "parity", None) or prof.connection.parity).upper()
+                stopbits = int(getattr(dev, "stopbits", None) or prof.connection.stopbits)
                 axes_swapped = prof.axes_swapped
         if not port:
             self.lbl_probe_status.setText(self.tr("No port selected"))
@@ -922,9 +923,9 @@ class PlotDockWidget(QDockWidget):
             baudrate=baud,
             flow_control=flow_ctrl,
             pause_on_pen_change=self.chk_pause_pen_change.isChecked(),
-            bytesize=profile.connection.bytesize,
-            parity=profile.connection.parity,
-            stopbits=profile.connection.stopbits,
+            bytesize=int(getattr(dev, "bytesize", None) or profile.connection.bytesize) if dev else profile.connection.bytesize,
+            parity=str(getattr(dev, "parity", None) or profile.connection.parity).upper() if dev else profile.connection.parity,
+            stopbits=int(getattr(dev, "stopbits", None) or profile.connection.stopbits) if dev else profile.connection.stopbits,
             start_step_index=self.spin_start_step.value(),
         )
         if not started:

@@ -87,6 +87,7 @@ class DeviceSettingsDialog(QDialog):
             self.combo_model.addItem(f"{p.name} ({p.manufacturer})", p.model_id)
         if not avail_profiles:
             self.combo_model.addItem("Mutoh XP-500", "mutoh_xp500")
+        self.combo_model.currentIndexChanged.connect(self._on_model_profile_changed)
         form.addRow(self.tr("Model Profile:"), self.combo_model)
 
         port_row = QHBoxLayout()
@@ -109,6 +110,28 @@ class DeviceSettingsDialog(QDialog):
         self.combo_baud.setEditable(True)
         self.combo_baud.setCurrentText("19200")
         form.addRow(self.tr("Baud Rate:"), self.combo_baud)
+
+        framing_row = QHBoxLayout()
+        self.combo_bytesize = QComboBox()
+        self.combo_bytesize.addItem(self.tr("8 Data Bits"), 8)
+        self.combo_bytesize.addItem(self.tr("7 Data Bits"), 7)
+        self.combo_bytesize.setToolTip(self.tr("Serial data bits (default from device profile, e.g. 8 or 7)"))
+
+        self.combo_parity = QComboBox()
+        self.combo_parity.addItem(self.tr("None (N)"), "N")
+        self.combo_parity.addItem(self.tr("Even (E)"), "E")
+        self.combo_parity.addItem(self.tr("Odd (O)"), "O")
+        self.combo_parity.setToolTip(self.tr("Serial parity check (None, Even, Odd)"))
+
+        self.combo_stopbits = QComboBox()
+        self.combo_stopbits.addItem(self.tr("1 Stop Bit"), 1)
+        self.combo_stopbits.addItem(self.tr("2 Stop Bits"), 2)
+        self.combo_stopbits.setToolTip(self.tr("Serial stop bits (1 or 2)"))
+
+        framing_row.addWidget(self.combo_bytesize)
+        framing_row.addWidget(self.combo_parity)
+        framing_row.addWidget(self.combo_stopbits)
+        form.addRow(self.tr("Data Format:"), framing_row)
 
         self.combo_flow = QComboBox()
         self.combo_flow.addItem(self.tr("Hardware (RTS / CTS)"), "rtscts")
@@ -227,11 +250,19 @@ class DeviceSettingsDialog(QDialog):
 
     def _populate_fields(self, dev: ConfiguredDevice):
         self.txt_name.setText(dev.name)
+        self.combo_model.blockSignals(True)
         idx_model = self.combo_model.findData(dev.model_id)
         if idx_model >= 0:
             self.combo_model.setCurrentIndex(idx_model)
+        self.combo_model.blockSignals(False)
         self.combo_port.setCurrentText(dev.port)
         self.combo_baud.setCurrentText(str(dev.baudrate))
+        idx_bs = self.combo_bytesize.findData(int(getattr(dev, "bytesize", 8) or 8))
+        self.combo_bytesize.setCurrentIndex(idx_bs if idx_bs >= 0 else 0)
+        idx_par = self.combo_parity.findData(str(getattr(dev, "parity", "N") or "N").upper())
+        self.combo_parity.setCurrentIndex(idx_par if idx_par >= 0 else 0)
+        idx_sb = self.combo_stopbits.findData(int(getattr(dev, "stopbits", 1) or 1))
+        self.combo_stopbits.setCurrentIndex(idx_sb if idx_sb >= 0 else 0)
         flow = getattr(dev, "flow_control", "rtscts")
         idx_flow = self.combo_flow.findData(flow)
         if idx_flow >= 0:
@@ -249,18 +280,54 @@ class DeviceSettingsDialog(QDialog):
         self.chk_invert_y.setChecked(dev.invert_y)
         self.lbl_test_result.setText(self.tr("Not tested yet"))
 
+    def _on_model_profile_changed(self):
+        """Apply default serial connection parameters from the newly selected DeviceProfile."""
+        model_id = self.combo_model.currentData() or "mutoh_xp500"
+        try:
+            prof = load_profile(model_id)
+        except Exception:
+            return
+        self.combo_baud.setCurrentText(str(prof.connection.baudrate))
+        idx_bs = self.combo_bytesize.findData(int(prof.connection.bytesize))
+        if idx_bs >= 0:
+            self.combo_bytesize.setCurrentIndex(idx_bs)
+        idx_par = self.combo_parity.findData(str(prof.connection.parity).upper())
+        if idx_par >= 0:
+            self.combo_parity.setCurrentIndex(idx_par)
+        idx_sb = self.combo_stopbits.findData(int(prof.connection.stopbits))
+        if idx_sb >= 0:
+            self.combo_stopbits.setCurrentIndex(idx_sb)
+        idx_flow = self.combo_flow.findData(prof.connection.flow_control)
+        if idx_flow >= 0:
+            self.combo_flow.setCurrentIndex(idx_flow)
+        idx_margin = self.combo_margins.findData(prof.default_margin_profile)
+        if idx_margin >= 0:
+            self.combo_margins.setCurrentIndex(idx_margin)
+
     def _on_add_device(self):
         new_id = f"device_{uuid.uuid4().hex[:6]}"
-        port = self.combo_port.currentText() or "/dev/ttyUSB0"
-        default_flow = "xonxoff" if (port.startswith("tcp://") or "virtual_plotter" in port) else (self.combo_flow.currentData() or "rtscts")
+        model_id = self.combo_model.currentData() or "mutoh_xp500"
+        try:
+            prof = load_profile(model_id)
+        except Exception:
+            prof = get_default_profile()
+        port = self.combo_port.currentText() or prof.connection.default_port
+        default_flow = (
+            "xonxoff"
+            if (port.startswith("tcp://") or "virtual_plotter" in port)
+            else (prof.connection.flow_control if prof.connection.flow_control != "dsrdtr" else "rtscts")
+        )
         new_dev = ConfiguredDevice(
             id=new_id,
             name=self.tr("New Plotter"),
-            model_id=self.combo_model.currentData() or "mutoh_xp500",
+            model_id=model_id,
             port=port,
-            baudrate=19200,
+            baudrate=int(prof.connection.baudrate),
+            bytesize=int(prof.connection.bytesize),
+            parity=str(prof.connection.parity).upper(),
+            stopbits=int(prof.connection.stopbits),
             flow_control=default_flow,
-            margin_profile="exp",
+            margin_profile=prof.default_margin_profile or "exp",
         )
         self.manager.add_device(new_dev)
         self._load_devices_list(select_id=new_id)
@@ -294,6 +361,9 @@ class DeviceSettingsDialog(QDialog):
             self._current_device.baudrate = int(self.combo_baud.currentText().strip())
         except ValueError:
             self._current_device.baudrate = 19200
+        self._current_device.bytesize = int(self.combo_bytesize.currentData() or 8)
+        self._current_device.parity = str(self.combo_parity.currentData() or "N").upper()
+        self._current_device.stopbits = int(self.combo_stopbits.currentData() or 1)
         self._current_device.flow_control = self.combo_flow.currentData() or "rtscts"
         self._current_device.margin_profile = self.combo_margins.currentData()
         self._current_device.rotation = int(self.combo_rotation.currentData())
@@ -316,16 +386,13 @@ class DeviceSettingsDialog(QDialog):
             baudrate = int(self.combo_baud.currentText().strip())
         except ValueError:
             baudrate = 19200
-        bytesize = 8
-        parity = "N"
-        stopbits = 1
+        bytesize = int(self.combo_bytesize.currentData() or 8)
+        parity = str(self.combo_parity.currentData() or "N").upper()
+        stopbits = int(self.combo_stopbits.currentData() or 1)
         try:
             prof = load_profile(self.combo_model.currentData() or "mutoh_xp500")
         except Exception:
             prof = self._current_device.get_profile() if self._current_device else get_default_profile()
-        bytesize = prof.connection.bytesize
-        parity = prof.connection.parity
-        stopbits = prof.connection.stopbits
         axes_swapped = prof.axes_swapped
         self.btn_test.setEnabled(False)
         self.lbl_test_result.setText(self.tr("Probing %1 at %2 baud...").replace("%1", port).replace("%2", str(baudrate)))

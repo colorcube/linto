@@ -48,6 +48,9 @@ class ConfiguredDevice:
     model_id: str = "mutoh_xp500"
     port: str = "/dev/ttyUSB0"
     baudrate: int = 19200
+    bytesize: int = 8
+    parity: str = "N"  # "N" (None), "E" (Even), "O" (Odd)
+    stopbits: int = 1  # 1 or 2
     flow_control: str = "rtscts"  # "rtscts", "xonxoff", "none"
     margin_profile: str = "exp"
     rotation: int = 0
@@ -56,6 +59,11 @@ class ConfiguredDevice:
     invert_y: bool = False
     probed_units_per_mm: Optional[float] = None
     axis_schema: int = AXIS_SCHEMA_VERSION
+
+    @property
+    def framing_label(self) -> str:
+        """Compact framing notation such as '8N1' or '7E1'."""
+        return f"{int(self.bytesize)}{str(self.parity).upper()}{int(self.stopbits)}"
 
     def get_profile(self) -> DeviceProfile:
         """Load the associated DeviceProfile."""
@@ -72,6 +80,9 @@ DEFAULT_DEVICES = [
         model_id="mutoh_xp500",
         port="/dev/ttyUSB0",
         baudrate=19200,
+        bytesize=8,
+        parity="N",
+        stopbits=1,
         flow_control="rtscts",
         margin_profile="exp",
     ),
@@ -81,6 +92,9 @@ DEFAULT_DEVICES = [
         model_id="mutoh_xp500",
         port="tcp://127.0.0.1:9999",
         baudrate=19200,
+        bytesize=8,
+        parity="N",
+        stopbits=1,
         flow_control="xonxoff",
         margin_profile="exp",
     ),
@@ -151,6 +165,12 @@ class DeviceManager:
                         prof = load_profile(d.get("model_id", "mutoh_xp500"))
                     except Exception:
                         pass
+                    if "bytesize" not in d and prof is not None:
+                        d["bytesize"] = int(prof.connection.bytesize)
+                    if "parity" not in d and prof is not None:
+                        d["parity"] = str(prof.connection.parity).upper()
+                    if "stopbits" not in d and prof is not None:
+                        d["stopbits"] = int(prof.connection.stopbits)
                     if "flow_control" not in d:
                         if prof is not None:
                             d["flow_control"] = prof.connection.flow_control

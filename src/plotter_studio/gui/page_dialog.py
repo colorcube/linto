@@ -309,9 +309,9 @@ class PageSetupDialog(QDialog):
         axes_swapped = True
         if self._active_dev:
             prof = self._active_dev.get_profile()
-            bytesize = prof.connection.bytesize
-            parity = prof.connection.parity
-            stopbits = prof.connection.stopbits
+            bytesize = int(getattr(self._active_dev, "bytesize", None) or prof.connection.bytesize)
+            parity = str(getattr(self._active_dev, "parity", None) or prof.connection.parity).upper()
+            stopbits = int(getattr(self._active_dev, "stopbits", None) or prof.connection.stopbits)
             axes_swapped = prof.axes_swapped
         self.btn_fetch_device.setEnabled(False)
         self.btn_fetch_device.setText(self.tr("Querying '%1'...").replace("%1", target))

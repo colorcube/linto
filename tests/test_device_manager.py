@@ -95,10 +95,18 @@ def test_device_dialog_headless(qapp, tmp_path):
     assert "none" in flow_keys
 
     dlg.combo_flow.setCurrentIndex(dlg.combo_flow.findData("xonxoff"))
+    dlg.combo_bytesize.setCurrentIndex(dlg.combo_bytesize.findData(7))
+    dlg.combo_parity.setCurrentIndex(dlg.combo_parity.findData("E"))
+    dlg.combo_stopbits.setCurrentIndex(dlg.combo_stopbits.findData(1))
     dlg._on_save_current_device()
     assert "Geänderter Name" in dlg.list_devices.currentItem().text()
-    assert mgr.get_device(dlg._current_device.id).baudrate == 300
-    assert mgr.get_device(dlg._current_device.id).flow_control == "xonxoff"
+    saved_dev = mgr.get_device(dlg._current_device.id)
+    assert saved_dev.baudrate == 300
+    assert saved_dev.flow_control == "xonxoff"
+    assert saved_dev.bytesize == 7
+    assert saved_dev.parity == "E"
+    assert saved_dev.stopbits == 1
+    assert saved_dev.framing_label == "7E1"
 
     # Test connection test error handling (background thread, non-blocking)
     dlg.combo_port.setEditText("/dev/nonexistent_test_port")
