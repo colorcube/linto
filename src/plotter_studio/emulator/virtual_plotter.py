@@ -116,15 +116,16 @@ class VirtualPlotter:
         self._lock = threading.RLock()
 
         # Hard-clip area calculation (Center-Origin)
-        # X: sheet_width - (m_left + m_right), Y: sheet_height - (m_top + m_bottom)
+        # Sheet dimensions: width_mm (horizontal/carriage), height_mm (vertical/feed)
+        # Mutoh XP-500 hardware axes: X = media feed (vertical), Y = pen carriage (horizontal)
         top_m, bottom_m, left_m, right_m = self.margins_mm
         self.plottable_width_mm = max(10.0, self.sheet_width_mm - (left_m + right_m))
         self.plottable_height_mm = max(10.0, self.sheet_height_mm - (top_m + bottom_m))
 
-        self.hard_clip_xmin_units = int(- (self.plottable_width_mm * self.units_per_mm) / 2.0)
-        self.hard_clip_xmax_units = int((self.plottable_width_mm * self.units_per_mm) / 2.0)
-        self.hard_clip_ymin_units = int(- (self.plottable_height_mm * self.units_per_mm) / 2.0)
-        self.hard_clip_ymax_units = int((self.plottable_height_mm * self.units_per_mm) / 2.0)
+        self.hard_clip_xmin_units = int(- (self.plottable_height_mm * self.units_per_mm) / 2.0)
+        self.hard_clip_xmax_units = int((self.plottable_height_mm * self.units_per_mm) / 2.0)
+        self.hard_clip_ymin_units = int(- (self.plottable_width_mm * self.units_per_mm) / 2.0)
+        self.hard_clip_ymax_units = int((self.plottable_width_mm * self.units_per_mm) / 2.0)
 
         # Plotter state
         self.active_pen: int = 0

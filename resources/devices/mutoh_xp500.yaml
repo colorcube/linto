@@ -6,9 +6,9 @@ protocol: "hpgl"
 origin: "center"
 units_per_mm: 40.0
 max_pens: 8
-swap_xy: false
+swap_xy: true
 invert_x: false
-invert_y: false
+invert_y: true
 rotation_deg: 0
 
 connection:

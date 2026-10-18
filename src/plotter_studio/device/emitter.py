@@ -37,6 +37,8 @@ class HPGLEmitter:
         invert_x: Optional[bool] = None,
         invert_y: Optional[bool] = None,
         rotation_deg: Optional[int] = None,
+        units_per_mm: Optional[float] = None,
+        feed_edge: str = "top",
     ):
         self.profile = profile
         self.margin_profile = margin_profile
@@ -45,6 +47,8 @@ class HPGLEmitter:
         self.invert_x = profile.invert_x if invert_x is None else invert_x
         self.invert_y = profile.invert_y if invert_y is None else invert_y
         self.rotation_deg = profile.rotation_deg if rotation_deg is None else rotation_deg
+        self.units_per_mm = float(units_per_mm) if (units_per_mm is not None and units_per_mm > 0) else profile.units_per_mm
+        self.feed_edge = feed_edge or "top"
 
     def to_plotter_units(
         self,
@@ -52,10 +56,16 @@ class HPGLEmitter:
         y_mm: float,
         sheet_w_mm: float,
         sheet_h_mm: float,
+        center_mm: Optional[tuple[float, float]] = None,
     ) -> tuple[int, int]:
         """Convert sheet coordinates (mm, top-left origin) to plotter units."""
         if self.profile.origin == "center":
-            cx, cy = self.profile.calculate_center_mm(sheet_w_mm, sheet_h_mm, self.margin_profile)
+            if center_mm is not None:
+                cx, cy = center_mm
+            else:
+                cx, cy = self.profile.calculate_center_mm(
+                    sheet_w_mm, sheet_h_mm, self.margin_profile, feed_edge=self.feed_edge
+                )
             # Base Cartesian coordinates relative to center:
             # +x_c is right, +y_c is up (since sheet y_mm has +Y down)
             x_c = x_mm - cx
@@ -85,8 +95,8 @@ class HPGLEmitter:
         if self.swap_xy:
             rx, ry = ry, rx
 
-        px = int(round(rx * self.profile.units_per_mm))
-        py = int(round(ry * self.profile.units_per_mm))
+        px = int(round(rx * self.units_per_mm))
+        py = int(round(ry * self.units_per_mm))
         return (px, py)
 
     def emit_commands(
@@ -97,6 +107,14 @@ class HPGLEmitter:
         """Generate structured commands with step indices for streaming & progress tracking."""
         sheet_w = getattr(document.page, "width_mm", getattr(document.page, "width", 420.0)) if document else 420.0
         sheet_h = getattr(document.page, "height_mm", getattr(document.page, "height", 297.0)) if document else 297.0
+
+        center_mm: Optional[tuple[float, float]] = None
+        if document and hasattr(document, "page") and document.page is not None:
+            page = document.page
+            # If Document.page has standard width_mm/height_mm (not legacy test attributes .width/.height override)
+            if not (hasattr(page, "width") or hasattr(page, "height")) and hasattr(page, "plottable_box"):
+                pb = page.plottable_box
+                center_mm = (pb.center.x, pb.center.y)
 
         commands: list[EmittedCommand] = []
 
@@ -157,7 +175,7 @@ class HPGLEmitter:
 
                 # Lift pen and travel to start point (PU)
                 start_x, start_y = poly[0]
-                u_x0, u_y0 = self.to_plotter_units(start_x, start_y, sheet_w, sheet_h)
+                u_x0, u_y0 = self.to_plotter_units(start_x, start_y, sheet_w, sheet_h, center_mm=center_mm)
                 commands.append(
                     EmittedCommand(
                         hpgl=f"PU{u_x0},{u_y0};\r\n",
@@ -180,7 +198,7 @@ class HPGLEmitter:
 
                     for pt in chunk:
                         px, py = pt
-                        u_x, u_y = self.to_plotter_units(px, py, sheet_w, sheet_h)
+                        u_x, u_y = self.to_plotter_units(px, py, sheet_w, sheet_h, center_mm=center_mm)
                         chain_parts.append(f"{u_x},{u_y}")
                         chunk_dist += math.hypot(px - prev_x, py - prev_y)
                         prev_x, prev_y = px, py

@@ -60,9 +60,20 @@ class DeviceProfile:
         sheet_w_mm: float,
         sheet_h_mm: float,
         profile_name: str = "",
+        feed_edge: str = "top",
     ) -> tuple[float, float]:
         """Return (center_x, center_y) of hard-clip window in sheet coordinates (mm)."""
-        top_m, bottom_m, left_m, right_m = self.get_margins(profile_name)
+        lead_m, trail_m, side_l, side_r = self.get_margins(profile_name)
+        edge = (feed_edge or "top").lower()
+        if edge == "bottom":
+            top_m, bottom_m, left_m, right_m = trail_m, lead_m, side_l, side_r
+        elif edge == "left":
+            top_m, bottom_m, left_m, right_m = side_l, side_r, lead_m, trail_m
+        elif edge == "right":
+            top_m, bottom_m, left_m, right_m = side_l, side_r, trail_m, lead_m
+        else:
+            top_m, bottom_m, left_m, right_m = lead_m, trail_m, side_l, side_r
+
         hard_clip_w = max(1.0, sheet_w_mm - (left_m + right_m))
         hard_clip_h = max(1.0, sheet_h_mm - (top_m + bottom_m))
 
@@ -143,6 +154,9 @@ def get_default_profile() -> DeviceProfile:
             model_id="mutoh_xp500",
             name="Mutoh XP-500",
             manufacturer="Mutoh",
+            swap_xy=True,
+            invert_x=False,
+            invert_y=True,
             margins_mm={
                 "exp": {"top": 25.0, "bottom": 5.0, "left": 5.0, "right": 5.0},
                 "norm": {"top": 35.0, "bottom": 15.0, "left": 15.0, "right": 15.0},

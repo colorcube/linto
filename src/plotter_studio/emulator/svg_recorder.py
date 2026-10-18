@@ -65,11 +65,10 @@ def export_plotter_svg(plotter: VirtualPlotter, target_path: str | Path) -> None
         if not poly.points:
             continue
         color = PEN_PALETTE.get(poly.pen, "#444444")
-        # Map center-origin (x, y) to sheet coords:
-        # Note: In plotter coordinates, +X is feed forward, +Y is carriage up/right
-        # In SVG, +Y goes downwards
+        # Map center-origin (px, py) to sheet coords:
+        # In Mutoh XP-500 coordinates: +X is feed down (+Y in SVG), +Y is carriage right (+X in SVG)
         pts_str = " ".join(
-            f"{center_x + px:.3f},{center_y - py:.3f}"
+            f"{center_x + py:.3f},{center_y + px:.3f}"
             for px, py in poly.points
         )
         svg_parts.append(
