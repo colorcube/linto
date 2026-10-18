@@ -1,9 +1,8 @@
 """Pen management dock widget with WYSIWYG colors, stroke widths, presets and dynamic remapping."""
 
 from __future__ import annotations
-import os
 import copy
-from typing import Optional, List, Any
+from typing import Optional
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor, QUndoStack
 from PySide6.QtWidgets import (
@@ -15,8 +14,13 @@ from PySide6.QtWidgets import (
 )
 from ..core.document import Document, LogicalPen
 from ..core.pen_presets import (
-    PenPreset, get_builtin_presets,
-    save_preset_json, load_preset_json, remap_document_to_preset
+    PenPreset,
+    get_builtin_presets,
+    get_user_presets_dir,
+    list_user_presets,
+    save_user_preset,
+    load_preset_json,
+    remap_document_to_preset,
 )
 from .commands import ApplyPresetCommand, PenRemapCommand, ModifyPenPropertyCommand
 
@@ -164,32 +168,14 @@ class PenDockWidget(QDockWidget):
         self.undo_stack = stack
 
     def _get_user_presets_dir(self) -> str:
-        d = os.environ.get("PLOTTER_STUDIO_CONFIG_DIR")
-        if not d:
-            d = os.path.expanduser("~/.config/plotter-studio/pens")
-        try:
-            os.makedirs(d, exist_ok=True)
-        except OSError:
-            pass
-        return d
+        return get_user_presets_dir()
 
     def _populate_presets(self):
         self.combo_presets.clear()
-        # Built-in presets
         for p in get_builtin_presets():
             self.combo_presets.addItem(f"★ {p.name}", p)
-
-        # Custom presets from config dir
-        pdir = self._get_user_presets_dir()
-        if os.path.exists(pdir):
-            for fname in sorted(os.listdir(pdir)):
-                if fname.endswith(".json"):
-                    fpath = os.path.join(pdir, fname)
-                    try:
-                        preset = load_preset_json(fpath)
-                        self.combo_presets.addItem(f"📁 {preset.name}", preset)
-                    except Exception:
-                        pass
+        for preset in list_user_presets():
+            self.combo_presets.addItem(f"📁 {preset.name}", preset)
 
     def refresh_table(self):
         self.table.blockSignals(True)
@@ -380,8 +366,6 @@ class PenDockWidget(QDockWidget):
         if not ok or not name.strip():
             return
         clean_name = name.strip()
-        safe_fname = "".join(c for c in clean_name if c.isalnum() or c in " -_").strip()
-        fpath = os.path.join(self._get_user_presets_dir(), f"{safe_fname}.json")
 
         preset = PenPreset(
             name=clean_name,
@@ -389,7 +373,7 @@ class PenDockWidget(QDockWidget):
             pens=copy.deepcopy(self.doc.pens),
         )
         try:
-            save_preset_json(preset, fpath)
+            save_user_preset(preset)
             self._populate_presets()
             idx = self.combo_presets.findText(f"📁 {clean_name}")
             if idx >= 0:

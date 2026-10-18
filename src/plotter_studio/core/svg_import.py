@@ -184,6 +184,25 @@ def extract_subpath_segments(
     return subpaths
 
 
+def parse_svg_tolerant(filepath_or_data: str) -> svgelements.SVG:
+    """Parse an SVG file path or XML string via svgelements, healing duplicate XML attributes on retry."""
+    is_file = os.path.exists(filepath_or_data)
+    try:
+        if is_file:
+            return svgelements.SVG.parse(filepath_or_data)
+        return svgelements.SVG.parse(io.StringIO(filepath_or_data))
+    except Exception as e:
+        if "duplicate attribute" in str(e).lower():
+            raw = (
+                Path(filepath_or_data).read_text(encoding="utf-8", errors="replace")
+                if is_file
+                else filepath_or_data
+            )
+            cleaned = _clean_duplicate_attributes(raw)
+            return svgelements.SVG.parse(io.StringIO(cleaned))
+        raise
+
+
 def load_svg(
     filepath_or_data: str,
     tolerance_mm: float = 0.05,
@@ -197,26 +216,10 @@ def load_svg(
     if os.path.exists(filepath_or_data):
         item_name = name or os.path.splitext(os.path.basename(filepath_or_data))[0]
         source_path = filepath_or_data
-        try:
-            svg = svgelements.SVG.parse(filepath_or_data)
-        except Exception as e:
-            if "duplicate attribute" in str(e).lower():
-                raw = Path(filepath_or_data).read_text(encoding="utf-8", errors="replace")
-                cleaned = _clean_duplicate_attributes(raw)
-                svg = svgelements.SVG.parse(io.StringIO(cleaned))
-            else:
-                raise
     else:
         item_name = name or "Import"
         source_path = None
-        try:
-            svg = svgelements.SVG.parse(io.StringIO(filepath_or_data))
-        except Exception as e:
-            if "duplicate attribute" in str(e).lower():
-                cleaned = _clean_duplicate_attributes(filepath_or_data)
-                svg = svgelements.SVG.parse(io.StringIO(cleaned))
-            else:
-                raise
+    svg = parse_svg_tolerant(filepath_or_data)
 
     # Determine scale to millimeters
     # Default: svgelements coordinates are in pixels at 96 DPI

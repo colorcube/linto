@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 import copy
-import io
 import logging
 import os
 from pathlib import Path
-from typing import List
+from typing import List, Optional, Sequence
 import uuid
 import xml.etree.ElementTree as ET
 import svgelements
@@ -14,15 +13,18 @@ import svgelements
 from .document import Document, LogicalPen, ImportItem, VectorPath, Page, DEFAULT_PENS, PAPER_PRESETS
 from .geometry import (
     AffineTransform,
+    BoundingBox,
     LineSegment,
     QuadraticBezierSegment,
     CubicBezierSegment,
     ArcSegment,
 )
+from .layout_ops import center_item_in_box
 from .svg_import import (
     extract_subpath_segments,
     _clean_duplicate_attributes,
     load_svg,
+    parse_svg_tolerant,
 )
 from .hpgl_import import load_hpgl, is_hpgl_file
 
@@ -32,6 +34,34 @@ logger = logging.getLogger("plotter_studio.core.svg_export")
 NS_PS = "https://plotter-studio.org/schema/v1"
 NS_SVG = "http://www.w3.org/2000/svg"
 ET.register_namespace("ps", NS_PS)
+
+
+def points_to_svg_d(points, closed: bool = False) -> str:
+    """Format an (N, 2) polyline array as an SVG path 'd' attribute string."""
+    if len(points) < 2:
+        return ""
+    d_parts = [f"M {points[0, 0]:.3f},{points[0, 1]:.3f}"]
+    for pt in points[1:]:
+        d_parts.append(f"L {pt[0]:.3f},{pt[1]:.3f}")
+    if closed:
+        d_parts.append("Z")
+    return " ".join(d_parts)
+
+
+def import_file_to_item(
+    filepath: str,
+    pens: Sequence[LogicalPen] = DEFAULT_PENS,
+    target_box: Optional[BoundingBox] = None,
+) -> ImportItem:
+    """Load an SVG or HP-GL file into an ImportItem and optionally center it in target_box."""
+    if is_hpgl_file(filepath):
+        item = load_hpgl(filepath)
+    else:
+        pen_palette = [(p.pen_id, p.color_hex) for p in pens]
+        item = load_svg(filepath, pen_palette=pen_palette)
+    if target_box is not None:
+        center_item_in_box(item, target_box)
+    return item
 
 
 def export_document_to_svg(doc: Document, output_path: str):
@@ -134,14 +164,10 @@ def export_document_to_svg(doc: Document, output_path: str):
                 if path.closed:
                     d_parts.append("Z")
             else:
-                if len(path.points) < 2:
+                d_str = points_to_svg_d(path.points, closed=path.closed)
+                if not d_str:
                     continue
-                pts_local = path.points
-                d_parts = [f"M {pts_local[0, 0]:.3f},{pts_local[0, 1]:.3f}"]
-                for i in range(1, len(pts_local)):
-                    d_parts.append(f"L {pts_local[i, 0]:.3f},{pts_local[i, 1]:.3f}")
-                if path.closed:
-                    d_parts.append("Z")
+                d_parts = [d_str]
 
             ET.SubElement(g_item, "path", {
                 "d": " ".join(d_parts),
@@ -178,26 +204,15 @@ def load_document_from_svg(filepath_or_data: str) -> Document:
     """
     if not is_project_file(filepath_or_data):
         if os.path.exists(filepath_or_data) and is_hpgl_file(filepath_or_data):
-            item = load_hpgl(filepath_or_data)
             page = Page()
-            pb = page.plottable_box
-            if item.original_bounds:
-                ob = item.original_bounds
-                item.transform.tx = pb.min_x + (pb.width - ob.width) / 2.0 - ob.min_x
-                item.transform.ty = pb.min_y + (pb.height - ob.height) / 2.0 - ob.min_y
+            item = load_hpgl(filepath_or_data)
+            center_item_in_box(item, page.plottable_box)
             return Document(page=page, pens=copy.deepcopy(DEFAULT_PENS), items=[item] if item.paths else [])
 
         item = load_svg(filepath_or_data)
         page = Page()
         try:
-            if os.path.exists(filepath_or_data):
-                try:
-                    svg_obj = svgelements.SVG.parse(filepath_or_data)
-                except ET.ParseError:
-                    raw_svg = Path(filepath_or_data).read_text(encoding="utf-8", errors="replace")
-                    svg_obj = svgelements.SVG.parse(io.StringIO(_clean_duplicate_attributes(raw_svg)))
-            else:
-                svg_obj = svgelements.SVG.parse(io.StringIO(_clean_duplicate_attributes(filepath_or_data)))
+            svg_obj = parse_svg_tolerant(filepath_or_data)
             w_mm = None
             h_mm = None
             if svg_obj.width and svg_obj.height:
@@ -401,12 +416,9 @@ def export_plot_job_to_svg(job, page: Page, output_path: str):
             "stroke-linejoin": "round",
         })
         for poly in layer.lines:
-            if len(poly) < 2:
-                continue
-            d_parts = [f"M {poly[0, 0]:.3f},{poly[0, 1]:.3f}"]
-            for pt in poly[1:]:
-                d_parts.append(f"L {pt[0]:.3f},{pt[1]:.3f}")
-            ET.SubElement(g_layer, "path", {"d": " ".join(d_parts)})
+            d_str = points_to_svg_d(poly)
+            if d_str:
+                ET.SubElement(g_layer, "path", {"d": d_str})
 
     tree = ET.ElementTree(root)
     ET.indent(tree, space="  ")

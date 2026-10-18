@@ -68,6 +68,25 @@ def delta_e(lab1: Tuple[float, float, float], lab2: Tuple[float, float, float]) 
 color_delta_e = delta_e
 
 
+def find_closest_pen_id(
+    color_hex: str,
+    palette_labs: List[Tuple[int, Tuple[float, float, float]]],
+    fallback_pen_id: int = 1,
+) -> int:
+    """Return the pen_id from palette_labs with minimum CIE76 Delta-E distance to color_hex."""
+    if not palette_labs:
+        return fallback_pen_id
+    col_lab = rgb_hex_to_lab(color_hex)
+    best_pen = palette_labs[0][0]
+    min_dist = float("inf")
+    for pen_id, p_lab in palette_labs:
+        dist = delta_e(col_lab, p_lab)
+        if dist < min_dist:
+            min_dist = dist
+            best_pen = pen_id
+    return best_pen
+
+
 def cluster_colors_to_pens(
     colors: List[str],
     pen_palette: List[Tuple[int, str]],  # List of (pen_id, hex_color)
@@ -82,25 +101,11 @@ def cluster_colors_to_pens(
         return {}
 
     palette_labs = [
-        (pen_id, rgb_to_lab(hex_to_rgb(hex_col)))
+        (pen_id, rgb_hex_to_lab(hex_col))
         for pen_id, hex_col in pen_palette[:max_pens]
     ]
 
     if not palette_labs:
         return {col: 1 for col in distinct_colors}
 
-    mapping: Dict[str, int] = {}
-
-    # Match each distinct color to the closest palette pen via Delta E in Lab space
-    for col in distinct_colors:
-        col_lab = rgb_to_lab(hex_to_rgb(col))
-        best_pen = palette_labs[0][0]
-        min_dist = float("inf")
-        for pen_id, p_lab in palette_labs:
-            dist = delta_e(col_lab, p_lab)
-            if dist < min_dist:
-                min_dist = dist
-                best_pen = pen_id
-        mapping[col] = best_pen
-
-    return mapping
+    return {col: find_closest_pen_id(col, palette_labs) for col in distinct_colors}
