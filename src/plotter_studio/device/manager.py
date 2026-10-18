@@ -42,9 +42,10 @@ class ConfiguredDevice:
     flow_control: str = "rtscts"  # "rtscts", "dsrdtr", "xonxoff", "none"
     margin_profile: str = "exp"
     rotation: int = 0
-    swap_xy: bool = False
+    swap_xy: bool = True
     invert_x: bool = False
-    invert_y: bool = False
+    invert_y: bool = True
+    probed_units_per_mm: Optional[float] = None
 
     def get_profile(self) -> DeviceProfile:
         """Load the associated DeviceProfile."""
@@ -63,6 +64,9 @@ DEFAULT_DEVICES = [
         baudrate=19200,
         flow_control="rtscts",
         margin_profile="exp",
+        swap_xy=True,
+        invert_x=False,
+        invert_y=True,
     ),
     ConfiguredDevice(
         id="mutoh_xp500_sim",
@@ -72,6 +76,9 @@ DEFAULT_DEVICES = [
         baudrate=19200,
         flow_control="xonxoff",
         margin_profile="exp",
+        swap_xy=True,
+        invert_x=False,
+        invert_y=True,
     ),
 ]
 
@@ -104,12 +111,25 @@ class DeviceManager:
                 raw_devices = data.get("devices", [])
                 self.devices = []
                 for d in raw_devices:
+                    prof = None
+                    try:
+                        prof = load_profile(d.get("model_id", "mutoh_xp500"))
+                    except Exception:
+                        pass
                     if "flow_control" not in d:
-                        try:
-                            prof = load_profile(d.get("model_id", "mutoh_xp500"))
+                        if prof is not None:
                             d["flow_control"] = prof.connection.flow_control
-                        except Exception:
+                        else:
                             d["flow_control"] = "xonxoff" if str(d.get("port", "")).startswith("tcp://") else "rtscts"
+                    if prof is not None:
+                        if "swap_xy" not in d:
+                            d["swap_xy"] = prof.swap_xy
+                        if "invert_x" not in d:
+                            d["invert_x"] = prof.invert_x
+                        if "invert_y" not in d:
+                            d["invert_y"] = prof.invert_y
+                        if "rotation" not in d:
+                            d["rotation"] = prof.rotation_deg
                     dev_obj = ConfiguredDevice(**d)
                     if dev_obj.id == "mutoh_xp500_usb" and dev_obj.port.startswith("/dev/pts"):
                         dev_obj.port = "/dev/ttyUSB0"

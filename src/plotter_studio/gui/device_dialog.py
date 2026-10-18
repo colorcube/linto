@@ -113,8 +113,8 @@ class DeviceSettingsDialog(QDialog):
         self.combo_flow.setToolTip(
             self.tr(
                 "Flow control (Handshake):\n"
-                "• RTS/CTS: Standard for 7/8-wire RS-232 cables (Mutoh, HP, Roland)\n"
-                "• DTR/DSR: Hardware handshake via pin 20 (DTR)\n"
+                "• RTS/CTS: Standard for 7/8-wire RS-232 cables (Mutoh DTR pin 20 wired to PC CTS)\n"
+                "• DTR/DSR: Legacy option (ignored by Linux kernel / POSIX termios; use RTS/CTS)\n"
                 "• XON/XOFF: Software handshake (3-wire cables & TCP simulator)\n"
                 "• None: No handshake"
             )
@@ -310,12 +310,28 @@ class DeviceSettingsDialog(QDialog):
             baudrate = int(self.combo_baud.currentText().strip())
         except ValueError:
             baudrate = 19200
+        bytesize = 8
+        parity = "N"
+        stopbits = 1
+        swap_xy = self.chk_swap_xy.isChecked()
+        if self._current_device:
+            prof = self._current_device.get_profile()
+            bytesize = prof.connection.bytesize
+            parity = prof.connection.parity
+            stopbits = prof.connection.stopbits
         self.btn_test.setEnabled(False)
         self.lbl_test_result.setText(self.tr("Probing %1 at %2 baud...").replace("%1", port).replace("%2", str(baudrate)))
         self.lbl_test_result.setStyleSheet("padding: 4px; background: #fff9c4; color: #f57f17; border-radius: 4px; font-size: 11px;")
 
         def _worker():
-            res = probe_plotter(port, baudrate=baudrate)
+            res = probe_plotter(
+                port,
+                baudrate=baudrate,
+                bytesize=bytesize,
+                parity=parity,
+                stopbits=stopbits,
+                swap_xy=swap_xy,
+            )
             self._probe_finished.emit(res)
 
         self._probe_thread = threading.Thread(target=_worker, daemon=True, name="DeviceSettingsProbeThread")
@@ -325,6 +341,8 @@ class DeviceSettingsDialog(QDialog):
         self.btn_test.setEnabled(True)
 
         if res.success:
+            if res.units_per_mm and res.units_per_mm > 0 and self._current_device:
+                self._current_device.probed_units_per_mm = res.units_per_mm
             dim_str = (
                 f"{res.hard_clip_mm[0]:.0f} × {res.hard_clip_mm[1]:.0f} mm ({res.detected_format})"
                 if res.hard_clip_mm

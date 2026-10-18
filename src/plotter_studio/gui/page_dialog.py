@@ -285,11 +285,29 @@ class PageSetupDialog(QDialog):
     def _on_fetch_device_size(self):
         target = self._active_dev.port if self._active_dev else "/dev/ttyUSB0"
         baud = self._active_dev.baudrate if self._active_dev else 19200
+        bytesize = 8
+        parity = "N"
+        stopbits = 1
+        swap_xy = True
+        if self._active_dev:
+            prof = self._active_dev.get_profile()
+            bytesize = prof.connection.bytesize
+            parity = prof.connection.parity
+            stopbits = prof.connection.stopbits
+            swap_xy = self._active_dev.swap_xy
         self.btn_fetch_device.setEnabled(False)
         self.btn_fetch_device.setText(self.tr("Querying '%1'...").replace("%1", target))
 
         def _worker():
-            res = probe_plotter(target, baudrate=baud, timeout=0.6)
+            res = probe_plotter(
+                target,
+                baudrate=baud,
+                timeout=0.6,
+                bytesize=bytesize,
+                parity=parity,
+                stopbits=stopbits,
+                swap_xy=swap_xy,
+            )
             self._probe_finished.emit(target, res)
 
         self._probe_thread = threading.Thread(target=_worker, daemon=True, name="PageSetupProbeThread")
@@ -300,6 +318,8 @@ class PageSetupDialog(QDialog):
         self.btn_fetch_device.setText(self.tr("Query paper size from plotter"))
 
         if res.success:
+            if res.units_per_mm and res.units_per_mm > 0 and self._active_dev:
+                self._active_dev.probed_units_per_mm = res.units_per_mm
             if res.detected_format and res.detected_format in PAPER_PRESETS:
                 self.combo_preset.setCurrentIndex(self.combo_preset.findData(res.detected_format))
                 self.combo_orient.setCurrentIndex(self.combo_orient.findData("landscape"))

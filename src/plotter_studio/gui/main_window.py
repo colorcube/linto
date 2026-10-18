@@ -969,6 +969,7 @@ class MainWindow(QMainWindow):
 
         profile = get_default_profile()
         margin_key = "exp"
+        units_override: Optional[float] = None
         emitter_opts: dict[str, Any] = {}
 
         # 1. Base on active configured device if available
@@ -976,11 +977,12 @@ class MainWindow(QMainWindow):
         if dev:
             profile = dev.get_profile()
             margin_key = getattr(dev, "margin_profile", "exp")
+            units_override = getattr(dev, "probed_units_per_mm", None)
             emitter_opts = {
                 "rotation_deg": getattr(dev, "rotation", 0),
-                "swap_xy": getattr(dev, "swap_xy", False),
-                "invert_x": getattr(dev, "invert_x", False),
-                "invert_y": getattr(dev, "invert_y", False),
+                "swap_xy": getattr(dev, "swap_xy", profile.swap_xy),
+                "invert_x": getattr(dev, "invert_x", profile.invert_x),
+                "invert_y": getattr(dev, "invert_y", profile.invert_y),
             }
 
         # 2. Allow active GUI overrides from plot_dock
@@ -990,7 +992,14 @@ class MainWindow(QMainWindow):
             if hasattr(self.plot_dock, "get_emitter_options"):
                 emitter_opts.update(self.plot_dock.get_emitter_options())
 
-        emitter = HPGLEmitter(profile, margin_profile=margin_key, **emitter_opts)
+        feed_edge = getattr(self.doc.page, "feed_edge", "top") if self.doc and hasattr(self.doc, "page") else "top"
+        emitter = HPGLEmitter(
+            profile,
+            margin_profile=margin_key,
+            units_per_mm=units_override,
+            feed_edge=feed_edge,
+            **emitter_opts,
+        )
         hpgl_content = emitter.emit_string(self._current_job, self.doc)
 
         try:

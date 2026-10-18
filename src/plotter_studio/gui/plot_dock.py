@@ -566,12 +566,21 @@ class PlotDockWidget(QDockWidget):
         """Inquire connected plotter (OI/OF/OH) in background thread."""
         port = self.combo_port.currentText().strip()
         baud = 19200
+        bytesize = 8
+        parity = "N"
+        stopbits = 1
+        swap_xy = True
         if self.device_manager:
             dev = self.device_manager.get_active_device()
             if dev:
                 if not port:
                     port = dev.port
                 baud = dev.baudrate
+                prof = dev.get_profile()
+                bytesize = prof.connection.bytesize
+                parity = prof.connection.parity
+                stopbits = prof.connection.stopbits
+                swap_xy = dev.swap_xy
         if not port:
             self.lbl_probe_status.setText(self.tr("No port selected"))
             return
@@ -587,7 +596,14 @@ class PlotDockWidget(QDockWidget):
         """)
 
         def _probe_worker():
-            res = probe_plotter(port, baudrate=baud)
+            res = probe_plotter(
+                port,
+                baudrate=baud,
+                bytesize=bytesize,
+                parity=parity,
+                stopbits=stopbits,
+                swap_xy=swap_xy,
+            )
             self._bridge.probe_done.emit(res)
 
         self._probe_thread = threading.Thread(target=_probe_worker, daemon=True, name="PlotterProbeThread")
@@ -596,6 +612,10 @@ class PlotDockWidget(QDockWidget):
     def _on_probe_done(self, result: ProbeResult):
         self.btn_probe.setEnabled(True)
         if result.success:
+            if result.units_per_mm and result.units_per_mm > 0 and self.device_manager:
+                dev = self.device_manager.get_active_device()
+                if dev:
+                    dev.probed_units_per_mm = result.units_per_mm
             clip_info = ""
             if result.hard_clip_mm:
                 clip_info = f" • Hard-Clip: {result.hard_clip_mm[0]:.0f}×{result.hard_clip_mm[1]:.0f} mm"
@@ -678,6 +698,7 @@ class PlotDockWidget(QDockWidget):
         profile = get_default_profile()
         baud = profile.connection.baudrate
         flow_ctrl = getattr(profile.connection, "flow_control", "rtscts")
+        units_override: Optional[float] = None
 
         if self.device_manager:
             dev = self.device_manager.get_active_device()
@@ -687,14 +708,18 @@ class PlotDockWidget(QDockWidget):
                 profile = dev.get_profile()
                 baud = dev.baudrate
                 flow_ctrl = getattr(dev, "flow_control", flow_ctrl)
+                units_override = getattr(dev, "probed_units_per_mm", None)
 
         if not port:
             QMessageBox.warning(self, self.tr("Plot Output"), self.tr("Please select an interface or address."))
             return
 
+        feed_edge = getattr(self.doc.page, "feed_edge", "top") if self.doc and hasattr(self.doc, "page") else "top"
         emitter = HPGLEmitter(
             profile,
             margin_profile=margin_key,
+            units_per_mm=units_override,
+            feed_edge=feed_edge,
             **self.get_emitter_options(),
         )
         commands = emitter.emit_commands(self.job, self.doc)
@@ -728,6 +753,9 @@ class PlotDockWidget(QDockWidget):
             baudrate=baud,
             flow_control=flow_ctrl,
             pause_on_pen_change=self.chk_pause_pen_change.isChecked(),
+            bytesize=profile.connection.bytesize,
+            parity=profile.connection.parity,
+            stopbits=profile.connection.stopbits,
         )
         if not started:
             self._on_stream_finished(False, self.tr("Could not start streamer."))

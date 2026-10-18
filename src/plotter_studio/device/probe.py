@@ -73,10 +73,26 @@ def probe_plotter(
     port: str,
     baudrate: int = 19200,
     timeout: Optional[float] = None,
+    bytesize: int = 8,
+    parity: str = "N",
+    stopbits: float = 1,
+    swap_xy: bool = True,
 ) -> ProbeResult:
     """Send inquiry commands (OI, OF, OH) and detect plotter configuration."""
     port_clean = port.strip()
     effective_timeout = timeout if timeout is not None else max(0.8, (50.0 * 10.0 / max(1, baudrate)) + 0.5)
+
+    parity_map = {
+        "N": serial.PARITY_NONE,
+        "NONE": serial.PARITY_NONE,
+        "E": serial.PARITY_EVEN,
+        "EVEN": serial.PARITY_EVEN,
+        "O": serial.PARITY_ODD,
+        "ODD": serial.PARITY_ODD,
+    }
+    ser_parity = parity_map.get(str(parity).upper(), serial.PARITY_NONE)
+    ser_bytesize = serial.SEVENBITS if int(bytesize) == 7 else serial.EIGHTBITS
+    ser_stopbits = serial.STOPBITS_TWO if float(stopbits) == 2 else serial.STOPBITS_ONE
 
     try:
         raw_resp = bytearray()
@@ -107,9 +123,9 @@ def probe_plotter(
             with serial.Serial(
                 port_clean,
                 baudrate=baudrate,
-                bytesize=serial.EIGHTBITS,
-                parity=serial.PARITY_NONE,
-                stopbits=serial.STOPBITS_ONE,
+                bytesize=ser_bytesize,
+                parity=ser_parity,
+                stopbits=ser_stopbits,
                 rtscts=False,  # Non-blocking probe without handshake stall
                 timeout=effective_timeout,
                 write_timeout=effective_timeout,
@@ -153,7 +169,7 @@ def probe_plotter(
             if of_match:
                 units_per_mm = float(of_match.group(1))
 
-        # Hard-clip window from OH (e.g. "-7800,-5740,7800,5740")
+        # Hard-clip window from OH (e.g. "-5399,-8209,5399,8209")
         hard_clip_units = None
         hard_clip_mm = None
         detected_fmt = "Unbekannt"
@@ -163,8 +179,14 @@ def probe_plotter(
             if len(oh_tokens) >= 4:
                 xmin, ymin, xmax, ymax = oh_tokens[:4]
                 hard_clip_units = (xmin, ymin, xmax, ymax)
-                w_mm = abs(xmax - xmin) / units_per_mm
-                h_mm = abs(ymax - ymin) / units_per_mm
+                dx_mm = abs(xmax - xmin) / units_per_mm
+                dy_mm = abs(ymax - ymin) / units_per_mm
+                # When swap_xy is True (Mutoh XP-500: X=feed/height, Y=carriage/width),
+                # sheet width is dy_mm and sheet height is dx_mm.
+                if swap_xy:
+                    w_mm, h_mm = dy_mm, dx_mm
+                else:
+                    w_mm, h_mm = dx_mm, dy_mm
                 hard_clip_mm = (w_mm, h_mm)
 
                 # Format estimation
