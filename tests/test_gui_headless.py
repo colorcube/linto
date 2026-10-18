@@ -53,13 +53,14 @@ def test_main_window_headless(qapp, tmp_path):
     assert fit_rect.height() > 200.0
     assert abs(fit_rect.height() - b_fit.height - 6.0) < 1.0
 
-    # Fit to plottable area explicitly
-    win.transform_dock.fit_to_plottable(margin_mm=10.0)
+    # Fit to plottable area explicitly (default margin 0.0 fills plottable box)
+    win.transform_dock.fit_to_plottable()
     b_plot = item.current_bounds
     assert b_plot is not None
     pb = doc.page.plottable_box
     assert abs(b_plot.center.x - pb.center.x) < 1.0
     assert abs(b_plot.center.y - pb.center.y) < 1.0
+    assert abs(b_plot.width - pb.width) < 1.0 or abs(b_plot.height - pb.height) < 1.0
 
     # Fit to sheet explicitly
     win.transform_dock.fit_to_sheet(margin_mm=15.0)

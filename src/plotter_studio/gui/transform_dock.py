@@ -309,7 +309,7 @@ class TransformDockWidget(QDockWidget):
 
         self.btn_fit_plottable = QPushButton(self.tr("Fit to Printable Area"))
         self.btn_fit_plottable.setIcon(get_icon("fit-plottable", size=16))
-        self.btn_fit_plottable.setToolTip(self.tr("Fit proportionally to printable area with margin"))
+        self.btn_fit_plottable.setToolTip(self.tr("Fit proportionally to printable area"))
         self.btn_fit_plottable.clicked.connect(lambda: self.fit_to_plottable())
         fit_plottable_row.addWidget(self.btn_fit_plottable)
         fit_plottable_row.addStretch()
@@ -329,7 +329,7 @@ class TransformDockWidget(QDockWidget):
 
         lbl_margin = QLabel(self.tr("Margin:"))
         lbl_margin.setStyleSheet("font-weight: 500; color: #4b5563;")
-        lbl_margin.setToolTip(self.tr("Safety margin to sheet edges or printable area when fitting"))
+        lbl_margin.setToolTip(self.tr("Safety margin to sheet edges when fitting"))
         fit_sheet_row.addWidget(lbl_margin)
 
         self.spin_fit_margin = QDoubleSpinBox()
@@ -338,7 +338,7 @@ class TransformDockWidget(QDockWidget):
         self.spin_fit_margin.setDecimals(1)
         self.spin_fit_margin.setValue(15.0)
         self.spin_fit_margin.setSuffix(" mm")
-        self.spin_fit_margin.setToolTip(self.tr("Safety margin to sheet edges or printable area when fitting in mm"))
+        self.spin_fit_margin.setToolTip(self.tr("Safety margin to sheet edges when fitting in mm"))
         fit_sheet_row.addWidget(self.spin_fit_margin)
 
         fit_sheet_row.addStretch()
@@ -697,12 +697,10 @@ class TransformDockWidget(QDockWidget):
             changes.append((it, old_t, new_t))
         self._apply_multi_transforms(changes, "Originalgröße (1:1)")
 
-    def fit_to_box(self, target_box: BoundingBox, action_name: str, margin_mm: Optional[float] = None):
+    def fit_to_box(self, target_box: BoundingBox, action_name: str, margin_mm: float = 0.0):
         unlocked = self._get_unlocked_items()
         if not unlocked:
             return
-        if margin_mm is None:
-            margin_mm = self.spin_fit_margin.value()
 
         cb = self._get_selection_bounds(unlocked)
         if cb is None or cb.width <= 0 or cb.height <= 0:
@@ -726,10 +724,12 @@ class TransformDockWidget(QDockWidget):
             changes.append((it, old_t, new_t))
         self._apply_multi_transforms(changes, action_name)
 
-    def fit_to_plottable(self, margin_mm: Optional[float] = None):
+    def fit_to_plottable(self, margin_mm: float = 0.0):
         self.fit_to_box(self.doc.page.plottable_box, "Auf plottbaren Bereich einpassen", margin_mm)
 
     def fit_to_sheet(self, margin_mm: Optional[float] = None):
+        if margin_mm is None:
+            margin_mm = self.spin_fit_margin.value()
         self.fit_to_box(self.doc.page.sheet_box, "Auf Blatt einpassen", margin_mm)
 
     def fit_to_page(self, margin_mm: Optional[float] = None):
