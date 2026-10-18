@@ -172,3 +172,56 @@ def test_tight_rotated_current_bounds_and_margin_profile_preservation():
     assert math.isclose(page.margin_left_mm, norm_left, abs_tol=1e-6)
 
 
+def test_layout_ops_and_page_probe_helpers():
+    """Verify pure layout_ops functions and Page.apply_probe_result / is_bounds_outside_plottable."""
+    from plotter_studio.core.document import ImportItem, VectorPath, Page
+    from plotter_studio.core.layout_ops import (
+        center_item_in_box,
+        compute_fit_to_box_transforms,
+        compute_align_center_transforms,
+        compute_reset_scale_transforms,
+    )
+    from plotter_studio.device.probe import ProbeResult
+
+    pts = np.array([[0.0, 0.0], [50.0, 0.0], [50.0, 25.0], [0.0, 0.0]])
+    item = ImportItem(name="Box", paths=[VectorPath(points=pts, pen_id=1, closed=True)])
+    page = Page(preset="A4", orientation="landscape")
+
+    center_item_in_box(item, page.plottable_box)
+    cb = item.current_bounds
+    assert cb is not None
+    assert math.isclose(cb.center.x, page.plottable_box.center.x, abs_tol=1e-5)
+    assert math.isclose(cb.center.y, page.plottable_box.center.y, abs_tol=1e-5)
+    assert page.is_bounds_outside_plottable(cb) is False
+
+    # Fit to sheet with 10 mm margin
+    fit_changes = compute_fit_to_box_transforms([item], page.sheet_box, margin_mm=10.0)
+    assert len(fit_changes) == 1
+    item.transform = fit_changes[0][2]
+    assert item.scale_percent > 100.0
+
+    # Reset to 1:1 scale
+    reset_changes = compute_reset_scale_transforms([item])
+    item.transform = reset_changes[0][2]
+    assert math.isclose(item.scale_percent, 100.0, abs_tol=1e-4)
+
+    # Align center to sheet
+    align_changes = compute_align_center_transforms([item], page.sheet_box, horizontal=True, vertical=True)
+    item.transform = align_changes[0][2]
+    assert math.isclose(item.current_bounds.center.x, page.sheet_box.center.x, abs_tol=1e-5)
+
+    # Multi-item get_combined_bounds
+    from plotter_studio.core.layout_ops import get_combined_bounds
+    item2 = ImportItem(name="Box2", paths=[VectorPath(points=pts + 100.0, pen_id=1, closed=True)])
+    combined = get_combined_bounds([item, item2])
+    assert combined is not None
+    assert combined.width > item.current_bounds.width
+
+    # Page.apply_probe_result with custom hard_clip_mm
+    probe_custom = ProbeResult(port="/dev/null", success=True, detected_format="Unbekannt", hard_clip_mm=(300.0, 200.0))
+    assert page.apply_probe_result(probe_custom) is True
+    assert page.preset == "Custom"
+    assert math.isclose(page.width_mm, 300.0 + page.margin_left_mm + page.margin_right_mm, abs_tol=1e-5)
+
+
+

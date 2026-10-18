@@ -13,13 +13,13 @@ from PySide6.QtWidgets import (
 )
 from ..core.document import Document, ImportItem
 from ..core.geometry import AffineTransform
-from ..core.svg_import import load_svg
-from ..core.hpgl_import import load_hpgl, is_hpgl_file
+from ..core.hpgl_import import is_hpgl_file
 from ..core.svg_export import (
     export_document_to_svg,
     export_plot_job_to_svg,
     load_document_from_svg,
     is_project_file,
+    import_file_to_item,
 )
 from ..pipeline.compiler import compile_document_to_plot_job
 from .canvas import PlotterCanvas, CanvasMode, extract_droppable_files
@@ -30,7 +30,7 @@ from .plot_dock import PlotDockWidget
 from .object_dock import ObjectDockWidget
 from .simulation_bar import PlotSimulationBar
 from .icons import get_icon
-from ..device import get_default_profile, HPGLEmitter, DeviceManager
+from ..device import build_emitter, DeviceManager
 from .device_dialog import DeviceSettingsDialog
 from .page_dialog import PageSetupDialog
 from .commands import (
@@ -737,9 +737,7 @@ class MainWindow(QMainWindow):
             self.transform_dock.set_selected_items(selected)
             b = item.current_bounds
             if b:
-                pb = self.doc.page.plottable_box
-                is_oob = not pb.contains_box(b)
-                scale_pct = math.hypot(item.transform.a, item.transform.b) * 100.0
+                is_oob = self.doc.page.is_bounds_outside_plottable(b)
                 warn_text = self.tr(" — ⚠️ Outside printable area!") if is_oob else ""
                 if len(selected) == 1:
                     self.lbl_info.setText(
@@ -747,7 +745,7 @@ class MainWindow(QMainWindow):
                         .replace("%1", item.name)
                         .replace("%2", f"{b.width:.1f}")
                         .replace("%3", f"{b.height:.1f}")
-                        .replace("%4", f"{scale_pct:.0f}")
+                        .replace("%4", f"{item.scale_percent:.0f}")
                         .replace("%5", warn_text)
                     )
                 else:
@@ -968,20 +966,7 @@ class MainWindow(QMainWindow):
                     self.load_project_file(fpath)
                     return
 
-            if is_hpgl_file(fpath):
-                item = load_hpgl(fpath)
-            else:
-                pen_palette = [(p.pen_id, p.color_hex) for p in self.doc.pens]
-                item = load_svg(fpath, pen_palette=pen_palette)
-
-            # Center item on page upon import
-            pb = self.doc.page.plottable_box
-            if item.original_bounds:
-                ob = item.original_bounds
-                tx = pb.min_x + (pb.width - ob.width) / 2.0 - ob.min_x
-                ty = pb.min_y + (pb.height - ob.height) / 2.0 - ob.min_y
-                item.transform.tx = tx
-                item.transform.ty = ty
+            item = import_file_to_item(fpath, self.doc.pens, target_box=self.doc.page.plottable_box)
 
             cmd = AddItemCommand(
                 self.doc,
@@ -1237,38 +1222,21 @@ class MainWindow(QMainWindow):
             return
         self._set_last_dir(fpath)
 
-        profile = get_default_profile()
-        margin_key = "exp"
-        units_override: Optional[float] = None
+        dev = self.device_manager.get_active_device() if hasattr(self, "device_manager") and self.device_manager else None
+        margin_key: Optional[str] = None
         emitter_opts: dict[str, Any] = {}
 
-        # 1. Base on active configured device if available
-        dev = self.device_manager.get_active_device() if hasattr(self, "device_manager") and self.device_manager else None
-        if dev:
-            profile = dev.get_profile()
-            margin_key = getattr(dev, "margin_profile", "exp")
-            units_override = getattr(dev, "probed_units_per_mm", None)
-            emitter_opts = {
-                "rotation_deg": getattr(dev, "rotation", 0),
-                "swap_xy": getattr(dev, "swap_xy", profile.swap_xy),
-                "invert_x": getattr(dev, "invert_x", profile.invert_x),
-                "invert_y": getattr(dev, "invert_y", profile.invert_y),
-            }
-
-        # 2. Allow active GUI overrides from plot_dock
         if hasattr(self, "plot_dock") and self.plot_dock:
             if hasattr(self.plot_dock, "combo_margins") and self.plot_dock.combo_margins.currentData():
                 margin_key = self.plot_dock.combo_margins.currentData()
             if hasattr(self.plot_dock, "get_emitter_options"):
                 emitter_opts.update(self.plot_dock.get_emitter_options())
 
-        feed_edge = getattr(self.doc.page, "feed_edge", "top") if self.doc and hasattr(self.doc, "page") else "top"
-        emitter = HPGLEmitter(
-            profile,
+        emitter = build_emitter(
+            document=self.doc,
+            device=dev,
             margin_profile=margin_key,
-            units_per_mm=units_override,
-            feed_edge=feed_edge,
-            **emitter_opts,
+            overrides=emitter_opts,
         )
         hpgl_content = emitter.emit_string(self._current_job, self.doc)
 

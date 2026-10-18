@@ -3,6 +3,7 @@
 from __future__ import annotations
 import copy
 import logging
+import math
 import uuid
 from dataclasses import dataclass, field
 from typing import List, Dict, Optional, Tuple, Any
@@ -30,18 +31,12 @@ PAPER_PRESETS: Dict[str, Tuple[float, float]] = {
     "Letter": (215.9, 279.4),
 }
 
-def _get_default_exp_margins() -> Dict[str, float]:
-    from ..device.profile import get_default_profile
-    top_m, bottom_m, left_m, right_m = get_default_profile().get_margins("exp")
-    return {
-        "left": left_m,
-        "right": right_m,
-        "top": top_m,       # Vorderkante Vorschub
-        "bottom": bottom_m, # Hinterkante Vorschub
-    }
-
-
-DEFAULT_EXP_MARGINS = _get_default_exp_margins()
+DEFAULT_EXP_MARGINS: Dict[str, float] = {
+    "left": 5.0,
+    "right": 5.0,
+    "top": 25.0,     # Vorderkante Vorschub
+    "bottom": 5.0,   # Hinterkante Vorschub
+}
 
 DEVICE_PROFILES: Dict[str, Dict[str, Any]] = {
     "mutoh_xp500": {
@@ -180,6 +175,33 @@ class Page:
     def sheet_box(self) -> BoundingBox:
         """Physical sheet bounding box (0, 0) to (W, H)."""
         return BoundingBox(0.0, 0.0, self.width_mm, self.height_mm)
+
+    def is_bounds_outside_plottable(self, bounds: BoundingBox, tol_mm: float = 0.5) -> bool:
+        """Return True if any edge of bounds exceeds plottable_box by more than tol_mm."""
+        pb = self.plottable_box
+        return (
+            bounds.min_x < pb.min_x - tol_mm
+            or bounds.min_y < pb.min_y - tol_mm
+            or bounds.max_x > pb.max_x + tol_mm
+            or bounds.max_y > pb.max_y + tol_mm
+        )
+
+    def apply_probe_result(self, result: Any) -> bool:
+        """Update page preset or custom sheet dimensions from a hardware ProbeResult."""
+        if not getattr(result, "success", False):
+            return False
+        detected_format = getattr(result, "detected_format", "")
+        if detected_format and detected_format in PAPER_PRESETS:
+            self.apply_preset(detected_format, "landscape")
+            return True
+        hard_clip_mm = getattr(result, "hard_clip_mm", None)
+        if hard_clip_mm:
+            w, h = hard_clip_mm
+            sheet_w = w + self.margin_left_mm + self.margin_right_mm
+            sheet_h = h + self.margin_top_mm + self.margin_bottom_mm
+            self.set_custom_size(sheet_w, sheet_h)
+            return True
+        return False
 
 
 @dataclass
@@ -370,6 +392,16 @@ class ImportItem:
         self._cached_bounds_key = cache_key
         self._cached_bounds = box
         return box
+
+    @property
+    def scale_percent(self) -> float:
+        """Return current X scale factor in percent."""
+        return math.hypot(self.transform.a, self.transform.b) * 100.0
+
+    @property
+    def rotation_degrees(self) -> float:
+        """Return current rotation angle in degrees."""
+        return math.degrees(math.atan2(self.transform.b, self.transform.a))
 
     def set_pen_for_all(self, pen_id: int):
         """Set all paths in this item to a specific pen."""

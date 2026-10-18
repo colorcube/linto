@@ -28,5 +28,12 @@ def _isolate_qt_dialogs_and_settings(monkeypatch):
             return QMessageBox.StandardButton.Discard
         return QMessageBox.StandardButton.Yes
 
+    def _default_ok(*_args, **_kwargs):
+        return QMessageBox.StandardButton.Ok
+
     monkeypatch.setattr(QMessageBox, "question", _default_question)
+    monkeypatch.setattr(QMessageBox, "critical", _default_ok)
+    monkeypatch.setattr(QMessageBox, "warning", _default_ok)
+    monkeypatch.setattr(QMessageBox, "information", _default_ok)
+    monkeypatch.setattr(QMessageBox, "about", lambda *_a, **_kw: None)
 

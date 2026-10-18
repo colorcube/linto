@@ -55,6 +55,7 @@ class PageSetupDialog(QDialog):
             "margin_bottom_mm": self.doc.page.margin_bottom_mm,
             "device_profile": self.doc.page.device_profile,
             "feed_edge": self.doc.page.feed_edge,
+            "margin_profile": self.doc.page.margin_profile,
         }
 
         self._active_dev: Optional[ConfiguredDevice] = (
@@ -337,15 +338,7 @@ class PageSetupDialog(QDialog):
         if res.success:
             if res.units_per_mm and res.units_per_mm > 0 and self._active_dev:
                 self._active_dev.probed_units_per_mm = res.units_per_mm
-            if res.detected_format and res.detected_format in PAPER_PRESETS:
-                self.combo_preset.setCurrentIndex(self.combo_preset.findData(res.detected_format))
-                self.combo_orient.setCurrentIndex(self.combo_orient.findData("landscape"))
-                self.doc.page.apply_preset(res.detected_format, "landscape")
-            elif res.hard_clip_mm:
-                w, h = res.hard_clip_mm
-                sheet_w = w + self.doc.page.margin_left_mm + self.doc.page.margin_right_mm
-                sheet_h = h + self.doc.page.margin_top_mm + self.doc.page.margin_bottom_mm
-                self.doc.page.set_custom_size(sheet_w, sheet_h)
+            self.doc.page.apply_probe_result(res)
             self._sync_from_page()
             msg = (
                 self.tr("Plotter at '%1' reports:\nModel: %2\nFormat: %3 (%4 × %5 mm)")
@@ -381,6 +374,7 @@ class PageSetupDialog(QDialog):
             "margin_bottom_mm": self.doc.page.margin_bottom_mm,
             "device_profile": self.doc.page.device_profile,
             "feed_edge": self.doc.page.feed_edge,
+            "margin_profile": self.doc.page.margin_profile,
         }
         # If changed and undo stack exists, push command
         if self.undo_stack and new_state != self._initial_state:
@@ -408,6 +402,7 @@ class PageSetupDialog(QDialog):
         p.orientation = state.get("orientation", p.orientation)
         p.device_profile = state.get("device_profile", p.device_profile)
         p.feed_edge = state.get("feed_edge", p.feed_edge)
+        p.margin_profile = state.get("margin_profile", p.margin_profile)
         p.margin_left_mm = state.get("margin_left_mm", p.margin_left_mm)
         p.margin_right_mm = state.get("margin_right_mm", p.margin_right_mm)
         p.margin_top_mm = state.get("margin_top_mm", p.margin_top_mm)

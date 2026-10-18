@@ -1,14 +1,13 @@
 """Object and Layer management dock widget."""
 
 from __future__ import annotations
-import re
 from typing import Optional, TYPE_CHECKING
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QUndoStack
 from PySide6.QtWidgets import (
     QDockWidget, QWidget, QVBoxLayout, QHBoxLayout,
     QTreeWidget, QTreeWidgetItem, QToolButton, QHeaderView,
-    QAbstractItemView
+    QAbstractItemView, QStyledItemDelegate, QLineEdit
 )
 from .icons import get_icon
 from .commands import (
@@ -23,7 +22,25 @@ if TYPE_CHECKING:
     from .canvas import PlotterCanvas
 
 
-_PATH_SUFFIX_RE = re.compile(r"\s*\(\d+\s+(?:Pfade?|paths?)\)$")
+_RAW_NAME_ROLE = Qt.UserRole
+_SUFFIX_ROLE = Qt.UserRole + 1
+
+
+class _ObjectNameDelegate(QStyledItemDelegate):
+    """Delegate that edits the raw object name (without path count suffix)."""
+
+    def setEditorData(self, editor, index):
+        raw_name = index.data(_RAW_NAME_ROLE)
+        if isinstance(editor, QLineEdit) and raw_name is not None:
+            editor.setText(str(raw_name))
+        else:
+            super().setEditorData(editor, index)
+
+    def setModelData(self, editor, model, index):
+        if isinstance(editor, QLineEdit):
+            model.setData(index, editor.text(), Qt.EditRole)
+        else:
+            super().setModelData(editor, model, index)
 
 
 class ObjectDockWidget(QDockWidget):
@@ -60,6 +77,7 @@ class ObjectDockWidget(QDockWidget):
         self.tree.setRootIsDecorated(False)
         self.tree.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.tree.setEditTriggers(QAbstractItemView.DoubleClicked | QAbstractItemView.EditKeyPressed)
+        self.tree.setItemDelegateForColumn(2, _ObjectNameDelegate(self.tree))
         self.tree.setStyleSheet("QTreeWidget { outline: none; } QTreeWidget::item { outline: none; }")
 
         header = self.tree.header()
@@ -171,7 +189,8 @@ class ObjectDockWidget(QDockWidget):
         suffix = self.tr("(1 path)") if path_count == 1 else self.tr("(%1 paths)").replace("%1", str(path_count))
         label = f"{item.name} {suffix}"
         node.setText(2, label)
-        node.setData(2, Qt.UserRole, item.name)  # Raw name for renaming
+        node.setData(2, _RAW_NAME_ROLE, item.name)
+        node.setData(2, _SUFFIX_ROLE, suffix)
         node.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable)
 
     def refresh(self):
@@ -317,7 +336,7 @@ class ObjectDockWidget(QDockWidget):
 
     def _on_item_double_clicked(self, node: QTreeWidgetItem, column: int):
         if column == 2:
-            raw_name = node.data(2, Qt.UserRole)
+            raw_name = node.data(2, _RAW_NAME_ROLE)
             if raw_name:
                 self.tree.blockSignals(True)
                 node.setText(2, str(raw_name))
@@ -329,7 +348,11 @@ class ObjectDockWidget(QDockWidget):
             item = self.doc.find_item(item_id)
             if item:
                 raw_text = node.text(2).strip()
-                clean_name = _PATH_SUFFIX_RE.sub("", raw_text).strip()
+                suffix = str(node.data(2, _SUFFIX_ROLE) or "")
+                if suffix and raw_text.endswith(suffix):
+                    clean_name = raw_text[:-len(suffix)].strip()
+                else:
+                    clean_name = raw_text
                 if clean_name and clean_name != item.name:
                     old_name = item.name
                     if self.undo_stack:
