@@ -95,3 +95,37 @@ def test_setup_i18n_german_translation(qapp):
     assert lbl.tr("Center on sheet or printable area") == "Mittig auf Blatt oder plottbarem Bereich ausrichten"
     assert lbl.tr("Configure plotter devices...") == "Plotter-Geräte konfigurieren..."
 
+    # Transformation Dock Flip tooltips and buttons
+    assert lbl.tr("Flip Horiz.") == "Horiz. spiegeln"
+    assert lbl.tr("Flip Vert.") == "Vert. spiegeln"
+    assert lbl.tr("Mirror selected object horizontally") == "Auswahl horizontal spiegeln"
+    assert lbl.tr("Mirror selected object vertically") == "Auswahl vertikal spiegeln"
+
+    # Standard dialog buttons (e.g. Unsaved Changes dialog)
+    assert QCoreApplication.translate("QPlatformTheme", "Save") == "Speichern"
+    assert QCoreApplication.translate("QPlatformTheme", "Discard") == "Verwerfen"
+    assert QCoreApplication.translate("QPlatformTheme", "Cancel") == "Abbrechen"
+    assert QCoreApplication.translate("QPlatformTheme", "&Save") == "&Speichern"
+    assert QCoreApplication.translate("QPlatformTheme", "&Discard") == "&Verwerfen"
+    assert QCoreApplication.translate("QPlatformTheme", "&Cancel") == "&Abbrechen"
+
+
+def test_translator_accelerator_handling(qapp):
+    """PlotterTranslator matches keys gracefully regardless of accelerator '&' differences."""
+    translator = PlotterTranslator(qapp)
+    translator.load_dict({
+        "&Save": "&Speichern",
+        "Discard": "Verwerfen",
+    }, lang="de")
+    qapp.installTranslator(translator)
+
+    lbl = QLabel()
+    # Exact matches
+    assert lbl.tr("&Save") == "&Speichern"
+    assert lbl.tr("Discard") == "Verwerfen"
+
+    # Stripping '&' from source_text finds key without '&'
+    assert lbl.tr("&Discard") == "Verwerfen"
+
+    qapp.removeTranslator(translator)
+

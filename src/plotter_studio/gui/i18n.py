@@ -91,7 +91,14 @@ class PlotterTranslator(QTranslator):
         if match:
             return match
 
-        # 3. Fallback to original source text
+        # 3. If source_text has accelerator '&', try matching without it as fallback
+        if "&" in source_text:
+            clean = source_text.replace("&", "")
+            match = self._global_messages.get(clean)
+            if match:
+                return match
+
+        # 4. Fallback to original source text
         return source_text
 
 
