@@ -17,10 +17,26 @@ class DeviceConnectionConfig:
     bytesize: int = 8
     parity: str = "N"
     stopbits: int = 1
-    rtscts: bool = True
-    xonxoff: bool = False
-    dsrdtr: bool = False
-    flow_control: str = "rtscts"
+    rtscts: Optional[bool] = None
+    xonxoff: Optional[bool] = None
+    dsrdtr: Optional[bool] = None
+    flow_control: str = ""
+
+    def __post_init__(self) -> None:
+        fc = (self.flow_control or "").strip().lower()
+        if not fc:
+            if self.xonxoff:
+                fc = "xonxoff"
+            elif self.dsrdtr:
+                fc = "dsrdtr"
+            elif self.rtscts is False:
+                fc = "none"
+            else:
+                fc = "rtscts"
+        self.flow_control = fc
+        self.rtscts = (fc == "rtscts") if self.rtscts is None else bool(self.rtscts)
+        self.xonxoff = (fc == "xonxoff") if self.xonxoff is None else bool(self.xonxoff)
+        self.dsrdtr = (fc == "dsrdtr") if self.dsrdtr is None else bool(self.dsrdtr)
 
 
 @dataclass

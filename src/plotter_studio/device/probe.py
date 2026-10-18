@@ -15,6 +15,8 @@ from typing import Optional
 import serial
 import serial.tools.list_ports
 
+from .streamer import parse_tcp_address, resolve_serial_framing
+
 
 @dataclass
 class ProbeResult:
@@ -81,18 +83,7 @@ def probe_plotter(
     """Send inquiry commands (OI, OF, OH) and detect plotter configuration."""
     port_clean = port.strip()
     effective_timeout = timeout if timeout is not None else max(0.8, (50.0 * 10.0 / max(1, baudrate)) + 0.5)
-
-    parity_map = {
-        "N": serial.PARITY_NONE,
-        "NONE": serial.PARITY_NONE,
-        "E": serial.PARITY_EVEN,
-        "EVEN": serial.PARITY_EVEN,
-        "O": serial.PARITY_ODD,
-        "ODD": serial.PARITY_ODD,
-    }
-    ser_parity = parity_map.get(str(parity).upper(), serial.PARITY_NONE)
-    ser_bytesize = serial.SEVENBITS if int(bytesize) == 7 else serial.EIGHTBITS
-    ser_stopbits = serial.STOPBITS_TWO if float(stopbits) == 2 else serial.STOPBITS_ONE
+    ser_bytesize, ser_parity, ser_stopbits = resolve_serial_framing(bytesize, parity, stopbits)
 
     try:
         raw_resp = bytearray()
@@ -102,9 +93,7 @@ def probe_plotter(
 
         if port_clean.startswith("tcp://"):
             # TCP connection
-            host_port = port_clean[6:].split(":")
-            host = host_port[0]
-            tcp_port = int(host_port[1]) if len(host_port) > 1 else 9999
+            host, tcp_port = parse_tcp_address(port_clean)
             with socket.create_connection((host, tcp_port), timeout=effective_timeout) as sock:
                 sock.settimeout(effective_timeout)
                 sock.sendall(b"OI;OF;OH;\r")

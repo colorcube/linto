@@ -8,9 +8,15 @@ from .profile import (
     get_margin_profile_items,
     list_available_profiles,
 )
-from .emitter import HPGLEmitter, EmittedCommand
+from .emitter import HPGLEmitter, EmittedCommand, build_emitter
 from .probe import ProbeResult, list_serial_ports, probe_plotter
-from .streamer import SerialStreamer, StreamerState
+from .streamer import (
+    SerialStreamer,
+    StreamerState,
+    Transport,
+    SerialTransport,
+    TcpTransport,
+)
 from .manager import DeviceManager, ConfiguredDevice, DEFAULT_DEVICES
 
 __all__ = [
@@ -22,11 +28,15 @@ __all__ = [
     "list_available_profiles",
     "HPGLEmitter",
     "EmittedCommand",
+    "build_emitter",
     "ProbeResult",
     "list_serial_ports",
     "probe_plotter",
     "SerialStreamer",
     "StreamerState",
+    "Transport",
+    "SerialTransport",
+    "TcpTransport",
     "DeviceManager",
     "ConfiguredDevice",
     "DEFAULT_DEVICES",

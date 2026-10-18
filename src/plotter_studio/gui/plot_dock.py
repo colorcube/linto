@@ -4,7 +4,6 @@ device connection & live plot control, and exports.
 
 from __future__ import annotations
 
-import os
 import threading
 from typing import Optional, Set, Any
 
@@ -19,7 +18,7 @@ from ..core.document import Document
 from ..pipeline.compiler import PipelineConfig, PlotJob
 from ..device import (
     get_default_profile,
-    HPGLEmitter,
+    build_emitter,
     list_serial_ports,
     probe_plotter,
     SerialStreamer,
@@ -727,12 +726,6 @@ class PlotDockWidget(QDockWidget):
 
     def _confirm_start_plot(self, port: str, dev_name: str) -> bool:
         """Show a pre-flight confirmation summary before streaming to hardware."""
-        if (
-            "PYTEST_CURRENT_TEST" in os.environ
-            and not getattr(self, "_force_plot_confirm", False)
-        ):
-            return True
-
         page = self.doc.page
         fmt_str = f"DIN {page.preset}" if page.preset != "Custom" and page.preset.startswith("A") else page.preset
         paper_info = f"{fmt_str} ({page.width_mm:.0f} × {page.height_mm:.0f} mm)"
@@ -787,19 +780,16 @@ class PlotDockWidget(QDockWidget):
         profile = get_default_profile()
         baud = profile.connection.baudrate
         flow_ctrl = getattr(profile.connection, "flow_control", "rtscts")
-        units_override: Optional[float] = None
         dev_name = profile.name
+        dev = self.device_manager.get_active_device() if self.device_manager else None
 
-        if self.device_manager:
-            dev = self.device_manager.get_active_device()
-            if dev:
-                dev_name = dev.name
-                if not port:
-                    port = dev.port
-                profile = dev.get_profile()
-                baud = dev.baudrate
-                flow_ctrl = getattr(dev, "flow_control", flow_ctrl)
-                units_override = getattr(dev, "probed_units_per_mm", None)
+        if dev:
+            dev_name = dev.name
+            if not port:
+                port = dev.port
+            profile = dev.get_profile()
+            baud = dev.baudrate
+            flow_ctrl = getattr(dev, "flow_control", flow_ctrl)
 
         if not port:
             QMessageBox.warning(self, self.tr("Plot Output"), self.tr("Please select an interface or address."))
@@ -808,13 +798,11 @@ class PlotDockWidget(QDockWidget):
         if not self._confirm_start_plot(port, dev_name):
             return
 
-        feed_edge = getattr(self.doc.page, "feed_edge", "top") if self.doc and hasattr(self.doc, "page") else "top"
-        emitter = HPGLEmitter(
-            profile,
+        emitter = build_emitter(
+            document=self.doc,
+            device=dev,
             margin_profile=margin_key,
-            units_per_mm=units_override,
-            feed_edge=feed_edge,
-            **self.get_emitter_options(),
+            overrides=self.get_emitter_options(),
         )
         commands = emitter.emit_commands(self.job, self.doc)
 

@@ -244,3 +244,56 @@ class HPGLEmitter:
         """Produce full HP-GL output string."""
         cmds = self.emit_commands(job, document)
         return "".join(c.hpgl for c in cmds)
+
+
+def build_emitter(
+    document: Optional[Document] = None,
+    device: Optional[object] = None,
+    margin_profile: Optional[str] = None,
+    overrides: Optional[dict] = None,
+) -> HPGLEmitter:
+    """Build an HPGLEmitter with a consistent priority order:
+
+    1. Profile defaults and document.page (margin_profile, feed_edge).
+    2. Active ConfiguredDevice settings (profile, margin_profile, probed_units_per_mm, axis options).
+    3. Explicit margin_profile and GUI overrides (rotation_deg, swap_xy, invert_x, invert_y).
+    """
+    from .profile import get_default_profile
+
+    profile = get_default_profile()
+    margin_key = "exp"
+    feed_edge = "top"
+    if document is not None and hasattr(document, "page") and document.page is not None:
+        margin_key = getattr(document.page, "margin_profile", "exp") or "exp"
+        feed_edge = getattr(document.page, "feed_edge", "top") or "top"
+
+    units_override: Optional[float] = None
+    emitter_opts: dict = {}
+
+    if device is not None:
+        if hasattr(device, "get_profile"):
+            profile = device.get_profile()
+        dev_margin = getattr(device, "margin_profile", None)
+        if dev_margin:
+            margin_key = dev_margin
+        units_override = getattr(device, "probed_units_per_mm", None)
+        emitter_opts = {
+            "rotation_deg": getattr(device, "rotation", profile.rotation_deg),
+            "swap_xy": getattr(device, "swap_xy", profile.swap_xy),
+            "invert_x": getattr(device, "invert_x", profile.invert_x),
+            "invert_y": getattr(device, "invert_y", profile.invert_y),
+        }
+
+    if margin_profile:
+        margin_key = margin_profile
+    if overrides:
+        emitter_opts.update(overrides)
+
+    return HPGLEmitter(
+        profile,
+        margin_profile=margin_key,
+        units_per_mm=units_override,
+        feed_edge=feed_edge,
+        **emitter_opts,
+    )
+

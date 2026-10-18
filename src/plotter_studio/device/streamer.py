@@ -1,4 +1,4 @@
-"""Serial and TCP plot streaming worker.
+"""Serial and TCP plot streaming worker with pluggable Transport abstraction.
 
 Handles thread-safe transmission of HP-GL instructions to the plotter with
 flow control, progress tracking, pause/resume and immediate abort.
@@ -24,6 +24,238 @@ logger = logging.getLogger("plotter_studio.device.streamer")
 XON = 0x11
 XOFF = 0x13
 
+_PARITY_MAP = {
+    "N": serial.PARITY_NONE,
+    "NONE": serial.PARITY_NONE,
+    "E": serial.PARITY_EVEN,
+    "EVEN": serial.PARITY_EVEN,
+    "O": serial.PARITY_ODD,
+    "ODD": serial.PARITY_ODD,
+}
+
+
+def parse_tcp_address(port: str, default_port: int = 9999) -> tuple[str, int]:
+    """Parse a 'tcp://host[:port]' string into (host, tcp_port)."""
+    raw = port.strip()
+    if raw.startswith("tcp://"):
+        raw = raw[6:]
+    host_port = raw.split(":")
+    host = host_port[0] or "127.0.0.1"
+    tcp_port = int(host_port[1]) if len(host_port) > 1 and host_port[1] else default_port
+    return host, tcp_port
+
+
+def resolve_serial_framing(
+    bytesize: int = 8,
+    parity: str = "N",
+    stopbits: float = 1,
+) -> tuple[int, str, float]:
+    """Convert numeric/string framing parameters to pyserial constants."""
+    ser_parity = _PARITY_MAP.get(str(parity).upper(), serial.PARITY_NONE)
+    ser_bytesize = serial.SEVENBITS if int(bytesize) == 7 else serial.EIGHTBITS
+    ser_stopbits = serial.STOPBITS_TWO if float(stopbits) == 2 else serial.STOPBITS_ONE
+    return ser_bytesize, ser_parity, ser_stopbits
+
+
+class Transport:
+    """Abstract byte transport interface for serial, TCP, or fake test connections."""
+
+    def open(self) -> None:
+        raise NotImplementedError
+
+    def write(self, data: bytes) -> int:
+        raise NotImplementedError
+
+    def read_available(self) -> bytes:
+        raise NotImplementedError
+
+    def read_some(self, max_bytes: int = 128, timeout_s: float = 0.05) -> bytes:
+        return self.read_available()
+
+    def reset_input(self) -> None:
+        pass
+
+    def discard_output(self) -> None:
+        pass
+
+    def drain(self) -> None:
+        pass
+
+    def close(self) -> None:
+        pass
+
+    def is_cts_low(self) -> bool:
+        return False
+
+    def disable_hardware_flow_control(self) -> None:
+        pass
+
+    def can_sync_oa(self) -> bool:
+        return True
+
+
+class SerialTransport(Transport):
+    """pyserial-backed Transport."""
+
+    def __init__(
+        self,
+        port: str,
+        baudrate: int = 19200,
+        bytesize: int = 8,
+        parity: str = "N",
+        stopbits: float = 1,
+        rtscts: bool = True,
+        dsrdtr: bool = False,
+        timeout: float = 0.2,
+        write_timeout: float = 5.0,
+    ):
+        self.port = port
+        self.baudrate = baudrate
+        self.bytesize, self.parity, self.stopbits = resolve_serial_framing(bytesize, parity, stopbits)
+        self.rtscts = rtscts
+        self.dsrdtr = dsrdtr
+        self.timeout = timeout
+        self.write_timeout = write_timeout
+        self.ser: Optional[serial.Serial] = None
+
+    def open(self) -> None:
+        self.ser = serial.Serial(
+            port=self.port,
+            baudrate=self.baudrate,
+            bytesize=self.bytesize,
+            parity=self.parity,
+            stopbits=self.stopbits,
+            rtscts=self.rtscts,
+            dsrdtr=self.dsrdtr,
+            xonxoff=False,
+            timeout=self.timeout,
+            write_timeout=self.write_timeout,
+        )
+        self.reset_input()
+        self.discard_output()
+
+    def write(self, data: bytes) -> int:
+        if not self.ser:
+            return 0
+        n = self.ser.write(data)
+        return len(data) if n is None else int(n)
+
+    def read_available(self) -> bytes:
+        if not self.ser:
+            return b""
+        available = getattr(self.ser, "in_waiting", 0)
+        if available and available > 0:
+            return self.ser.read(available)
+        return b""
+
+    def read_some(self, max_bytes: int = 128, timeout_s: float = 0.05) -> bytes:
+        if not self.ser or not hasattr(self.ser, "read"):
+            return b""
+        waiting = getattr(self.ser, "in_waiting", 0)
+        chunk = self.ser.read(waiting if waiting and waiting > 0 else 1)
+        if not chunk and timeout_s > 0:
+            time.sleep(min(timeout_s, 0.02))
+        return chunk or b""
+
+    def can_sync_oa(self) -> bool:
+        return bool(self.ser and hasattr(self.ser, "read"))
+
+    def reset_input(self) -> None:
+        if self.ser and hasattr(self.ser, "reset_input_buffer"):
+            try:
+                self.ser.reset_input_buffer()
+            except Exception:
+                pass
+
+    def discard_output(self) -> None:
+        if self.ser and hasattr(self.ser, "reset_output_buffer"):
+            try:
+                self.ser.reset_output_buffer()
+            except Exception:
+                pass
+        if self.ser and hasattr(self.ser, "cancel_write"):
+            try:
+                self.ser.cancel_write()
+            except Exception:
+                pass
+
+    def drain(self) -> None:
+        if self.ser and hasattr(self.ser, "flush"):
+            try:
+                self.ser.flush()
+            except Exception:
+                pass
+
+    def close(self) -> None:
+        if self.ser:
+            try:
+                self.ser.close()
+            except Exception:
+                pass
+            self.ser = None
+
+    def is_cts_low(self) -> bool:
+        if self.ser and getattr(self.ser, "rtscts", False):
+            try:
+                return getattr(self.ser, "cts", True) is False
+            except Exception:
+                return False
+        return False
+
+    def disable_hardware_flow_control(self) -> None:
+        if self.ser and getattr(self.ser, "rtscts", False):
+            try:
+                self.ser.rtscts = False
+            except Exception:
+                pass
+
+
+class TcpTransport(Transport):
+    """TCP socket-backed Transport."""
+
+    def __init__(self, port: str, connect_timeout: float = 3.0, write_timeout: float = 2.0):
+        self.host, self.tcp_port = parse_tcp_address(port)
+        self.connect_timeout = connect_timeout
+        self.write_timeout = write_timeout
+        self.sock: Optional[socket.socket] = None
+
+    def open(self) -> None:
+        self.sock = socket.create_connection((self.host, self.tcp_port), timeout=self.connect_timeout)
+        self.sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        self.sock.settimeout(self.write_timeout)
+
+    def write(self, data: bytes) -> int:
+        if not self.sock:
+            return 0
+        n = self.sock.send(data)
+        if n <= 0:
+            raise ConnectionError("TCP-Verbindung geschlossen")
+        return n
+
+    def read_available(self) -> bytes:
+        if not self.sock:
+            return b""
+        r, _, _ = select.select([self.sock], [], [], 0)
+        if r:
+            return self.sock.recv(4096)
+        return b""
+
+    def read_some(self, max_bytes: int = 256, timeout_s: float = 0.05) -> bytes:
+        if not self.sock:
+            return b""
+        r, _, _ = select.select([self.sock], [], [], timeout_s)
+        if r:
+            return self.sock.recv(max_bytes)
+        return b""
+
+    def close(self) -> None:
+        if self.sock:
+            try:
+                self.sock.close()
+            except Exception:
+                pass
+            self.sock = None
+
 
 class StreamerState(str, Enum):
     IDLE = "IDLE"
@@ -36,7 +268,7 @@ class StreamerState(str, Enum):
 
 
 class SerialStreamer:
-    """Background worker that streams HP-GL commands to a serial or TCP port."""
+    """Background worker that streams HP-GL commands to a serial, TCP, or custom Transport."""
 
     def __init__(
         self,
@@ -45,12 +277,14 @@ class SerialStreamer:
         on_finished: Optional[Callable[[bool, str], None]] = None,
         write_timeout: float = 5.0,
         end_settle_delay_s: float = 0.05,
+        transport: Optional[Transport] = None,
     ):
         self.on_progress = on_progress
         self.on_status = on_status
         self.on_finished = on_finished
         self.write_timeout = write_timeout
         self.end_settle_delay_s = end_settle_delay_s
+        self._injected_transport = transport
 
         self._lock = threading.RLock()
         self._state = StreamerState.IDLE
@@ -61,6 +295,7 @@ class SerialStreamer:
         self._abort_requested = False
         self._xoff_paused = False
 
+        self._transport: Optional[Transport] = None
         self._serial: Optional[serial.Serial] = None
         self._socket: Optional[socket.socket] = None
 
@@ -100,6 +335,7 @@ class SerialStreamer:
         parity: str = "N",
         stopbits: float = 1,
         sync_with_oa: bool = True,
+        transport: Optional[Transport] = None,
     ) -> bool:
         """Start streaming commands in a background thread."""
         with self._lock:
@@ -113,6 +349,7 @@ class SerialStreamer:
 
             eff_write_timeout = self.write_timeout if write_timeout is None else write_timeout
             eff_settle_delay = self.end_settle_delay_s if end_settle_delay_s is None else end_settle_delay_s
+            eff_transport = transport or self._injected_transport
 
             self._thread = threading.Thread(
                 target=self._run_stream,
@@ -132,6 +369,7 @@ class SerialStreamer:
                     parity,
                     stopbits,
                     sync_with_oa,
+                    eff_transport,
                 ),
                 daemon=True,
                 name="PlotStreamWorker",
@@ -174,16 +412,8 @@ class SerialStreamer:
             self._state = StreamerState.ABORTING
             self._abort_requested = True
             self._pause_event.set()  # Wake up if paused
-            if self._serial and hasattr(self._serial, "reset_output_buffer"):
-                try:
-                    self._serial.reset_output_buffer()
-                except Exception:
-                    pass
-            if self._serial and hasattr(self._serial, "cancel_write"):
-                try:
-                    self._serial.cancel_write()
-                except Exception:
-                    pass
+            if self._transport:
+                self._transport.discard_output()
 
     def _emit_status(self, state: StreamerState, msg: str) -> None:
         with self._lock:
@@ -193,119 +423,70 @@ class SerialStreamer:
             cb(state, msg)
 
     def _send_raw(self, data: bytes) -> bool:
-        """Send raw bytes, retrying cleanly if hardware CTS blocks longer than write_timeout.
+        """Send raw bytes via active Transport, retrying cleanly if CTS or write timeout blocks.
 
         Returns True if all bytes were sent, False if aborted during transmission.
         """
-        if self._socket:
-            view = memoryview(data)
-            sent = 0
-            while sent < len(view):
-                if self._abort_requested:
-                    return False
-                try:
-                    n = self._socket.send(view[sent:])
-                    if n <= 0:
-                        raise ConnectionError("TCP-Verbindung geschlossen")
-                    sent += n
-                except socket.timeout:
-                    if self._abort_requested:
-                        return False
-                    continue
+        if not self._transport:
             return True
 
-        if self._serial:
-            view = memoryview(data)
-            sent = 0
-            cts_stall_notified = False
-            while sent < len(view):
+        view = memoryview(data)
+        sent = 0
+        stall_notified = False
+        timeout_exc = (getattr(serial, "SerialTimeoutException", TimeoutError), socket.timeout, TimeoutError)
+
+        while sent < len(view):
+            if self._abort_requested:
+                return False
+
+            if self._transport.is_cts_low():
+                if not stall_notified:
+                    stall_notified = True
+                    self._emit_status(
+                        StreamerState.PAUSED,
+                        "Plotter-Puffer voll (CTS low) – warte auf Plotter...",
+                    )
+                time.sleep(0.05)
+                continue
+
+            try:
+                n = self._transport.write(bytes(view[sent:]))
+                sent += n
+                if stall_notified and not self.is_user_paused():
+                    stall_notified = False
+                    self._emit_status(StreamerState.STREAMING, "Sende Plotdaten...")
+            except timeout_exc:
                 if self._abort_requested:
                     return False
-
-                # Check CTS before writing if hardware handshake is active and cts property is readable
-                if getattr(self._serial, "rtscts", False):
-                    try:
-                        cts_state = getattr(self._serial, "cts", True)
-                    except Exception:
-                        cts_state = True
-                    if cts_state is False:
-                        if not cts_stall_notified:
-                            cts_stall_notified = True
-                            self._emit_status(
-                                StreamerState.PAUSED,
-                                "Plotter-Puffer voll (CTS low) – warte auf Plotter...",
-                            )
-                        time.sleep(0.05)
-                        continue
-
-                try:
-                    n = self._serial.write(bytes(view[sent:]))
-                    if n is None:
-                        n = len(view) - sent
-                    sent += n
-                    if cts_stall_notified and not self.is_user_paused():
-                        cts_stall_notified = False
-                        self._emit_status(StreamerState.STREAMING, "Sende Plotdaten...")
-                except getattr(serial, "SerialTimeoutException", TimeoutError):
-                    if self._abort_requested:
-                        return False
-                    if not cts_stall_notified:
-                        cts_stall_notified = True
-                        self._emit_status(
-                            StreamerState.PAUSED,
-                            "Plotter-Puffer voll (Write-Timeout) – warte auf Plotter...",
-                        )
-                    time.sleep(0.05)
-                    continue
-            return True
-
+                if not stall_notified:
+                    stall_notified = True
+                    self._emit_status(
+                        StreamerState.PAUSED,
+                        "Plotter-Puffer voll (Write-Timeout) – warte auf Plotter...",
+                    )
+                time.sleep(0.05)
+                continue
         return True
 
     def _sync_plotter_ready(self, timeout_s: float = 2.0) -> bool:
-        """Send OA; inquiry and wait for plotter response to ensure buffer is drained up to this point.
-
-        Because the plotter executes OA; in-order from its command buffer, receiving the
-        'x,y,p\\r' reply guarantees all preceding drawing motions have completed mechanically.
-        """
-        if self._abort_requested:
+        """Send OA; inquiry and wait for plotter response to ensure buffer is drained up to this point."""
+        if self._abort_requested or not self._transport or not self._transport.can_sync_oa():
             return False
 
         try:
-            if self._serial and hasattr(self._serial, "read"):
-                if hasattr(self._serial, "reset_input_buffer"):
-                    self._serial.reset_input_buffer()
-                if not self._send_raw(b"OA;\r"):
-                    return False
-                if hasattr(self._serial, "flush"):
-                    self._serial.flush()
-                deadline = time.monotonic() + timeout_s
-                buf = bytearray()
-                while time.monotonic() < deadline and not self._abort_requested:
-                    waiting = getattr(self._serial, "in_waiting", 0)
-                    chunk = self._serial.read(waiting if waiting and waiting > 0 else 1)
-                    if chunk:
-                        buf.extend(chunk)
-                        if b"\r" in buf or b"\n" in buf:
-                            return True
-                    else:
-                        time.sleep(0.02)
+            self._transport.reset_input()
+            if not self._send_raw(b"OA;\r"):
                 return False
-
-            if self._socket:
-                if not self._send_raw(b"OA;\r"):
-                    return False
-                deadline = time.monotonic() + timeout_s
-                buf = bytearray()
-                while time.monotonic() < deadline and not self._abort_requested:
-                    r, _, _ = select.select([self._socket], [], [], 0.05)
-                    if r:
-                        chunk = self._socket.recv(256)
-                        if not chunk:
-                            break
-                        buf.extend(chunk)
-                        if b"\r" in buf or b"\n" in buf:
-                            return True
-                return False
+            self._transport.drain()
+            deadline = time.monotonic() + timeout_s
+            buf = bytearray()
+            while time.monotonic() < deadline and not self._abort_requested:
+                chunk = self._transport.read_some(128, timeout_s=0.05)
+                if chunk:
+                    buf.extend(chunk)
+                    if b"\r" in buf or b"\n" in buf:
+                        return True
+            return False
         except Exception as e:
             logger.debug(f"OA; sync skipped or timed out: {e}")
         return False
@@ -314,28 +495,12 @@ class SerialStreamer:
         """Flush host output buffer, send ESC.K and lift/park pen immediately."""
         self._emit_status(StreamerState.ABORTING, "Sende Abbruch-Befehl...")
         try:
-            if self._serial:
-                if hasattr(self._serial, "reset_output_buffer"):
-                    try:
-                        self._serial.reset_output_buffer()
-                    except Exception:
-                        pass
-                # Temporarily disable rtscts stall if CTS is low so ESC.K goes out immediately
-                orig_rtscts = getattr(self._serial, "rtscts", False)
+            if self._transport:
+                self._transport.discard_output()
+                self._transport.disable_hardware_flow_control()
                 try:
-                    if orig_rtscts:
-                        self._serial.rtscts = False
-                except Exception:
-                    pass
-                try:
-                    self._serial.write(b"\x1b.K\rPU;SP0;\r\n")
-                    if hasattr(self._serial, "flush"):
-                        self._serial.flush()
-                except Exception:
-                    pass
-            elif self._socket:
-                try:
-                    self._socket.sendall(b"\x1b.K\rPU;SP0;\r\n")
+                    self._transport.write(b"\x1b.K\rPU;SP0;\r\n")
+                    self._transport.drain()
                 except Exception:
                     pass
         except Exception:
@@ -346,22 +511,13 @@ class SerialStreamer:
             self.on_finished(False, "Plot durch Benutzer abgebrochen")
 
     def _check_and_wait_xoff(self) -> None:
-        """Process incoming bytes for XON / XOFF flow control (Serial or TCP)."""
-        if not self._serial and not self._socket:
+        """Process incoming bytes for XON / XOFF flow control."""
+        if not self._transport:
             return
 
         while not self._abort_requested:
             try:
-                raw = b""
-                if self._serial:
-                    available = getattr(self._serial, "in_waiting", 0)
-                    if available and available > 0:
-                        raw = self._serial.read(available)
-                elif self._socket:
-                    r, _, _ = select.select([self._socket], [], [], 0)
-                    if r:
-                        raw = self._socket.recv(4096)
-
+                raw = self._transport.read_available()
                 if raw:
                     for b in raw:
                         if b == XOFF:
@@ -397,6 +553,7 @@ class SerialStreamer:
         parity: str = "N",
         stopbits: float = 1,
         sync_with_oa: bool = False,
+        transport: Optional[Transport] = None,
     ) -> None:
         port_clean = port.strip()
         total_commands = len(commands)
@@ -407,45 +564,34 @@ class SerialStreamer:
         effective_dsrdtr = (fc == "dsrdtr") if dsrdtr is None else bool(dsrdtr)
         effective_xonxoff = (fc == "xonxoff") if xonxoff_userspace is None else bool(xonxoff_userspace)
 
-        parity_map = {
-            "N": serial.PARITY_NONE,
-            "NONE": serial.PARITY_NONE,
-            "E": serial.PARITY_EVEN,
-            "EVEN": serial.PARITY_EVEN,
-            "O": serial.PARITY_ODD,
-            "ODD": serial.PARITY_ODD,
-        }
-        ser_parity = parity_map.get(str(parity).upper(), serial.PARITY_NONE)
-        ser_bytesize = serial.SEVENBITS if int(bytesize) == 7 else serial.EIGHTBITS
-        ser_stopbits = serial.STOPBITS_TWO if float(stopbits) == 2 else serial.STOPBITS_ONE
-
         self._emit_status(StreamerState.CONNECTING, f"Verbinde mit {port_clean}...")
 
         try:
-            if port_clean.startswith("tcp://"):
+            if transport is not None:
+                self._transport = transport
+                self._transport.open()
+            elif port_clean.startswith("tcp://"):
                 if fc != "none" and xonxoff_userspace is not False:
                     effective_xonxoff = True
-                host_port = port_clean[6:].split(":")
-                host = host_port[0]
-                tcp_port = int(host_port[1]) if len(host_port) > 1 else 9999
-                self._socket = socket.create_connection((host, tcp_port), timeout=3.0)
-                self._socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-                self._socket.settimeout(2.0)
+                tcp_t = TcpTransport(port_clean, connect_timeout=3.0, write_timeout=2.0)
+                tcp_t.open()
+                self._transport = tcp_t
+                self._socket = tcp_t.sock
             else:
-                self._serial = serial.Serial(
+                ser_t = SerialTransport(
                     port=port_clean,
                     baudrate=baudrate,
-                    bytesize=ser_bytesize,
-                    parity=ser_parity,
-                    stopbits=ser_stopbits,
+                    bytesize=bytesize,
+                    parity=parity,
+                    stopbits=stopbits,
                     rtscts=effective_rtscts,
                     dsrdtr=effective_dsrdtr,
-                    xonxoff=False,
                     timeout=0.1 if effective_xonxoff else 0.2,
                     write_timeout=write_timeout,
                 )
-                self._serial.reset_input_buffer()
-                self._serial.reset_output_buffer()
+                ser_t.open()
+                self._transport = ser_t
+                self._serial = ser_t.ser
 
             self._emit_status(StreamerState.STREAMING, "Sende Plotdaten...")
             active_pen: Optional[int] = None
@@ -456,7 +602,6 @@ class SerialStreamer:
                 is_pen_select = hpgl_stripped.startswith("SP") and not hpgl_stripped.startswith("SP0") and cmd.pen > 0
                 if is_pen_select:
                     if pause_on_pen_change and active_pen is not None and cmd.pen != active_pen:
-                        # Synchronize with plotter buffer via OA; before prompting user to swap pens
                         if sync_with_oa:
                             self._sync_plotter_ready(timeout_s=5.0)
                         should_pause_pen = False
@@ -472,15 +617,12 @@ class SerialStreamer:
                             )
                     active_pen = cmd.pen
 
-                # Wait if paused (manual or pen-change pause)
                 self._pause_event.wait()
 
-                # Check for abort (before or after pause)
                 if self._abort_requested:
                     self._execute_abort_sequence()
                     return
 
-                # Flow control check (userspace XON/XOFF)
                 if effective_xonxoff:
                     self._check_and_wait_xoff()
                     if self._abort_requested:
@@ -490,7 +632,6 @@ class SerialStreamer:
                 if inter_command_delay_s > 0.0:
                     time.sleep(inter_command_delay_s)
 
-                # Send command bytes
                 sent_ok = self._send_raw(cmd.hpgl.encode("ascii", errors="replace"))
                 if not sent_ok or self._abort_requested:
                     self._execute_abort_sequence()
@@ -499,17 +640,12 @@ class SerialStreamer:
                 if cmd.is_draw:
                     drawn_total_mm += cmd.dist_mm
 
-                # Emit progress
                 pct = ((i + 1) / total_commands) * 100.0 if total_commands > 0 else 100.0
                 if self.on_progress:
                     self.on_progress(cmd.step_index, total_commands, pct, cmd.pen, drawn_total_mm / 1000.0)
 
-            # Allow plotter to finish mechanical SP0; pen parking before closing serial port
-            if self._serial and hasattr(self._serial, "flush"):
-                try:
-                    self._serial.flush()
-                except Exception:
-                    pass
+            if self._transport:
+                self._transport.drain()
             if sync_with_oa and total_commands > 0 and not self._abort_requested:
                 self._sync_plotter_ready(timeout_s=2.0)
             if end_settle_delay_s > 0.0 and not self._abort_requested:
@@ -519,7 +655,6 @@ class SerialStreamer:
                 self._execute_abort_sequence()
                 return
 
-            # Successfully completed
             self._close_connection()
             self._emit_status(StreamerState.COMPLETED, "Plot erfolgreich abgeschlossen")
             if self.on_finished:
@@ -536,17 +671,8 @@ class SerialStreamer:
                 self.on_finished(False, f"Fehler: {e}")
 
     def _close_connection(self) -> None:
-        if self._serial:
-            try:
-                self._serial.close()
-            except Exception:
-                pass
-            self._serial = None
-
-        if self._socket:
-            try:
-                self._socket.close()
-            except Exception:
-                pass
-            self._socket = None
-
+        if self._transport:
+            self._transport.close()
+            self._transport = None
+        self._serial = None
+        self._socket = None

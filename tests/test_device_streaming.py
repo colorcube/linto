@@ -668,4 +668,96 @@ def test_cts_stall_and_serial_framing(monkeypatch):
     assert any(b"OA;\r" in chunk for chunk in written)
 
 
+def test_fake_transport_partial_writes_and_build_emitter():
+    """Verify pluggable Transport with partial writes, DeviceConnectionConfig sync, and build_emitter priority."""
+    from plotter_studio.device import (
+        Transport,
+        build_emitter,
+        DeviceConnectionConfig,
+        ConfiguredDevice,
+    )
+    from plotter_studio.device.emitter import EmittedCommand
+
+    # 1. DeviceConnectionConfig single source of truth
+    cfg_xon = DeviceConnectionConfig(xonxoff=True)
+    assert cfg_xon.flow_control == "xonxoff"
+    assert cfg_xon.xonxoff is True
+    assert cfg_xon.rtscts is False
+
+    cfg_fc = DeviceConnectionConfig(flow_control="dsrdtr")
+    assert cfg_fc.dsrdtr is True
+    assert cfg_fc.rtscts is False
+
+    # 2. build_emitter priority order: Document -> ConfiguredDevice -> explicit overrides
+    doc = Document()
+    doc.page.feed_edge = "bottom"
+    doc.page.margin_profile = "norm"
+    dev = ConfiguredDevice(
+        id="dev1",
+        name="Custom XP-500",
+        model_id="mutoh_xp500",
+        margin_profile="type1",
+        rotation=90,
+        swap_xy=False,
+        probed_units_per_mm=100.0,
+    )
+    em = build_emitter(
+        document=doc,
+        device=dev,
+        margin_profile="exp",
+        overrides={"rotation_deg": 180},
+    )
+    assert em.feed_edge == "bottom"
+    assert em.margin_profile == "exp"
+    assert em.units_per_mm == 100.0
+    assert em.rotation_deg == 180
+    assert em.swap_xy is False
+
+    # 3. Pluggable Transport simulating partial writes (3 bytes at a time)
+    class PartialWriteFakeTransport(Transport):
+        def __init__(self):
+            self.opened = False
+            self.closed = False
+            self.sent = bytearray()
+
+        def open(self) -> None:
+            self.opened = True
+
+        def write(self, data: bytes) -> int:
+            chunk = data[:3]
+            self.sent.extend(chunk)
+            return len(chunk)
+
+        def read_available(self) -> bytes:
+            return b""
+
+        def read_some(self, max_bytes: int = 128, timeout_s: float = 0.05) -> bytes:
+            return b"0,0,0\r"
+
+        def close(self) -> None:
+            self.closed = True
+
+    fake_t = PartialWriteFakeTransport()
+    cmds = [
+        EmittedCommand(hpgl="IN;\r\n", step_index=0, pen=0, is_draw=False, dist_mm=0.0),
+        EmittedCommand(hpgl="SP1;PD100,200;\r\n", step_index=1, pen=1, is_draw=True, dist_mm=10.0),
+    ]
+    done = [None]
+    streamer = SerialStreamer(
+        on_finished=lambda ok, msg: done.__setitem__(0, ok),
+        end_settle_delay_s=0.0,
+        transport=fake_t,
+    )
+    assert streamer.start_stream("fake://plotter", cmds, sync_with_oa=True) is True
+    start_t = time.time()
+    while done[0] is None and (time.time() - start_t < 1.0):
+        time.sleep(0.01)
+
+    assert done[0] is True
+    assert fake_t.opened is True
+    assert fake_t.closed is True
+    assert b"IN;\r\nSP1;PD100,200;\r\nOA;\r" == bytes(fake_t.sent)
+
+
+
 
