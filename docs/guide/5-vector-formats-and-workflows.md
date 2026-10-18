@@ -46,7 +46,8 @@ For generative art (Plotter Art) created via Python, JavaScript, or Processing, 
    Pen plotters only draw stroke lines, not solid fills. Setting `fill="none"` ensures that what you see in your web browser or SVG preview matches what the pen will physically draw.
 
 4. **Supported SVG Elements:**
-   You can freely mix `<path>`, `<line>`, `<polyline>`, `<polygon>`, `<rect>`, `<circle>`, `<ellipse>`, and nested `<g transform="...">` groups. Curves (`C`, `Q`, `A`) are parsed losslessly.
+   You can freely mix `<path>`, `<line>`, `<polyline>`, `<polygon>`, `<rect>`, `<circle>`, `<ellipse>`, `<text>` (including `<tspan>`), and nested `<g transform="...">` groups. Curves (`C`, `Q`, `A`) are parsed losslessly.
+   * **SVG `<text>` Import (Single-Line Font Fallback):** Standard `<text>` elements are automatically rendered using an integrated **Hershey Simplex** single-stroke vector font (supporting ASCII, German umlauts/`ß`, and common diacritics) with `font-size`, `text-anchor` (`start`, `middle`, `end`), and `dx`/`dy` offsets. Plotter Studio still displays an informational warning on import and in the pre-flight panel reminding you that `<text>` was replaced by a single-line font (convert text to paths in your editor if you need the exact original typeface outlines).
 
 ---
 
@@ -57,7 +58,7 @@ For generative art (Plotter Art) created via Python, JavaScript, or Processing, 
 * **Vector & Print Formats:** `.pdf`, `.eps`, `.ps` (note: PDF text fonts often import as double-line outlines), Adobe Illustrator (`.ai`), CorelDRAW (`.cdr`), Visio (`.vsd`/`.vsdx`), `.wmf`/`.emf`.
 * **CAD Formats:** `.dxf` (AutoCAD R12/R14/2000+) and `.hpgl`/`.plt`.
 * **Single-Line Fonts (Hershey Text):**
-  Standard fonts (TrueType/OpenType) consist of closed outline contours (e.g. an "I" is drawn as a narrow rectangle). Inkscape provides true **single-line fonts** for plotters under `Extensions → Text → Hershey Text`.
+  Standard fonts (TrueType/OpenType) consist of closed outline contours (e.g. an "I" is drawn as a narrow rectangle). While Plotter Studio automatically substitutes raw SVG `<text>` elements with its built-in **Hershey Simplex** single-line font, Inkscape provides additional typeface styles under `Extensions → Text → Hershey Text` (or `Path → Object to Path` if you intentionally want double-line outline lettering).
 * **Bitmap Vectorization (Centerline Tracing):**
   Via `Path → Trace Bitmap`, Inkscape offers **Centerline Tracing (Autotrace)**. Unlike outline tracing (which traces both sides of a black line), centerline tracing creates a single clean centerline for the pen.
 

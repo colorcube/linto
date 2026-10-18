@@ -105,7 +105,8 @@ pytest
 
 * **[InkCut](https://github.com/codelv/inkcut) (GPL-3.0-or-later):** 24 device profiles (Roland, Graphtec, Summa, US Cutter) adapted via `tools/import_inkcut_devices.py`, and inspiration for device abstraction.
 * **[vpype](https://github.com/abey79/vpype) (Antoine Beyeler, GPL-3.0-or-later):** Conceptual inspiration for the modular slicer pipeline and path optimization heuristics.
-* **[MutohPlot](https://github.com/oliver321/MutohPlot) (Oliver F., MIT License):** Valuable reference for Mutoh XP-500 hard-clip margins, HP-GL tokenizer, and 5×7 stroke font.
+* **[MutohPlot](https://github.com/oliver321/MutohPlot) (Oliver F., MIT License):** Valuable reference for Mutoh XP-500 hard-clip margins, HP-GL tokenizer, 5×7 `LB` label stroke font, and SVG `<text>` diagnostic warnings.
+* **Hershey Vector Fonts (A. V. Hershey, 1967, Public Domain):** Basis for the integrated **Hershey Simplex** single-line vector font used to render SVG `<text>` elements directly for pen plotters.
 
 ---
 

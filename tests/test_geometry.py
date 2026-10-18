@@ -251,13 +251,15 @@ def test_deduplicate_polylines_pen_luminance_order_and_svg_text_warning():
     job_lum = compile_document_to_plot_job(doc, PipelineConfig(pen_order="luminance"))
     assert list(job_lum.layers.keys()) == [4, 1]
 
-    # 3. SVG <text> warning on load_svg and compile_document_to_plot_job
-    svg_with_text = '<svg xmlns="http://www.w3.org/2000/svg" width="100mm" height="100mm"><line x1="10" y1="10" x2="50" y2="50" stroke="#000"/><text x="20" y="20">Hello</text></svg>'
+    # 3. SVG <text> single-stroke Hershey conversion and warning on load_svg / compile_document_to_plot_job
+    svg_with_text = '<svg xmlns="http://www.w3.org/2000/svg" width="100mm" height="100mm"><text x="50" y="30" font-size="14" text-anchor="middle" fill="#dc2626">Hallo ÄÖÜß 123°</text></svg>'
     imported = load_svg(svg_with_text)
     assert imported.ignored_text_count == 1
+    assert len(imported.paths) > 10  # Multiple single-stroke subpaths generated from text
+    assert all(p.pen_id == 2 for p in imported.paths)  # Mapped to red pen 2 (#dc2626)
     doc.items.append(imported)
     job_warn = compile_document_to_plot_job(doc)
-    assert any("<text>" in w for w in job_warn.warnings)
+    assert any("durch einfache Linienschrift ersetzt" in w for w in job_warn.warnings)
 
 
 

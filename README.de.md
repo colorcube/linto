@@ -105,7 +105,8 @@ pytest
 
 * **[InkCut](https://github.com/codelv/inkcut) (GPL-3.0-or-later):** 24 Geräteprofile (u. a. Roland, Graphtec, Summa, US Cutter) wurden übernommen und aufbereitet (`tools/import_inkcut_devices.py`).
 * **[vpype](https://github.com/abey79/vpype) (Antoine Beyeler, GPL-3.0-or-later):** Konzeptionelle Inspiration für die modulare Slicer-Pipeline.
-* **[MutohPlot](https://github.com/oliver321/MutohPlot) (Oliver F., MIT-Lizenz):** Wertvolle Referenz für die Mutoh XP-500 Hard-Clip-Tabellen, HP-GL-Tokenizer und den 5×7-Vektorfont.
+* **[MutohPlot](https://github.com/oliver321/MutohPlot) (Oliver F., MIT-Lizenz):** Wertvolle Referenz für die Mutoh XP-500 Hard-Clip-Tabellen, den HP-GL-Tokenizer, den 5×7-Zeichensatz für HP-GL-`LB`-Labels sowie die Diagnose-Hinweise bei SVG-`<text>`-Elementen.
+* **Hershey Vector Fonts (A. V. Hershey, 1967, Public Domain):** Grundlage für die integrierte **Hershey-Simplex**-Einlinienschrift (`hershey_font.py`), mit der SVG-`<text>`-Elemente direkt als echte Einlinien-Vektorpfade gezeichnet werden.
 
 ---
 

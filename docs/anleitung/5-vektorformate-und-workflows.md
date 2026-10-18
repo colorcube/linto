@@ -46,7 +46,8 @@ Für generative Kunst (Plotter Art) aus eigenen Python-, JavaScript- oder Proces
    Ein Stiftplotter kennt keine Flächenfüllung, sondern nur Konturlinien. Setze im Skript `fill="none"`, damit du schon im Browser oder Bildbetrachter exakt das siehst, was der Stift später zeichnet.
 
 4. **Unterstützte SVG-Elemente:**
-   Du kannst `<path>`, `<line>`, `<polyline>`, `<polygon>`, `<rect>`, `<circle>` und `<ellipse>` sowie verschachtelte `<g transform="...">`-Gruppen beliebig kombinieren. Kurven (`C`, `Q`, `A`) werden verlustfrei eingelesen.
+   Du kannst `<path>`, `<line>`, `<polyline>`, `<polygon>`, `<rect>`, `<circle>`, `<ellipse>`, `<text>` (inkl. `<tspan>`) sowie verschachtelte `<g transform="...">`-Gruppen beliebig kombinieren. Kurven (`C`, `Q`, `A`) werden verlustfrei eingelesen.
+   * **SVG-`<text>`-Import (Automatische Einlinien-Ersatzschrift):** Nicht in Pfade umgewandelte `<text>`-Elemente werden beim Import automatisch durch eine integrierte **Hershey-Simplex-Einlinienschrift** (inkl. deutscher Umlaute, `ß` und gängiger Akzentzeichen) unter Beachtung von `font-size`, `text-anchor` (`start`, `middle`, `end`) und `dx`/`dy`-Versatz ersetzt. Plotter Studio gibt dabei bewusst weiterhin einen Hinweis in der Statusleiste und in der Pre-Flight-Inspektion aus, dass `<text>` durch eine einfache Linienschrift ersetzt wurde (wer die exakten Umrisskonturen einer bestimmten TrueType-Schrift plotten möchte, wandelt den Text zuvor im Grafikprogramm in Pfade um).
 
 ---
 
@@ -57,7 +58,7 @@ Für generative Kunst (Plotter Art) aus eigenen Python-, JavaScript- oder Proces
 * **Vektor- & Druckformate:** `.pdf`, `.eps`, `.ps` (wichtig: beim PDF-Import werden eingebettete Schriften oft als Doppellinien-Umrisse geladen), Adobe Illustrator (`.ai`), CorelDRAW (`.cdr`), Visio (`.vsd`/`.vsdx`), `.wmf`/`.emf`.
 * **CAD-Formate:** `.dxf` (AutoCAD R12/R14/2000+) und `.hpgl`/`.plt`.
 * **Echte Einlinienschriften (Hershey Text):**
-  Normale Computerschriften (TrueType/OpenType) bestehen aus geschlossenen Außenkonturen (ein „I" wird als schmales Rechteck doppelt umfahren). Inkscape bringt unter `Erweiterungen → Text → Hershey Text` echte **Single-Line-Schriften** für Stiftplotter mit, die als einfache Mittellinie gezeichnet werden.
+  Normale Computerschriften (TrueType/OpenType) bestehen aus geschlossenen Außenkonturen (ein „I" wird als schmales Rechteck doppelt umfahren). Während Plotter Studio direkte SVG-`<text>`-Elemente automatisch durch seine eingebaute **Hershey-Simplex**-Einlinienschrift ersetzt, bringt Inkscape unter `Erweiterungen → Text → Hershey Text` noch weitere **Single-Line-Schriftstile** (z. B. Script, Serif, Gothic) mit – oder erlaubt über `Pfad → Objekt in Pfad umwandeln` das gezielte Plotten von Umriss-Schriften.
 * **Rasterbilder (`.png`, `.jpg`) vektorisieren:**
   Über `Pfad → Bitmap nachzeichnen` bietet Inkscape den Modus **Mittellinien-Vektorisierung (Centerline Tracing / Autotrace)**. Anders als die normale Konturerkennung (die um jede schwarze Linie zwei Ränder legt) erzeugt das Centerline-Tracing eine einzelne Mittellinie für den Stift.
 

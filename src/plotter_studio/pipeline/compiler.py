@@ -164,7 +164,7 @@ def compile_document_to_plot_job(
 
     if total_ignored_texts > 0:
         job.warnings.append(
-            f"Hinweis: {total_ignored_texts} SVG-<text>-Element(e) wurden ignoriert (Text vor dem Import in Pfade umwandeln)."
+            f"Hinweis: {total_ignored_texts} SVG-<text>-Element(e) durch einfache Linienschrift ersetzt (für Originalschriftart Text vor dem Import in Pfade umwandeln)."
         )
 
     # Step 2: Process each pen layer

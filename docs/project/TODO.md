@@ -1,3 +1,4 @@
+
 # Plotter Studio – Todo & Roadmap
 
 Zentrale Aufgabenliste für die Weiterentwicklung von Plotter Studio. Detaillierte Spezifikationen und Systemarchitektur finden sich in [konzept.md](konzept.md).
@@ -79,5 +80,6 @@ Tests direkt am physischen Mutoh XP-500 Plotter mit [tools/xp500_probe.py](tools
 ## 5. Erweiterte Gestaltungswerkzeuge
 
 - [ ] **Schraffur (Hatching):** Automatisches Füllen geschlossener Vektorflächen mit Stift-Linienmustern.
-- [ ] **Hershey-Text:** Parametrische Single-Line-Schriften für technische Beschriftungen, Passkreuze und Stiftnotizen (inkl. `stroke_font.py` aus `MutohPlot` als mögliche Vorlage).
+- [x] **SVG-`<text>`-Import mit Hershey-Simplex-Einlinienschrift:** Automatische Umwandlung von SVG-`<text>`- und `<tspan>`-Elementen in durchgehende Einlinien-Vektorpfade (`src/plotter_studio/core/hershey_font.py`, Public-Domain Hershey Roman Simplex inkl. Umlauten/`ß`) mit Diagnose-Hinweis.
+- [ ] **Interaktives Text-/Beschriftungs-Werkzeug:** Direktes Erzeugen von technischen Beschriftungen, Passkreuzen und Stiftnotizen auf dem Arbeitsblatt unter Nutzung von `hershey_font.py`.
 

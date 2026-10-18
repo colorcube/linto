@@ -992,7 +992,7 @@ class MainWindow(QMainWindow):
             self.undo_stack.push(cmd)
             if getattr(item, "ignored_text_count", 0) > 0:
                 self.lbl_info.setText(
-                    self.tr("Imported: %1 (⚠️ %2 <text> element(s) ignored – convert text to paths)")
+                    self.tr("Imported: %1 (⚠️ %2 <text> element(s) replaced by single-line font – convert text to paths for original font)")
                     .replace("%1", os.path.basename(fpath))
                     .replace("%2", str(item.ignored_text_count))
                 )

@@ -367,6 +367,7 @@
   "The file '%1' is a complete Plotter Studio project.\n\nDo you want to open the full project (Yes) or import it as a single object onto the current sheet (No)?": "Die Datei »%1« ist ein vollständiges Plotter-Studio-Projekt.\n\nMöchtest du das Projekt vollständig öffnen (Ja) oder als einzelnes Objekt in das aktuelle Blatt importieren (Nein)?",
   "Import %1": "Import %1",
   "Imported: %1": "Importiert: %1",
+  "Imported: %1 (⚠️ %2 <text> element(s) replaced by single-line font – convert text to paths for original font)": "Importiert: %1 (⚠️ %2 <text>-Element(e) durch einfache Linienschrift ersetzt – für Originalschrift Text in Pfade umwandeln)",
   "Import Error": "Fehler beim Import",
   "Could not import file:\n%1": "Konnte Datei nicht importieren:\n%1",
   "Saved to: %1": "Gespeichert unter: %1",

@@ -230,11 +230,38 @@ def load_svg(
     found_colors: List[str] = []
     ignored_text_count = 0
 
+    from .geometry import AffineTransform
+    from .hershey_font import render_text_to_subpaths
+
     for elem in svg.elements():
         if isinstance(elem, svgelements.Text):
             txt = getattr(elem, "text", None)
-            if txt is None or str(txt).strip():
+            if txt is not None and str(txt).strip():
                 ignored_text_count += 1
+                m = getattr(elem, "transform", None)
+                text_tf = (
+                    AffineTransform(float(m.a), float(m.b), float(m.c), float(m.d), float(m.e), float(m.f))
+                    if m is not None
+                    else None
+                )
+                tx_x = float(getattr(elem, "x", 0.0) or 0.0) + float(getattr(elem, "dx", 0.0) or 0.0)
+                tx_y = float(getattr(elem, "y", 0.0) or 0.0) + float(getattr(elem, "dy", 0.0) or 0.0)
+                tx_fs = float(getattr(elem, "font_size", 12.0) or 12.0)
+                tx_anchor = str(getattr(elem, "anchor", "start") or "start")
+                text_subpaths = render_text_to_subpaths(
+                    str(txt),
+                    x=tx_x,
+                    y=tx_y,
+                    font_size=tx_fs,
+                    anchor=tx_anchor,
+                    transform=text_tf,
+                    scale_mm=scale_mm,
+                )
+                if text_subpaths:
+                    color = extract_stroke_color(elem)
+                    found_colors.append(color)
+                    for segs in text_subpaths:
+                        raw_subpaths.append((segs, color, False))
             continue
         if isinstance(elem, (svgelements.Path, svgelements.Shape)):
             # Convert shapes (circle, rect, line, etc.) to Path
