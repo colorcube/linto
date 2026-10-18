@@ -30,6 +30,7 @@ class PlotterCanvas(QGraphicsView):
     file_dropped = Signal(str)
     selection_changed_signal = Signal()
     item_drag_finished = Signal(object, object, object)  # (item, old_transform, new_transform)
+    items_drag_finished = Signal(list)  # list of (item, old_transform, new_transform)
     item_transformed_live = Signal()
 
     def __init__(self, doc: Document, parent=None):
@@ -269,9 +270,15 @@ class PlotterCanvas(QGraphicsView):
             if isinstance(cur, GraphicsImportItem):
                 self._drag_item = cur.item
                 self._drag_old_transform = copy.deepcopy(cur.item.transform)
+                self._drag_old_transforms = {
+                    it.item_id: (it, copy.deepcopy(it.transform))
+                    for it in self.doc.items
+                    if not it.locked
+                }
             else:
                 self._drag_item = None
                 self._drag_old_transform = None
+                self._drag_old_transforms = {}
 
         super().mousePressEvent(event)
 
@@ -298,15 +305,32 @@ class PlotterCanvas(QGraphicsView):
             event.accept()
             return
         super().mouseReleaseEvent(event)
-        if hasattr(self, "_drag_item") and self._drag_item is not None and self._drag_old_transform is not None:
+        drag_snapshots = getattr(self, "_drag_old_transforms", None)
+        if drag_snapshots:
+            changed = []
+            for item_id, (it, old_t) in drag_snapshots.items():
+                cur_t = it.transform
+                if (abs(old_t.tx - cur_t.tx) > 1e-4 or abs(old_t.ty - cur_t.ty) > 1e-4 or
+                    abs(old_t.a - cur_t.a) > 1e-5 or abs(old_t.b - cur_t.b) > 1e-5 or
+                    abs(old_t.c - cur_t.c) > 1e-5 or abs(old_t.d - cur_t.d) > 1e-5):
+                    changed.append((it, old_t, copy.deepcopy(cur_t)))
+            if changed:
+                self.items_drag_finished.emit(changed)
+                if len(changed) == 1:
+                    it, old_t, new_t = changed[0]
+                    self.item_drag_finished.emit(it, old_t, new_t)
+            self._drag_old_transforms = {}
+            self._drag_item = None
+            self._drag_old_transform = None
+        elif hasattr(self, "_drag_item") and self._drag_item is not None and self._drag_old_transform is not None:
             old_t = self._drag_old_transform
             cur_t = self._drag_item.transform
             if (abs(old_t.tx - cur_t.tx) > 1e-4 or abs(old_t.ty - cur_t.ty) > 1e-4 or
                 abs(old_t.a - cur_t.a) > 1e-5 or abs(old_t.b - cur_t.b) > 1e-5 or
                 abs(old_t.c - cur_t.c) > 1e-5 or abs(old_t.d - cur_t.d) > 1e-5):
-                self.item_drag_finished.emit(
-                    self._drag_item, self._drag_old_transform, copy.deepcopy(self._drag_item.transform)
-                )
+                new_t = copy.deepcopy(self._drag_item.transform)
+                self.items_drag_finished.emit([(self._drag_item, self._drag_old_transform, new_t)])
+                self.item_drag_finished.emit(self._drag_item, self._drag_old_transform, new_t)
             self._drag_item = None
             self._drag_old_transform = None
         self.selection_changed_signal.emit()
@@ -316,6 +340,22 @@ class PlotterCanvas(QGraphicsView):
         w = self.doc.page.width_mm
         h = self.doc.page.height_mm
         rect = QRectF(-15, -15, w + 30, h + 30)
+        self.fitInView(rect, Qt.KeepAspectRatio)
+        self.zoom_changed.emit(self.transform().m11())
+
+    def zoom_to_selection(self):
+        """Fit currently selected object(s) in viewport (or full sheet if none selected)."""
+        selected = self.get_selected_import_items()
+        box = None
+        for it in selected:
+            cb = it.current_bounds
+            if cb is not None:
+                box = cb if box is None else box.expanded_to(cb)
+        if box is None or box.width <= 0 or box.height <= 0:
+            self.zoom_to_fit()
+            return
+        pad = max(10.0, max(box.width, box.height) * 0.15)
+        rect = QRectF(box.min_x - pad, box.min_y - pad, box.width + 2 * pad, box.height + 2 * pad)
         self.fitInView(rect, Qt.KeepAspectRatio)
         self.zoom_changed.emit(self.transform().m11())
 

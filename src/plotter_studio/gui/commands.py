@@ -3,9 +3,19 @@
 from __future__ import annotations
 import copy
 from typing import List, Tuple, Optional, Callable, Dict, Any
+from PySide6.QtCore import QCoreApplication
 from PySide6.QtGui import QUndoCommand
 from ..core.geometry import AffineTransform
 from ..core.document import Document, ImportItem, VectorPath, LogicalPen, Page
+
+CMD_ID_POS = 1001
+CMD_ID_SIZE = 1002
+CMD_ID_SCALE = 1003
+CMD_ID_ROT = 1004
+
+
+def _tr(text: str) -> str:
+    return QCoreApplication.translate("Commands", text)
 
 
 class TransformItemCommand(QUndoCommand):
@@ -16,10 +26,10 @@ class TransformItemCommand(QUndoCommand):
         old_transform: AffineTransform,
         new_transform: AffineTransform,
         on_updated: Callable[[], None],
-        text: str = "Objekt transformieren",
+        text: Optional[str] = None,
         command_id: int = -1,
     ):
-        super().__init__(text)
+        super().__init__(text or _tr("Transform object"))
         self.item = item
         self.old_transform = copy.deepcopy(old_transform)
         self.new_transform = copy.deepcopy(new_transform)
@@ -55,9 +65,9 @@ class AssignPenCommand(QUndoCommand):
         items: List[ImportItem],
         new_pen_id: int,
         on_updated: Callable[[], None],
-        text: str = "Stift zuweisen",
+        text: Optional[str] = None,
     ):
-        super().__init__(text)
+        super().__init__(text or _tr("Assign pen"))
         self.items = items
         self.new_pen_id = new_pen_id
         self.on_updated = on_updated
@@ -85,9 +95,9 @@ class AddItemCommand(QUndoCommand):
         doc: Document,
         item: ImportItem,
         on_updated: Callable[[], None],
-        text: str = "Objekt importieren",
+        text: Optional[str] = None,
     ):
-        super().__init__(text)
+        super().__init__(text or _tr("Import object"))
         self.doc = doc
         self.item = item
         self.on_updated = on_updated
@@ -109,9 +119,9 @@ class DeleteItemsCommand(QUndoCommand):
         doc: Document,
         items: List[ImportItem],
         on_updated: Callable[[], None],
-        text: str = "Objekt(e) löschen",
+        text: Optional[str] = None,
     ):
-        super().__init__(text)
+        super().__init__(text or _tr("Delete object(s)"))
         self.doc = doc
         self.items_with_indices: List[Tuple[int, ImportItem]] = []
         for it in items:
@@ -142,9 +152,9 @@ class PageConfigCommand(QUndoCommand):
         old_state: Dict[str, Any],
         new_state: Dict[str, Any],
         on_updated: Callable[[], None],
-        text: str = "Papierformat ändern",
+        text: Optional[str] = None,
     ):
-        super().__init__(text)
+        super().__init__(text or _tr("Change paper format"))
         self.page = page
         self.old_state = copy.deepcopy(old_state)
         self.new_state = copy.deepcopy(new_state)
@@ -179,9 +189,9 @@ class PenRemapCommand(QUndoCommand):
         old_mappings: List[Tuple[int, Optional[int]]],
         new_mappings: List[Tuple[int, Optional[int]]],
         on_updated: Callable[[], None],
-        text: str = "Stift-Remapping ändern",
+        text: Optional[str] = None,
     ):
-        super().__init__(text)
+        super().__init__(text or _tr("Change pen remapping"))
         self.doc = doc
         self.old_mappings = old_mappings
         self.new_mappings = new_mappings
@@ -211,9 +221,9 @@ class ApplyPresetCommand(QUndoCommand):
         new_pens: List[LogicalPen],
         old_assignments: List[Tuple[VectorPath, int]],
         on_updated: Callable[[], None],
-        text: str = "Stift-Preset anwenden",
+        text: Optional[str] = None,
     ):
-        super().__init__(text)
+        super().__init__(text or _tr("Apply pen preset"))
         self.doc = doc
         self.old_pens = copy.deepcopy(old_pens)
         self.new_pens = copy.deepcopy(new_pens)
@@ -242,9 +252,9 @@ class ModifyItemPropertiesCommand(QUndoCommand):
         old_props: Dict[str, Any],
         new_props: Dict[str, Any],
         on_updated: Callable[[], None],
-        text: str = "Objekt-Eigenschaft ändern",
+        text: Optional[str] = None,
     ):
-        super().__init__(text)
+        super().__init__(text or _tr("Change object property"))
         self.item = item
         self.old_props = copy.deepcopy(old_props)
         self.new_props = copy.deepcopy(new_props)
@@ -271,9 +281,9 @@ class MoveItemZOrderCommand(QUndoCommand):
         item_id: str,
         direction: str,
         on_updated: Callable[[], None],
-        text: str = "Ebenen-Reihenfolge ändern",
+        text: Optional[str] = None,
     ):
-        super().__init__(text)
+        super().__init__(text or _tr("Change layer order"))
         self.doc = doc
         self.item_id = item_id
         self.direction = direction  # "up" or "down"
@@ -304,9 +314,9 @@ class ModifyPenPropertyCommand(QUndoCommand):
         old_value: Any,
         new_value: Any,
         on_updated: Callable[[], None],
-        text: str = "Stift ändern",
+        text: Optional[str] = None,
     ):
-        super().__init__(text)
+        super().__init__(text or _tr("Modify pen"))
         self.doc = doc
         self.pen_id = pen_id
         self.attr_name = attr_name

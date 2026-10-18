@@ -165,3 +165,85 @@ def test_toolbar_clean_style_and_device_selector(qapp):
     assert win.device_manager.active_device_id == selected_dev.id
 
     win.close()
+
+
+def test_multi_selection_duplicate_delete_and_drag_undo(qapp):
+    """Verify multi-selection in ObjectDock, multi-duplicate/delete, drag undo, spinbox merging, and flipping."""
+    import numpy as np
+    from plotter_studio.core.geometry import AffineTransform
+
+    doc = Document()
+    pts = np.array([[10.0, 10.0], [40.0, 10.0], [40.0, 30.0], [10.0, 10.0]])
+    it1 = ImportItem(name="Obj1", paths=[VectorPath(points=pts.copy(), pen_id=1, closed=True)])
+    it2 = ImportItem(name="Obj2", paths=[VectorPath(points=pts.copy(), pen_id=2, closed=True)])
+    it3 = ImportItem(name="Obj3", paths=[VectorPath(points=pts.copy(), pen_id=3, closed=True)])
+    doc.items.extend([it1, it2, it3])
+
+    win = MainWindow(doc)
+    win.show()
+
+    # 1. Verify spinboxes have keyboardTracking disabled
+    assert win.transform_dock.spin_pos_x.keyboardTracking() is False
+    assert win.transform_dock.spin_obj_w.keyboardTracking() is False
+    assert win.plot_dock.spin_flatten.keyboardTracking() is False
+
+    # 2. Select both it1 and it2 on canvas -> ObjectDock syncs multi-selection
+    win.canvas._item_map[it1.item_id].setSelected(True)
+    win.canvas._item_map[it2.item_id].setSelected(True)
+    win.canvas.selection_changed_signal.emit()
+    assert set(win.object_dock.get_selected_item_ids()) == {it1.item_id, it2.item_id}
+
+    # 3. Duplicate both selected items in one macro
+    win.duplicate_selected_items()
+    assert len(doc.items) == 5
+    win.undo_stack.undo()
+    assert len(doc.items) == 3
+
+    # 4. Delete it1 -> selection should NOT jump to doc.items[-1] (it3)
+    win.canvas._scene.clearSelection()
+    win.canvas._item_map[it1.item_id].setSelected(True)
+    win.canvas.selection_changed_signal.emit()
+    win.delete_selected_items()
+    assert len(doc.items) == 2
+    assert win.canvas.get_selected_import_items() == []
+    win.undo_stack.undo()
+    assert len(doc.items) == 3
+
+    # 5. Multi-item drag undo via items_drag_finished
+    old_t1 = AffineTransform(1.0, 0.0, 0.0, 1.0, 0.0, 0.0)
+    new_t1 = AffineTransform(1.0, 0.0, 0.0, 1.0, 25.0, 15.0)
+    old_t2 = AffineTransform(1.0, 0.0, 0.0, 1.0, 0.0, 0.0)
+    new_t2 = AffineTransform(1.0, 0.0, 0.0, 1.0, 25.0, 15.0)
+    it1.transform = new_t1
+    it2.transform = new_t2
+    win.canvas.items_drag_finished.emit([(it1, old_t1, new_t1), (it2, old_t2, new_t2)])
+    assert it1.transform.tx == pytest.approx(25.0)
+    assert it2.transform.tx == pytest.approx(25.0)
+
+    # Single undo reverts both items
+    win.undo_stack.undo()
+    assert it1.transform.tx == pytest.approx(0.0)
+    assert it2.transform.tx == pytest.approx(0.0)
+
+    # 6. Consecutive spinbox position changes on same item merge into 1 undo command
+    win.undo_stack.clear()
+    win.transform_dock.set_selected_items([it1])
+    win.transform_dock.spin_pos_x.setValue(30.0)
+    win.transform_dock.spin_pos_x.setValue(45.0)
+    assert win.undo_stack.count() == 1
+
+    # 7. Flip horizontal & vertical
+    win.canvas._item_map[it1.item_id].setSelected(True)
+    a_before = it1.transform.a
+    d_before = it1.transform.d
+    win.flip_selected_items(horizontal=True)
+    assert it1.transform.a == pytest.approx(-a_before)
+    win.flip_selected_items(horizontal=False)
+    assert it1.transform.d == pytest.approx(-d_before)
+
+    # 8. Zoom to selection
+    win.act_zoom_selection.trigger()
+    assert win.canvas.transform().m11() > 0.0
+
+    win.close()
+

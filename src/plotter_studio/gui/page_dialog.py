@@ -109,6 +109,7 @@ class PageSetupDialog(QDialog):
         self.spin_width.setRange(20.0, 5000.0)
         self.spin_width.setDecimals(1)
         self.spin_width.setSuffix(" mm")
+        self.spin_width.setKeyboardTracking(False)
         self.spin_width.setValue(self.doc.page.width_mm)
         self.spin_width.valueChanged.connect(self._on_custom_dim_changed)
 
@@ -116,6 +117,7 @@ class PageSetupDialog(QDialog):
         self.spin_height.setRange(20.0, 5000.0)
         self.spin_height.setDecimals(1)
         self.spin_height.setSuffix(" mm")
+        self.spin_height.setKeyboardTracking(False)
         self.spin_height.setValue(self.doc.page.height_mm)
         self.spin_height.valueChanged.connect(self._on_custom_dim_changed)
 
@@ -146,6 +148,7 @@ class PageSetupDialog(QDialog):
         self.spin_margin_left.setRange(0.0, 100.0)
         self.spin_margin_left.setDecimals(1)
         self.spin_margin_left.setSuffix(" mm")
+        self.spin_margin_left.setKeyboardTracking(False)
         self.spin_margin_left.setValue(self.doc.page.margin_left_mm)
         self.spin_margin_left.valueChanged.connect(self._on_margins_changed)
 
@@ -153,6 +156,7 @@ class PageSetupDialog(QDialog):
         self.spin_margin_right.setRange(0.0, 100.0)
         self.spin_margin_right.setDecimals(1)
         self.spin_margin_right.setSuffix(" mm")
+        self.spin_margin_right.setKeyboardTracking(False)
         self.spin_margin_right.setValue(self.doc.page.margin_right_mm)
         self.spin_margin_right.valueChanged.connect(self._on_margins_changed)
 
@@ -167,6 +171,7 @@ class PageSetupDialog(QDialog):
         self.spin_margin_top.setRange(0.0, 100.0)
         self.spin_margin_top.setDecimals(1)
         self.spin_margin_top.setSuffix(" mm")
+        self.spin_margin_top.setKeyboardTracking(False)
         self.spin_margin_top.setValue(self.doc.page.margin_top_mm)
         self.spin_margin_top.valueChanged.connect(self._on_margins_changed)
 
@@ -174,6 +179,7 @@ class PageSetupDialog(QDialog):
         self.spin_margin_bottom.setRange(0.0, 100.0)
         self.spin_margin_bottom.setDecimals(1)
         self.spin_margin_bottom.setSuffix(" mm")
+        self.spin_margin_bottom.setKeyboardTracking(False)
         self.spin_margin_bottom.setValue(self.doc.page.margin_bottom_mm)
         self.spin_margin_bottom.valueChanged.connect(self._on_margins_changed)
 
@@ -275,11 +281,22 @@ class PageSetupDialog(QDialog):
         self.doc.page.set_custom_size(self.spin_width.value(), self.spin_height.value())
 
     def _on_margins_changed(self):
+        new_l = self.spin_margin_left.value()
+        new_r = self.spin_margin_right.value()
+        new_t = self.spin_margin_top.value()
+        new_b = self.spin_margin_bottom.value()
+        if (
+            abs(new_l - self.doc.page.margin_left_mm) < 1e-4
+            and abs(new_r - self.doc.page.margin_right_mm) < 1e-4
+            and abs(new_t - self.doc.page.margin_top_mm) < 1e-4
+            and abs(new_b - self.doc.page.margin_bottom_mm) < 1e-4
+        ):
+            return
         self.doc.page.device_profile = "custom"
-        self.doc.page.margin_left_mm = self.spin_margin_left.value()
-        self.doc.page.margin_right_mm = self.spin_margin_right.value()
-        self.doc.page.margin_top_mm = self.spin_margin_top.value()
-        self.doc.page.margin_bottom_mm = self.spin_margin_bottom.value()
+        self.doc.page.margin_left_mm = new_l
+        self.doc.page.margin_right_mm = new_r
+        self.doc.page.margin_top_mm = new_t
+        self.doc.page.margin_bottom_mm = new_b
         self._sync_from_page()
 
     def _on_fetch_device_size(self):

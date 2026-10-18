@@ -14,7 +14,13 @@ from PySide6.QtWidgets import (
 )
 from ..core.document import Document, ImportItem
 from ..core.geometry import AffineTransform, Point, BoundingBox
-from .commands import TransformItemCommand
+from .commands import (
+    TransformItemCommand,
+    CMD_ID_POS,
+    CMD_ID_SIZE,
+    CMD_ID_SCALE,
+    CMD_ID_ROT,
+)
 from .icons import get_icon
 
 
@@ -188,6 +194,7 @@ class TransformDockWidget(QDockWidget):
         self.spin_pos_x.setRange(-2000.0, 5000.0)
         self.spin_pos_x.setDecimals(1)
         self.spin_pos_x.setSuffix(" mm")
+        self.spin_pos_x.setKeyboardTracking(False)
         self.spin_pos_x.valueChanged.connect(self._on_pos_mm_changed)
 
         lbl_y = QLabel(self.tr("Y:"))
@@ -197,6 +204,7 @@ class TransformDockWidget(QDockWidget):
         self.spin_pos_y.setRange(-2000.0, 5000.0)
         self.spin_pos_y.setDecimals(1)
         self.spin_pos_y.setSuffix(" mm")
+        self.spin_pos_y.setKeyboardTracking(False)
         self.spin_pos_y.valueChanged.connect(self._on_pos_mm_changed)
 
         lbl_w = QLabel(self.tr("W:"))
@@ -206,6 +214,7 @@ class TransformDockWidget(QDockWidget):
         self.spin_obj_w.setRange(1.0, 5000.0)
         self.spin_obj_w.setDecimals(1)
         self.spin_obj_w.setSuffix(" mm")
+        self.spin_obj_w.setKeyboardTracking(False)
         self.spin_obj_w.valueChanged.connect(self._on_obj_w_changed)
 
         # Proportional padlock toggle button (Inkscape style)
@@ -222,6 +231,7 @@ class TransformDockWidget(QDockWidget):
         self.spin_obj_h.setRange(1.0, 5000.0)
         self.spin_obj_h.setDecimals(1)
         self.spin_obj_h.setSuffix(" mm")
+        self.spin_obj_h.setKeyboardTracking(False)
         self.spin_obj_h.valueChanged.connect(self._on_obj_h_changed)
 
         grid_pos_dim.addWidget(lbl_x, 0, 0)
@@ -254,6 +264,7 @@ class TransformDockWidget(QDockWidget):
         self.spin_rot_angle.setDecimals(1)
         self.spin_rot_angle.setSingleStep(5.0)
         self.spin_rot_angle.setSuffix(" °")
+        self.spin_rot_angle.setKeyboardTracking(False)
         self.spin_rot_angle.setToolTip(self.tr("Rotation angle in degrees"))
         self.spin_rot_angle.valueChanged.connect(self._on_rot_angle_spin_changed)
         r_layout.addWidget(self.spin_rot_angle)
@@ -271,6 +282,20 @@ class TransformDockWidget(QDockWidget):
         r_layout.addWidget(self.btn_rotate_ccw)
         r_layout.addWidget(self.btn_rotate_cw)
         self.grp_rotation.addLayout(r_layout)
+
+        flip_layout = QHBoxLayout()
+        flip_layout.setSpacing(6)
+        self.btn_flip_h = QPushButton(self.tr("Flip Horiz."))
+        self.btn_flip_h.setToolTip(self.tr("Mirror selected object horizontally"))
+        self.btn_flip_h.clicked.connect(self.flip_horizontal)
+        self.btn_flip_v = QPushButton(self.tr("Flip Vert."))
+        self.btn_flip_v.setToolTip(self.tr("Mirror selected object vertically"))
+        self.btn_flip_v.clicked.connect(self.flip_vertical)
+        flip_layout.addWidget(self.btn_flip_h)
+        flip_layout.addWidget(self.btn_flip_v)
+        flip_layout.addStretch()
+        self.grp_rotation.addLayout(flip_layout)
+
         self.main_layout.addWidget(self.grp_rotation)
 
         # 4. Group "Placement"
@@ -338,6 +363,7 @@ class TransformDockWidget(QDockWidget):
         self.spin_fit_margin.setDecimals(1)
         self.spin_fit_margin.setValue(15.0)
         self.spin_fit_margin.setSuffix(" mm")
+        self.spin_fit_margin.setKeyboardTracking(False)
         self.spin_fit_margin.setToolTip(self.tr("Safety margin to sheet edges when fitting in mm"))
         fit_sheet_row.addWidget(self.spin_fit_margin)
 
@@ -360,6 +386,7 @@ class TransformDockWidget(QDockWidget):
         self.spin_obj_scale.setSingleStep(5.0)
         self.spin_obj_scale.setSuffix(" %")
         self.spin_obj_scale.setValue(100.0)
+        self.spin_obj_scale.setKeyboardTracking(False)
         self.spin_obj_scale.valueChanged.connect(self._on_scale_spin_changed)
         zoom_row.addWidget(self.spin_obj_scale)
 
@@ -455,6 +482,8 @@ class TransformDockWidget(QDockWidget):
         self.spin_rot_angle.setEnabled(enabled)
         self.btn_rotate_ccw.setEnabled(enabled)
         self.btn_rotate_cw.setEnabled(enabled)
+        self.btn_flip_h.setEnabled(enabled)
+        self.btn_flip_v.setEnabled(enabled)
         self.btn_center_h.setEnabled(enabled)
         self.btn_center_v.setEnabled(enabled)
         self.btn_center_both.setEnabled(enabled)
@@ -542,25 +571,20 @@ class TransformDockWidget(QDockWidget):
         return self.doc.page.sheet_box
 
     # --- Item Sizing & Transformation ---
-    def _apply_item_transform(self, old_t: AffineTransform, new_t: AffineTransform, text: str):
-        if not self.active_item or self.active_item.locked:
-            return
-        if self.undo_stack:
-            cmd = TransformItemCommand(
-                self.active_item, old_t, new_t, self._on_transform_applied, text=text
-            )
-            self.undo_stack.push(cmd)
-        else:
-            self.active_item.transform = copy.deepcopy(new_t)
-            self._on_transform_applied()
-
-    def _apply_multi_transforms(self, changes: list[tuple[ImportItem, AffineTransform, AffineTransform]], text: str):
+    def _apply_multi_transforms(
+        self,
+        changes: list[tuple[ImportItem, AffineTransform, AffineTransform]],
+        text: str,
+        command_id: int = -1,
+    ):
         if not changes:
             return
         if len(changes) == 1:
             it, old_t, new_t = changes[0]
             if self.undo_stack:
-                cmd = TransformItemCommand(it, old_t, new_t, self._on_transform_applied, text=text)
+                cmd = TransformItemCommand(
+                    it, old_t, new_t, self._on_transform_applied, text=text, command_id=command_id
+                )
                 self.undo_stack.push(cmd)
             else:
                 it.transform = copy.deepcopy(new_t)
@@ -594,9 +618,9 @@ class TransformDockWidget(QDockWidget):
         delta = target_angle_deg - cur_angle
         if abs(delta) < 1e-4:
             return
-        self.rotate_selected(delta)
+        self.rotate_selected(delta, command_id=CMD_ID_ROT)
 
-    def rotate_selected(self, angle_degrees: float):
+    def rotate_selected(self, angle_degrees: float, command_id: int = -1):
         """Rotate unlocked selected item(s) around their visual center."""
         unlocked = self._get_unlocked_items()
         if not unlocked:
@@ -613,10 +637,25 @@ class TransformDockWidget(QDockWidget):
             new_t = rot_t.multiply(old_t)
             changes.append((it, old_t, new_t))
 
-        dir_str = "im Uhrzeigersinn" if angle_degrees > 0 else "gegen den Uhrzeigersinn"
-        self._apply_multi_transforms(changes, f"Objekt drehen ({angle_degrees:.1f}° {dir_str})")
+        dir_str = self.tr("CW") if angle_degrees > 0 else self.tr("CCW")
+        text = self.tr("Rotate object (%1° %2)").replace("%1", f"{angle_degrees:.1f}").replace("%2", dir_str)
+        self._apply_multi_transforms(changes, text, command_id=command_id)
 
-    def _apply_scene_scale(self, factor_x: float, factor_y: float):
+    def flip_horizontal(self):
+        """Mirror unlocked selected item(s) horizontally around their visual center."""
+        self._apply_scene_scale(-1.0, 1.0, text=self.tr("Flip object horizontally"))
+
+    def flip_vertical(self):
+        """Mirror unlocked selected item(s) vertically around their visual center."""
+        self._apply_scene_scale(1.0, -1.0, text=self.tr("Flip object vertically"))
+
+    def _apply_scene_scale(
+        self,
+        factor_x: float,
+        factor_y: float,
+        text: Optional[str] = None,
+        command_id: int = -1,
+    ):
         """Scale unlocked selected item(s) around center in scene coordinates, preserving rotation."""
         unlocked = self._get_unlocked_items()
         if not unlocked:
@@ -636,7 +675,9 @@ class TransformDockWidget(QDockWidget):
             old_t = copy.deepcopy(it.transform)
             new_t = s_scene.multiply(old_t)
             changes.append((it, old_t, new_t))
-        self._apply_multi_transforms(changes, "Objekt skalieren")
+        self._apply_multi_transforms(
+            changes, text or self.tr("Scale object"), command_id=command_id
+        )
 
     def _on_obj_w_changed(self, new_w: float):
         if self._updating_fields:
@@ -647,7 +688,7 @@ class TransformDockWidget(QDockWidget):
             return
         factor_x = new_w / cb.width
         factor_y = factor_x if self.btn_chain.isChecked() else 1.0
-        self._apply_scene_scale(factor_x, factor_y)
+        self._apply_scene_scale(factor_x, factor_y, command_id=CMD_ID_SIZE)
 
     def _on_obj_h_changed(self, new_h: float):
         if self._updating_fields:
@@ -658,7 +699,7 @@ class TransformDockWidget(QDockWidget):
             return
         factor_y = new_h / cb.height
         factor_x = factor_y if self.btn_chain.isChecked() else 1.0
-        self._apply_scene_scale(factor_x, factor_y)
+        self._apply_scene_scale(factor_x, factor_y, command_id=CMD_ID_SIZE)
 
     def _on_scale_spin_changed(self, pct: float):
         if self._updating_fields or not self.active_item or self.active_item.locked or not self.active_item.original_bounds:
@@ -668,7 +709,7 @@ class TransformDockWidget(QDockWidget):
         if cur_scale <= 1e-6:
             return
         factor = target_scale / cur_scale
-        self._apply_scene_scale(factor, factor)
+        self._apply_scene_scale(factor, factor, command_id=CMD_ID_SCALE)
 
     def scale_relative(self, factor: float):
         self._apply_scene_scale(factor, factor)
@@ -695,7 +736,7 @@ class TransformDockWidget(QDockWidget):
             old_t = copy.deepcopy(it.transform)
             new_t = s_scene.multiply(old_t)
             changes.append((it, old_t, new_t))
-        self._apply_multi_transforms(changes, "Originalgröße (1:1)")
+        self._apply_multi_transforms(changes, self.tr("Original size (1:1)"))
 
     def fit_to_box(self, target_box: BoundingBox, action_name: str, margin_mm: float = 0.0):
         unlocked = self._get_unlocked_items()
@@ -725,12 +766,12 @@ class TransformDockWidget(QDockWidget):
         self._apply_multi_transforms(changes, action_name)
 
     def fit_to_plottable(self, margin_mm: float = 0.0):
-        self.fit_to_box(self.doc.page.plottable_box, "Auf plottbaren Bereich einpassen", margin_mm)
+        self.fit_to_box(self.doc.page.plottable_box, self.tr("Fit to Printable Area"), margin_mm)
 
     def fit_to_sheet(self, margin_mm: Optional[float] = None):
         if margin_mm is None:
             margin_mm = self.spin_fit_margin.value()
-        self.fit_to_box(self.doc.page.sheet_box, "Auf Blatt einpassen", margin_mm)
+        self.fit_to_box(self.doc.page.sheet_box, self.tr("Fit to Sheet"), margin_mm)
 
     def fit_to_page(self, margin_mm: Optional[float] = None):
         """Backward compatibility alias for fit_to_sheet."""
@@ -761,7 +802,9 @@ class TransformDockWidget(QDockWidget):
             new_t.ty += dy
             changes.append((it, old_t, new_t))
 
-        self._apply_multi_transforms(changes, "Position ändern (mm)")
+        self._apply_multi_transforms(
+            changes, self.tr("Change position (mm)"), command_id=CMD_ID_POS
+        )
 
     def align_center_h(self):
         unlocked = self._get_unlocked_items()
@@ -778,7 +821,7 @@ class TransformDockWidget(QDockWidget):
             new_t = copy.deepcopy(old_t)
             new_t.tx += dx
             changes.append((it, old_t, new_t))
-        self._apply_multi_transforms(changes, "Horizontal zentrieren")
+        self._apply_multi_transforms(changes, self.tr("Center horizontally"))
 
     def align_center_v(self):
         unlocked = self._get_unlocked_items()
@@ -795,7 +838,7 @@ class TransformDockWidget(QDockWidget):
             new_t = copy.deepcopy(old_t)
             new_t.ty += dy
             changes.append((it, old_t, new_t))
-        self._apply_multi_transforms(changes, "Vertikal zentrieren")
+        self._apply_multi_transforms(changes, self.tr("Center vertically"))
 
     def align_center_both(self):
         unlocked = self._get_unlocked_items()
@@ -814,5 +857,5 @@ class TransformDockWidget(QDockWidget):
             new_t.tx += dx
             new_t.ty += dy
             changes.append((it, old_t, new_t))
-        self._apply_multi_transforms(changes, "Mittig zentrieren")
+        self._apply_multi_transforms(changes, self.tr("Center on sheet"))
 
