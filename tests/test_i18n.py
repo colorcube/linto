@@ -73,6 +73,8 @@ def test_setup_i18n_german_translation(qapp):
     # Docks & Dialogs translations
     assert lbl.tr("Objects & Layers") == "Objekte & Ebenen"
     assert lbl.tr("Position & Dimensions") == "Position & Maße"
+    assert lbl.tr("Printable Area") == "Plottbarer Bereich"
+    assert lbl.tr("No object selected") == "Kein Objekt ausgewählt"
     assert lbl.tr("Pens") == "Stifte"
     assert lbl.tr("Pipeline Optimization") == "Pipeline-Optimierung"
     assert lbl.tr("Pre-Flight Inspection") == "Pre-Flight-Inspektion"
@@ -81,4 +83,15 @@ def test_setup_i18n_german_translation(qapp):
     assert lbl.tr("Page Setup & Paper Format") == "Seiteneinrichtung & Papierformat"
     assert lbl.tr("Configure Plotter Devices") == "Plotter-Geräte konfigurieren"
     assert lbl.tr("Apply Pen Preset") == "Stift-Preset anwenden"
+
+    # Toolbar icon hover tooltips
+    assert lbl.tr("Layout Mode (Ctrl+L)") == "Layout-Modus (Strg+L)"
+    assert lbl.tr("Output / Plot Mode (Ctrl+P)") == "Ausgabe- / Plot-Modus (Strg+P)"
+    assert lbl.tr("Open project or vector file (Ctrl+O)") == "Projekt oder Vektordatei öffnen (Strg+O)"
+    assert lbl.tr("Save project (Ctrl+S)") == "Projekt speichern (Strg+S)"
+    assert lbl.tr("Undo (Ctrl+Z)") == "Rückgängig (Strg+Z)"
+    assert lbl.tr("Redo (Ctrl+Y)") == "Wiederholen (Strg+Y)"
+    assert lbl.tr("Fit sheet to window (Ctrl+0)") == "Blatt im Fenster einpassen (Strg+0)"
+    assert lbl.tr("Center on sheet or printable area") == "Mittig auf Blatt oder plottbarem Bereich ausrichten"
+    assert lbl.tr("Configure plotter devices...") == "Plotter-Geräte konfigurieren..."
 

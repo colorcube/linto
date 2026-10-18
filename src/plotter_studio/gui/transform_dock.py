@@ -425,10 +425,10 @@ class TransformDockWidget(QDockWidget):
     def _update_chain_icon(self):
         if self.btn_chain.isChecked():
             self.btn_chain.setIcon(get_icon("lock", size=16))
-            self.btn_chain.setToolTip("Seitenverhältnis gesperrt (klicken zum Lösen)")
+            self.btn_chain.setToolTip(self.tr("Aspect ratio locked (click to unlock)"))
         else:
             self.btn_chain.setIcon(get_icon("lock-open", size=16))
-            self.btn_chain.setToolTip("Seitenverhältnis frei (klicken zum Sperren)")
+            self.btn_chain.setToolTip(self.tr("Aspect ratio unlocked (click to lock)"))
 
     def _on_chain_toggled(self, checked: bool):
         self._update_chain_icon()
@@ -481,7 +481,7 @@ class TransformDockWidget(QDockWidget):
         self.selected_items = list(items)
         self.active_item = items[0] if items else None
         if not items:
-            self.lbl_item_name.setText("Kein Objekt ausgewählt")
+            self.lbl_item_name.setText(self.tr("No object selected"))
             self.lbl_locked_badge.setVisible(False)
             self._set_item_controls_enabled(False)
             return
@@ -489,16 +489,16 @@ class TransformDockWidget(QDockWidget):
         if len(items) == 1:
             self.lbl_item_name.setText(items[0].name)
         else:
-            self.lbl_item_name.setText(f"{len(items)} Objekte ausgewählt")
+            self.lbl_item_name.setText(self.tr("%1 objects selected").replace("%1", str(len(items))))
 
         unlocked = self._get_unlocked_items()
         if not unlocked:
-            self.lbl_locked_badge.setText("🔒 Gesperrt")
+            self.lbl_locked_badge.setText(self.tr("🔒 Locked"))
             self.lbl_locked_badge.setVisible(True)
             self._set_item_controls_enabled(False)
         else:
             if len(unlocked) < len(items):
-                self.lbl_locked_badge.setText(f"🔒 {len(items) - len(unlocked)} gesperrt")
+                self.lbl_locked_badge.setText(self.tr("🔒 %1 locked").replace("%1", str(len(items) - len(unlocked))))
                 self.lbl_locked_badge.setVisible(True)
             else:
                 self.lbl_locked_badge.setVisible(False)

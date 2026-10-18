@@ -220,11 +220,13 @@ class MainWindow(QMainWindow):
         self.act_undo = self.undo_stack.createUndoAction(self, self.tr("&Undo"))
         self.act_undo.setIcon(get_icon("undo"))
         self.act_undo.setShortcut(QKeySequence.Undo)
+        self.act_undo.setToolTip(self.tr("Undo (Ctrl+Z)"))
         menu_edit.addAction(self.act_undo)
 
         self.act_redo = self.undo_stack.createRedoAction(self, self.tr("&Redo"))
         self.act_redo.setIcon(get_icon("redo"))
         self.act_redo.setShortcut(QKeySequence.Redo)
+        self.act_redo.setToolTip(self.tr("Redo (Ctrl+Y)"))
         menu_edit.addAction(self.act_redo)
 
         menu_edit.addSeparator()
@@ -280,6 +282,7 @@ class MainWindow(QMainWindow):
         self.act_mode_layout.setCheckable(True)
         self.act_mode_layout.setChecked(True)
         self.act_mode_layout.setShortcut(QKeySequence("Ctrl+L"))
+        self.act_mode_layout.setToolTip(self.tr("Layout Mode (Ctrl+L)"))
         self.act_mode_layout.triggered.connect(self.switch_to_layout_mode)
         self.mode_group.addAction(self.act_mode_layout)
         menu_view.addAction(self.act_mode_layout)
@@ -288,6 +291,7 @@ class MainWindow(QMainWindow):
         self.act_mode_plot.setIcon(get_icon("mode-plot"))
         self.act_mode_plot.setCheckable(True)
         self.act_mode_plot.setShortcut(QKeySequence("Ctrl+P"))
+        self.act_mode_plot.setToolTip(self.tr("Output / Plot Mode (Ctrl+P)"))
         self.act_mode_plot.triggered.connect(self.switch_to_plot_mode)
         self.mode_group.addAction(self.act_mode_plot)
         menu_view.addAction(self.act_mode_plot)
@@ -420,7 +424,7 @@ class MainWindow(QMainWindow):
 
         self.btn_device_settings = QToolButton(toolbar)
         self.btn_device_settings.setIcon(get_icon("settings", size=18))
-        self.btn_device_settings.setToolTip("Geräte verwalten und konfigurieren...")
+        self.btn_device_settings.setToolTip(self.tr("Configure plotter devices..."))
         self.btn_device_settings.clicked.connect(self.open_device_settings_dialog)
         toolbar.addWidget(self.btn_device_settings)
 
