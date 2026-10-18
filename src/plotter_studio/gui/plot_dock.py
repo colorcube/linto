@@ -4,10 +4,11 @@ device connection & live plot control, and exports.
 
 from __future__ import annotations
 
+import os
 import threading
-from typing import Optional, Set
+from typing import Optional, Set, Any
 
-from PySide6.QtCore import Qt, Signal, QObject, QEvent, QSize
+from PySide6.QtCore import Qt, Signal, QObject, QEvent, QSize, QTimer
 from PySide6.QtWidgets import (
     QDockWidget, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QGroupBox, QLabel, QDoubleSpinBox, QCheckBox, QPushButton,
@@ -75,6 +76,7 @@ class PlotDockWidget(QDockWidget):
     export_hpgl_requested = Signal()
     export_svg_requested = Signal()
     stream_step_changed = Signal(int)
+    stream_active_changed = Signal(bool)
 
     def __init__(self, doc: Document, parent=None):
         super().__init__(self.tr("Output"), parent)
@@ -82,6 +84,12 @@ class PlotDockWidget(QDockWidget):
         self.job: Optional[PlotJob] = None
         self._pen_checkboxes: dict[int, QCheckBox] = {}
         self._pipeline_dirty = False
+        self._updating_device = False
+
+        self._recompute_timer = QTimer(self)
+        self._recompute_timer.setSingleShot(True)
+        self._recompute_timer.setInterval(400)
+        self._recompute_timer.timeout.connect(self._on_recompute_timer)
 
         self._bridge = StreamerSignalBridge()
         self._bridge.progress.connect(self._on_stream_progress)
@@ -96,6 +104,10 @@ class PlotDockWidget(QDockWidget):
         self.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
         self._init_ui()
         self.refresh_ports()
+
+    def is_streaming(self) -> bool:
+        """Return True while a plot job is actively streaming or paused on the hardware."""
+        return bool(self._streamer and self._streamer.is_active())
 
     def minimum_content_width(self) -> int:
         """Calculate the required width to display all dock content without horizontal clipping."""
@@ -185,6 +197,7 @@ class PlotDockWidget(QDockWidget):
         lbl_flat.setStyleSheet("font-weight: 500; color: #374151;")
         lbl_flat.setToolTip(tip_flatten)
         self.spin_flatten = QDoubleSpinBox()
+        self.spin_flatten.setKeyboardTracking(False)
         self.spin_flatten.setAlignment(Qt.AlignLeft)
         self.spin_flatten.setRange(0.01, 2.0)
         self.spin_flatten.setValue(0.05)
@@ -200,6 +213,7 @@ class PlotDockWidget(QDockWidget):
         lbl_merge.setStyleSheet("font-weight: 500; color: #374151;")
         lbl_merge.setToolTip(tip_merge)
         self.spin_merge = QDoubleSpinBox()
+        self.spin_merge.setKeyboardTracking(False)
         self.spin_merge.setAlignment(Qt.AlignLeft)
         self.spin_merge.setRange(0.0, 5.0)
         self.spin_merge.setValue(0.10)
@@ -215,6 +229,7 @@ class PlotDockWidget(QDockWidget):
         lbl_simp.setStyleSheet("font-weight: 500; color: #374151;")
         lbl_simp.setToolTip(tip_simplify)
         self.spin_simplify = QDoubleSpinBox()
+        self.spin_simplify.setKeyboardTracking(False)
         self.spin_simplify.setAlignment(Qt.AlignLeft)
         self.spin_simplify.setRange(0.0, 2.0)
         self.spin_simplify.setValue(0.02)
@@ -378,6 +393,7 @@ class PlotDockWidget(QDockWidget):
         self.combo_rotation.addItem("90° (" + self.tr("Feed axis") + ")", 90)
         self.combo_rotation.addItem("180°", 180)
         self.combo_rotation.addItem("270°", 270)
+        self.combo_rotation.currentIndexChanged.connect(self._on_emitter_option_changed)
         hbox_rot.addWidget(self.combo_rotation)
         hbox_rot.addStretch()
         self.grp_device.addLayout(hbox_rot)
@@ -392,10 +408,13 @@ class PlotDockWidget(QDockWidget):
 
         self.chk_swap_xy = QCheckBox("X↔Y")
         self.chk_swap_xy.setToolTip(self.tr("Swap X and Y axes (e.g. roll feed ↔ carriage)"))
+        self.chk_swap_xy.toggled.connect(self._on_emitter_option_changed)
         self.chk_invert_x = QCheckBox("X inv.")
         self.chk_invert_x.setToolTip(self.tr("Mirror X axis"))
+        self.chk_invert_x.toggled.connect(self._on_emitter_option_changed)
         self.chk_invert_y = QCheckBox("Y inv.")
         self.chk_invert_y.setToolTip(self.tr("Mirror Y axis"))
+        self.chk_invert_y.toggled.connect(self._on_emitter_option_changed)
         hbox_axes.addWidget(self.chk_swap_xy)
         hbox_axes.addWidget(self.chk_invert_x)
         hbox_axes.addWidget(self.chk_invert_y)
@@ -533,23 +552,27 @@ class PlotDockWidget(QDockWidget):
             self.apply_configured_device(dev)
 
     def apply_configured_device(self, dev: ConfiguredDevice):
-        idx = self.combo_port.findText(dev.port)
-        if idx >= 0:
-            self.combo_port.setCurrentIndex(idx)
-        else:
-            self.combo_port.setEditText(dev.port)
+        self._updating_device = True
+        try:
+            idx = self.combo_port.findText(dev.port)
+            if idx >= 0:
+                self.combo_port.setCurrentIndex(idx)
+            else:
+                self.combo_port.setEditText(dev.port)
 
-        m_idx = self.combo_margins.findData(dev.margin_profile)
-        if m_idx >= 0:
-            self.combo_margins.setCurrentIndex(m_idx)
+            m_idx = self.combo_margins.findData(dev.margin_profile)
+            if m_idx >= 0:
+                self.combo_margins.setCurrentIndex(m_idx)
 
-        r_idx = self.combo_rotation.findData(dev.rotation)
-        if r_idx >= 0:
-            self.combo_rotation.setCurrentIndex(r_idx)
+            r_idx = self.combo_rotation.findData(dev.rotation)
+            if r_idx >= 0:
+                self.combo_rotation.setCurrentIndex(r_idx)
 
-        self.chk_swap_xy.setChecked(dev.swap_xy)
-        self.chk_invert_x.setChecked(dev.invert_x)
-        self.chk_invert_y.setChecked(dev.invert_y)
+            self.chk_swap_xy.setChecked(dev.swap_xy)
+            self.chk_invert_x.setChecked(dev.invert_x)
+            self.chk_invert_y.setChecked(dev.invert_y)
+        finally:
+            self._updating_device = False
 
         flow_names = {
             "rtscts": "RTS/CTS",
@@ -561,6 +584,17 @@ class PlotDockWidget(QDockWidget):
         baud_info = f" ({dev.baudrate} Baud, {flow_str})" if not dev.port.startswith("tcp://") else f" ({flow_str})"
         dev_info_html = self.tr("Device: <b>%1</b><br>Port: <code>%2</code>%3").replace("%1", dev.name).replace("%2", dev.port).replace("%3", baud_info)
         self.lbl_active_device_info.setText(dev_info_html)
+
+    def _on_emitter_option_changed(self, *args):
+        """Sync rotation and axis inversion/swap controls back to the active ConfiguredDevice."""
+        if self._updating_device or not self.device_manager:
+            return
+        dev = self.device_manager.get_active_device()
+        if dev:
+            dev.rotation = int(self.combo_rotation.currentData() or 0)
+            dev.swap_xy = self.chk_swap_xy.isChecked()
+            dev.invert_x = self.chk_invert_x.isChecked()
+            dev.invert_y = self.chk_invert_y.isChecked()
 
     def start_probe(self):
         """Inquire connected plotter (OI/OF/OH) in background thread."""
@@ -610,7 +644,8 @@ class PlotDockWidget(QDockWidget):
         self._probe_thread.start()
 
     def _on_probe_done(self, result: ProbeResult):
-        self.btn_probe.setEnabled(True)
+        if not self.is_streaming():
+            self.btn_probe.setEnabled(True)
         if result.success:
             if result.units_per_mm and result.units_per_mm > 0 and self.device_manager:
                 dev = self.device_manager.get_active_device()
@@ -670,6 +705,13 @@ class PlotDockWidget(QDockWidget):
             border: 1px solid #ffb74d;
             border-radius: 4px;
         """)
+        if not self.is_streaming():
+            self._recompute_timer.start(400)
+
+    def _on_recompute_timer(self):
+        """Automatically trigger pipeline recomputation after debounce delay."""
+        if self._pipeline_dirty and not self.is_streaming():
+            self.config_changed.emit()
 
     def is_pipeline_dirty(self) -> bool:
         """Return True if pipeline parameters have been modified without recomputing."""
@@ -684,9 +726,57 @@ class PlotDockWidget(QDockWidget):
             "invert_y": self.chk_invert_y.isChecked(),
         }
 
+    def _confirm_start_plot(self, port: str, dev_name: str) -> bool:
+        """Show a pre-flight confirmation summary before streaming to hardware."""
+        if (
+            "PYTEST_CURRENT_TEST" in os.environ
+            and not getattr(self, "_force_plot_confirm", False)
+        ):
+            return True
+
+        page = self.doc.page
+        fmt_str = f"DIN {page.preset}" if page.preset != "Custom" and page.preset.startswith("A") else page.preset
+        paper_info = f"{fmt_str} ({page.width_mm:.0f} × {page.height_mm:.0f} mm)"
+        pen_list = ", ".join(
+            f"SP{pid} ({layer.pen.name})"
+            for pid, layer in sorted(self.job.layers.items())
+        ) if self.job and self.job.layers else "-"
+        duration_str = self.job.formatted_duration if self.job else "00m 00s"
+        warn_block = ""
+        if self.job and self.job.warnings:
+            warn_block = "\n\n⚠️ " + "\n⚠️ ".join(self.job.warnings)
+
+        msg = (
+            self.tr(
+                "Ready to send plot to hardware?\n\n"
+                "• Device: %1 (%2)\n"
+                "• Paper: %3\n"
+                "• Pens required: %4\n"
+                "• Estimated time: %5%6"
+            )
+            .replace("%1", dev_name)
+            .replace("%2", port)
+            .replace("%3", paper_info)
+            .replace("%4", pen_list)
+            .replace("%5", duration_str)
+            .replace("%6", warn_block)
+        )
+        resp = QMessageBox.question(
+            self,
+            self.tr("Confirm Plot Start"),
+            msg,
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Yes,
+        )
+        return resp == QMessageBox.StandardButton.Yes
+
     def start_plot(self):
         """Start streaming HP-GL commands to the selected plotter port."""
+        if self.is_streaming():
+            return
+
         if self._pipeline_dirty:
+            self._recompute_timer.stop()
             self.config_changed.emit()
 
         if not self.job or not self.job.steps:
@@ -699,10 +789,12 @@ class PlotDockWidget(QDockWidget):
         baud = profile.connection.baudrate
         flow_ctrl = getattr(profile.connection, "flow_control", "rtscts")
         units_override: Optional[float] = None
+        dev_name = profile.name
 
         if self.device_manager:
             dev = self.device_manager.get_active_device()
             if dev:
+                dev_name = dev.name
                 if not port:
                     port = dev.port
                 profile = dev.get_profile()
@@ -712,6 +804,9 @@ class PlotDockWidget(QDockWidget):
 
         if not port:
             QMessageBox.warning(self, self.tr("Plot Output"), self.tr("Please select an interface or address."))
+            return
+
+        if not self._confirm_start_plot(port, dev_name):
             return
 
         feed_edge = getattr(self.doc.page, "feed_edge", "top") if self.doc and hasattr(self.doc, "page") else "top"
@@ -738,6 +833,9 @@ class PlotDockWidget(QDockWidget):
         self.btn_pause_plot.setEnabled(True)
         self.btn_pause_plot.setText(self.tr("⏸ Pause"))
         self.btn_abort_plot.setEnabled(True)
+        self.btn_probe.setEnabled(False)
+        self.chk_pause_pen_change.setEnabled(False)
+        self.grp_pipeline.setEnabled(False)
         self.combo_port.setEnabled(False)
         self.combo_margins.setEnabled(False)
         self.combo_rotation.setEnabled(False)
@@ -746,6 +844,7 @@ class PlotDockWidget(QDockWidget):
         self.chk_invert_y.setEnabled(False)
         self.progress_bar.setValue(0)
         self.lbl_stream_status.setText(self.tr("Starting transmission..."))
+        self.stream_active_changed.emit(True)
 
         started = self._streamer.start_stream(
             port,
@@ -805,12 +904,16 @@ class PlotDockWidget(QDockWidget):
         self.btn_pause_plot.setEnabled(False)
         self.btn_pause_plot.setText(self.tr("⏸ Pause"))
         self.btn_abort_plot.setEnabled(False)
+        self.btn_probe.setEnabled(True)
+        self.chk_pause_pen_change.setEnabled(True)
+        self.grp_pipeline.setEnabled(True)
         self.combo_port.setEnabled(True)
         self.combo_margins.setEnabled(True)
         self.combo_rotation.setEnabled(True)
         self.chk_swap_xy.setEnabled(True)
         self.chk_invert_x.setEnabled(True)
         self.chk_invert_y.setEnabled(True)
+        self.stream_active_changed.emit(False)
 
         if success:
             self.progress_bar.setValue(100)
@@ -835,6 +938,9 @@ class PlotDockWidget(QDockWidget):
         )
 
     def set_job(self, job: Optional[PlotJob]):
+        if self.is_streaming():
+            return
+        self._recompute_timer.stop()
         self.job = job
         self._pipeline_dirty = False
         self.btn_recompute.setText(self.tr("Recompute Pipeline"))

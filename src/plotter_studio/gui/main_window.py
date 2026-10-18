@@ -38,7 +38,7 @@ from .device_dialog import DeviceSettingsDialog
 from .page_dialog import PageSetupDialog
 from .commands import (
     TransformItemCommand, AssignPenCommand,
-    AddItemCommand, DeleteItemsCommand
+    AddItemCommand, DeleteItemsCommand, PageConfigCommand
 )
 
 _ORIG_QMESSAGEBOX_QUESTION = QMessageBox.question
@@ -156,6 +156,15 @@ class MainWindow(QMainWindow):
 
         self._update_dock_title_bars()
 
+    def _format_action_tooltip(self, action: QAction, base_tooltip: str) -> str:
+        """Append native shortcut text to tooltip if not already present."""
+        if "(" in base_tooltip and ")" in base_tooltip:
+            return base_tooltip
+        sc = action.shortcut().toString(QKeySequence.NativeText)
+        if sc:
+            return f"{base_tooltip} ({sc})"
+        return base_tooltip
+
     def _setup_actions_and_menus(self):
         menu_bar = self.menuBar()
 
@@ -165,27 +174,28 @@ class MainWindow(QMainWindow):
         self.act_new = QAction(self.tr("&New Project"), self)
         self.act_new.setIcon(get_icon("plus"))
         self.act_new.setShortcut(QKeySequence.New)
+        self.act_new.setToolTip(self._format_action_tooltip(self.act_new, self.tr("Create new project")))
         self.act_new.triggered.connect(self.new_document)
         menu_file.addAction(self.act_new)
 
         self.act_open_project = QAction(self.tr("&Open Project..."), self)
         self.act_open_project.setIcon(get_icon("open"))
         self.act_open_project.setShortcut(QKeySequence.Open)
-        self.act_open_project.setToolTip(self.tr("Open project or vector file (Ctrl+O)"))
+        self.act_open_project.setToolTip(self._format_action_tooltip(self.act_open_project, self.tr("Open project or vector file (Ctrl+O)")))
         self.act_open_project.triggered.connect(self.open_project_dialog)
         menu_file.addAction(self.act_open_project)
 
         self.act_save = QAction(self.tr("&Save Project"), self)
         self.act_save.setIcon(get_icon("save"))
         self.act_save.setShortcut(QKeySequence.Save)
-        self.act_save.setToolTip(self.tr("Save project (Ctrl+S)"))
+        self.act_save.setToolTip(self._format_action_tooltip(self.act_save, self.tr("Save project (Ctrl+S)")))
         self.act_save.triggered.connect(self.save_project)
         menu_file.addAction(self.act_save)
 
         self.act_save_as = QAction(self.tr("Save Project &As..."), self)
         self.act_save_as.setIcon(get_icon("save"))
         self.act_save_as.setShortcut(QKeySequence.SaveAs)
-        self.act_save_as.setToolTip(self.tr("Save project as SVG (Ctrl+Shift+S)"))
+        self.act_save_as.setToolTip(self._format_action_tooltip(self.act_save_as, self.tr("Save project as SVG (Ctrl+Shift+S)")))
         self.act_save_as.triggered.connect(self.save_project_dialog)
         menu_file.addAction(self.act_save_as)
 
@@ -194,7 +204,7 @@ class MainWindow(QMainWindow):
         self.act_import_svg = QAction(self.tr("&Import..."), self)
         self.act_import_svg.setIcon(get_icon("import"))
         self.act_import_svg.setShortcut(QKeySequence("Ctrl+I"))
-        self.act_import_svg.setToolTip(self.tr("Import SVG or plot file (Ctrl+I)"))
+        self.act_import_svg.setToolTip(self._format_action_tooltip(self.act_import_svg, self.tr("Import SVG or plot file (Ctrl+I)")))
         self.act_import_svg.triggered.connect(self.import_svg_dialog)
         menu_file.addAction(self.act_import_svg)
 
@@ -203,7 +213,7 @@ class MainWindow(QMainWindow):
         self.act_page_setup = QAction(self.tr("&Page Setup..."), self)
         self.act_page_setup.setIcon(get_icon("page"))
         self.act_page_setup.setShortcut(QKeySequence("Ctrl+Shift+P"))
-        self.act_page_setup.setToolTip(self.tr("Edit page setup & paper format (Ctrl+Shift+P)"))
+        self.act_page_setup.setToolTip(self._format_action_tooltip(self.act_page_setup, self.tr("Edit page setup & paper format (Ctrl+Shift+P)")))
         self.act_page_setup.triggered.connect(self.open_page_setup_dialog)
         menu_file.addAction(self.act_page_setup)
 
@@ -220,13 +230,13 @@ class MainWindow(QMainWindow):
         self.act_undo = self.undo_stack.createUndoAction(self, self.tr("&Undo"))
         self.act_undo.setIcon(get_icon("undo"))
         self.act_undo.setShortcut(QKeySequence.Undo)
-        self.act_undo.setToolTip(self.tr("Undo (Ctrl+Z)"))
+        self.act_undo.setToolTip(self._format_action_tooltip(self.act_undo, self.tr("Undo (Ctrl+Z)")))
         menu_edit.addAction(self.act_undo)
 
         self.act_redo = self.undo_stack.createRedoAction(self, self.tr("&Redo"))
         self.act_redo.setIcon(get_icon("redo"))
-        self.act_redo.setShortcut(QKeySequence.Redo)
-        self.act_redo.setToolTip(self.tr("Redo (Ctrl+Y)"))
+        self.act_redo.setShortcuts([QKeySequence.Redo, QKeySequence("Ctrl+Y"), QKeySequence("Ctrl+Shift+Z")])
+        self.act_redo.setToolTip(self._format_action_tooltip(self.act_redo, self.tr("Redo (Ctrl+Y)")))
         menu_edit.addAction(self.act_redo)
 
         menu_edit.addSeparator()
@@ -234,14 +244,14 @@ class MainWindow(QMainWindow):
         self.act_duplicate = QAction(self.tr("&Duplicate"), self)
         self.act_duplicate.setIcon(get_icon("duplicate"))
         self.act_duplicate.setShortcut(QKeySequence("Ctrl+D"))
-        self.act_duplicate.setToolTip(self.tr("Duplicate selected object (Ctrl+D)"))
+        self.act_duplicate.setToolTip(self._format_action_tooltip(self.act_duplicate, self.tr("Duplicate selected object (Ctrl+D)")))
         self.act_duplicate.triggered.connect(self.duplicate_selected_items)
         menu_edit.addAction(self.act_duplicate)
 
         self.act_delete = QAction(self.tr("&Delete"), self)
         self.act_delete.setIcon(get_icon("delete"))
         self.act_delete.setShortcut(QKeySequence.Delete)
-        self.act_delete.setToolTip(self.tr("Delete selected objects (Del)"))
+        self.act_delete.setToolTip(self._format_action_tooltip(self.act_delete, self.tr("Delete selected objects (Del)")))
         self.act_delete.triggered.connect(self.delete_selected_items)
         menu_edit.addAction(self.act_delete)
 
@@ -250,25 +260,37 @@ class MainWindow(QMainWindow):
         self.act_rotate_ccw = QAction(self.tr("Rotate 90° CCW (-90°)"), self)
         self.act_rotate_ccw.setIcon(get_icon("rotate-ccw"))
         self.act_rotate_ccw.setShortcut(QKeySequence("Ctrl+Shift+R"))
-        self.act_rotate_ccw.setToolTip(self.tr("Rotate selection 90° counter-clockwise (Ctrl+Shift+R)"))
+        self.act_rotate_ccw.setToolTip(self._format_action_tooltip(self.act_rotate_ccw, self.tr("Rotate selection 90° counter-clockwise (Ctrl+Shift+R)")))
         self.act_rotate_ccw.triggered.connect(lambda: self.rotate_selected_items(-90.0))
         menu_edit.addAction(self.act_rotate_ccw)
 
         self.act_rotate_cw = QAction(self.tr("Rotate 90° CW (+90°)"), self)
         self.act_rotate_cw.setIcon(get_icon("rotate-cw"))
         self.act_rotate_cw.setShortcut(QKeySequence("Ctrl+R"))
-        self.act_rotate_cw.setToolTip(self.tr("Rotate selection 90° clockwise (Ctrl+R)"))
+        self.act_rotate_cw.setToolTip(self._format_action_tooltip(self.act_rotate_cw, self.tr("Rotate selection 90° clockwise (Ctrl+R)")))
         self.act_rotate_cw.triggered.connect(lambda: self.rotate_selected_items(90.0))
         menu_edit.addAction(self.act_rotate_cw)
+
+        self.act_flip_h = QAction(self.tr("Flip Horizontal"), self)
+        self.act_flip_h.setToolTip(self.tr("Flip selection horizontally"))
+        self.act_flip_h.triggered.connect(lambda: self.flip_selected_items(horizontal=True))
+        menu_edit.addAction(self.act_flip_h)
+
+        self.act_flip_v = QAction(self.tr("Flip Vertical"), self)
+        self.act_flip_v.setToolTip(self.tr("Flip selection vertically"))
+        self.act_flip_v.triggered.connect(lambda: self.flip_selected_items(horizontal=False))
+        menu_edit.addAction(self.act_flip_v)
 
         menu_edit.addSeparator()
 
         # Assign pen 1..8 shortcuts
+        self._pen_actions: list[QAction] = []
         for pen_id in range(1, 9):
-            act = QAction(self.tr(f"Assign to Pen {pen_id}"), self)
+            act = QAction(self.tr("Assign to Pen %1").replace("%1", str(pen_id)), self)
             act.setShortcut(QKeySequence(str(pen_id)))
             act.triggered.connect(lambda checked=False, pid=pen_id: self.assign_selection_to_pen(pid))
             menu_edit.addAction(act)
+            self._pen_actions.append(act)
 
         # --- View Menu ---
         menu_view = menu_bar.addMenu(self.tr("&View"))
@@ -282,7 +304,7 @@ class MainWindow(QMainWindow):
         self.act_mode_layout.setCheckable(True)
         self.act_mode_layout.setChecked(True)
         self.act_mode_layout.setShortcut(QKeySequence("Ctrl+L"))
-        self.act_mode_layout.setToolTip(self.tr("Layout Mode (Ctrl+L)"))
+        self.act_mode_layout.setToolTip(self._format_action_tooltip(self.act_mode_layout, self.tr("Layout Mode (Ctrl+L)")))
         self.act_mode_layout.triggered.connect(self.switch_to_layout_mode)
         self.mode_group.addAction(self.act_mode_layout)
         menu_view.addAction(self.act_mode_layout)
@@ -291,7 +313,7 @@ class MainWindow(QMainWindow):
         self.act_mode_plot.setIcon(get_icon("mode-plot"))
         self.act_mode_plot.setCheckable(True)
         self.act_mode_plot.setShortcut(QKeySequence("Ctrl+P"))
-        self.act_mode_plot.setToolTip(self.tr("Output / Plot Mode (Ctrl+P)"))
+        self.act_mode_plot.setToolTip(self._format_action_tooltip(self.act_mode_plot, self.tr("Output / Plot Mode (Ctrl+P)")))
         self.act_mode_plot.triggered.connect(self.switch_to_plot_mode)
         self.mode_group.addAction(self.act_mode_plot)
         menu_view.addAction(self.act_mode_plot)
@@ -301,21 +323,28 @@ class MainWindow(QMainWindow):
         self.act_zoom_fit = QAction(self.tr("Fit Sheet to Window"), self)
         self.act_zoom_fit.setIcon(get_icon("zoom-fit"))
         self.act_zoom_fit.setShortcut(QKeySequence("Ctrl+0"))
-        self.act_zoom_fit.setToolTip(self.tr("Fit sheet to window (Ctrl+0)"))
+        self.act_zoom_fit.setToolTip(self._format_action_tooltip(self.act_zoom_fit, self.tr("Fit sheet to window (Ctrl+0)")))
         self.act_zoom_fit.triggered.connect(self.canvas.zoom_to_fit)
         menu_view.addAction(self.act_zoom_fit)
 
+        self.act_zoom_selection = QAction(self.tr("Zoom to Selection"), self)
+        self.act_zoom_selection.setIcon(get_icon("zoom-in"))
+        self.act_zoom_selection.setShortcut(QKeySequence("Ctrl+Shift+0"))
+        self.act_zoom_selection.setToolTip(self._format_action_tooltip(self.act_zoom_selection, self.tr("Zoom to selected objects (Ctrl+Shift+0)")))
+        self.act_zoom_selection.triggered.connect(self.canvas.zoom_to_selection)
+        menu_view.addAction(self.act_zoom_selection)
+
         self.act_zoom_in = QAction(self.tr("Zoom In"), self)
         self.act_zoom_in.setIcon(get_icon("zoom-in"))
-        self.act_zoom_in.setShortcut(QKeySequence.ZoomIn)
-        self.act_zoom_in.setToolTip(self.tr("Zoom In (Ctrl++)"))
+        self.act_zoom_in.setShortcuts([QKeySequence.ZoomIn, QKeySequence("Ctrl++"), QKeySequence("Ctrl+="), QKeySequence("+"), QKeySequence("=")])
+        self.act_zoom_in.setToolTip(self._format_action_tooltip(self.act_zoom_in, self.tr("Zoom In (Ctrl++)")))
         self.act_zoom_in.triggered.connect(lambda checked=False: self.canvas.zoom_in())
         menu_view.addAction(self.act_zoom_in)
 
         self.act_zoom_out = QAction(self.tr("Zoom Out"), self)
         self.act_zoom_out.setIcon(get_icon("zoom-out"))
-        self.act_zoom_out.setShortcut(QKeySequence.ZoomOut)
-        self.act_zoom_out.setToolTip(self.tr("Zoom Out (Ctrl+-)"))
+        self.act_zoom_out.setShortcuts([QKeySequence.ZoomOut, QKeySequence("Ctrl+-"), QKeySequence("-")])
+        self.act_zoom_out.setToolTip(self._format_action_tooltip(self.act_zoom_out, self.tr("Zoom Out (Ctrl+-)")))
         self.act_zoom_out.triggered.connect(lambda checked=False: self.canvas.zoom_out())
         menu_view.addAction(self.act_zoom_out)
 
@@ -386,16 +415,32 @@ class MainWindow(QMainWindow):
         btn_center.setIcon(get_icon("align-center"))
         btn_center.setToolTip(self.tr("Center on sheet or printable area"))
         btn_center.triggered.connect(self.transform_dock.align_center_both)
+        self.act_align_center = btn_center
 
         btn_fit = toolbar.addAction(self.tr("Fit to Sheet"))
         btn_fit.setIcon(get_icon("fit-page"))
         btn_fit.setToolTip(self.tr("Fit artwork to sheet"))
         btn_fit.triggered.connect(self.transform_dock.fit_to_page)
+        self.act_fit_sheet = btn_fit
 
         btn_orig = toolbar.addAction(self.tr("Original Size (1:1)"))
         btn_orig.setIcon(get_icon("original-size"))
         btn_orig.setToolTip(self.tr("Reset to 1:1 original size"))
         btn_orig.triggered.connect(self.transform_dock.reset_to_original_size)
+        self.act_orig_size = btn_orig
+
+        self._layout_editing_actions = [
+            self.act_duplicate,
+            self.act_delete,
+            self.act_rotate_ccw,
+            self.act_rotate_cw,
+            self.act_flip_h,
+            self.act_flip_v,
+            self.act_align_center,
+            self.act_fit_sheet,
+            self.act_orig_size,
+            *self._pen_actions,
+        ]
 
         # Spacer to push paper setup & device settings to the right
         spacer = QWidget(toolbar)
@@ -437,7 +482,7 @@ class MainWindow(QMainWindow):
 
         self.lbl_coord = QLabel("X: 0.0 mm | Y: 0.0 mm")
         self.lbl_zoom = QLabel("Zoom: 100 %")
-        self.lbl_info = QLabel("Bereit")
+        self.lbl_info = QLabel(self.tr("Ready"))
         self.lbl_paper_status = QLabel("DIN A3 (420 × 297 mm)")
         self.lbl_paper_status.setStyleSheet("color: #4b5563; font-size: 11px; padding: 0 4px;")
 
@@ -452,7 +497,7 @@ class MainWindow(QMainWindow):
         self.canvas.zoom_changed.connect(self._on_zoom_changed)
         self.canvas.file_dropped.connect(self.import_svg_file)
         self.canvas.selection_changed_signal.connect(self._on_selection_changed)
-        self.canvas.item_drag_finished.connect(self._on_item_drag_finished)
+        self.canvas.items_drag_finished.connect(self._on_items_drag_finished)
 
         # Pen dock
         self.pen_dock.pen_changed.connect(self._on_pens_changed)
@@ -475,11 +520,41 @@ class MainWindow(QMainWindow):
         self.plot_dock.export_svg_requested.connect(self.export_plot_svg_dialog)
         self.plot_dock.stream_step_changed.connect(self.canvas.set_simulation_step)
         self.plot_dock.stream_step_changed.connect(self.simulation_bar.set_step)
+        self.plot_dock.stream_active_changed.connect(self._on_stream_active_changed)
 
         # Object dock
         self.object_dock.btn_import.clicked.connect(self.import_svg_dialog)
         self.object_dock.document_modified.connect(self._on_document_modified)
         self.canvas.selection_changed_signal.connect(self.object_dock.sync_from_canvas_selection)
+
+    def is_plot_active(self) -> bool:
+        """Return True when a hardware plot stream is currently running or paused."""
+        return bool(hasattr(self, "plot_dock") and self.plot_dock and self.plot_dock.is_streaming())
+
+    def _on_stream_active_changed(self, active: bool):
+        """Lock/unlock editing, file, and mode controls while a plot is actively streaming."""
+        self.setAcceptDrops(not active)
+        self.act_new.setEnabled(not active)
+        self.act_open_project.setEnabled(not active)
+        self.act_import_svg.setEnabled(not active)
+        self.act_page_setup.setEnabled(not active)
+        self.act_mode_layout.setEnabled(not active)
+        self.btn_page_setup.setEnabled(not active)
+        self.combo_active_device.setEnabled(not active)
+        self.btn_device_settings.setEnabled(not active)
+        self.object_dock.setEnabled(not active)
+        self.transform_dock.setEnabled(not active)
+        self.pen_dock.setEnabled(not active)
+        self.simulation_bar.setEnabled(not active)
+        if active:
+            for act in self._layout_editing_actions:
+                act.setEnabled(False)
+            self.lbl_info.setText(self.tr("Plot in progress..."))
+        else:
+            in_layout = (self.canvas._mode == CanvasMode.LAYOUT)
+            for act in self._layout_editing_actions:
+                act.setEnabled(in_layout)
+            self.lbl_info.setText(self.tr("Output active") if not in_layout else self.tr("Layout active"))
 
     def _refresh_device_selector(self):
         self.combo_active_device.blockSignals(True)
@@ -496,12 +571,35 @@ class MainWindow(QMainWindow):
             self.combo_active_device.setCurrentIndex(active_idx)
         self.combo_active_device.blockSignals(False)
 
-    def _apply_active_device_to_page_and_plot_dock(self, dev: ConfiguredDevice):
+    def _capture_page_margin_state(self) -> dict[str, Any]:
+        p = self.doc.page
+        return {
+            "margin_left_mm": p.margin_left_mm,
+            "margin_right_mm": p.margin_right_mm,
+            "margin_top_mm": p.margin_top_mm,
+            "margin_bottom_mm": p.margin_bottom_mm,
+            "device_profile": p.device_profile,
+            "margin_profile": p.margin_profile,
+        }
+
+    def _apply_active_device_to_page_and_plot_dock(self, dev: ConfiguredDevice, record_undo: bool = False):
         if self.doc.page.device_profile != "custom" and dev.model_id:
+            old_state = self._capture_page_margin_state()
             self.doc.page.apply_device_profile(
                 dev.model_id, self.doc.page.feed_edge, dev.margin_profile
             )
-            self._on_page_changed()
+            new_state = self._capture_page_margin_state()
+            if record_undo and old_state != new_state:
+                cmd = PageConfigCommand(
+                    self.doc.page,
+                    old_state,
+                    new_state,
+                    self._on_page_changed,
+                    text=self.tr("Apply device profile '%1'").replace("%1", dev.name),
+                )
+                self.undo_stack.push(cmd)
+            else:
+                self._on_page_changed()
         self.plot_dock.apply_configured_device(dev)
 
     def _on_active_device_changed(self):
@@ -511,7 +609,7 @@ class MainWindow(QMainWindow):
         self.device_manager.set_active_device(dev_id)
         dev = self.device_manager.get_active_device()
         if dev:
-            self._apply_active_device_to_page_and_plot_dock(dev)
+            self._apply_active_device_to_page_and_plot_dock(dev, record_undo=True)
 
     def open_device_settings_dialog(self):
         dlg = DeviceSettingsDialog(self.device_manager, parent=self)
@@ -519,7 +617,7 @@ class MainWindow(QMainWindow):
             self._refresh_device_selector()
             dev = self.device_manager.get_active_device()
             if dev:
-                self._apply_active_device_to_page_and_plot_dock(dev)
+                self._apply_active_device_to_page_and_plot_dock(dev, record_undo=True)
 
     def open_page_setup_dialog(self):
         dlg = PageSetupDialog(self.doc, self.device_manager, self.undo_stack, parent=self)
@@ -531,15 +629,17 @@ class MainWindow(QMainWindow):
         p = self.doc.page
         if p.preset != "Custom":
             fmt_str = f"DIN {p.preset}" if p.preset.startswith("A") else p.preset
-            orient_str = "Quer" if p.orientation == "landscape" else "Hoch"
+            orient_str = self.tr("Landscape (short)") if p.orientation == "landscape" else self.tr("Portrait (short)")
             summary = f"{fmt_str} {orient_str} ({p.width_mm:.0f} × {p.height_mm:.0f} mm)"
         else:
             summary = f"Custom ({p.width_mm:.0f} × {p.height_mm:.0f} mm)"
         if hasattr(self, "btn_page_setup"):
             self.btn_page_setup.setText(summary)
-            self.btn_page_setup.setToolTip(f"Seiteneinrichtung: {summary} (Klicken zum Bearbeiten)")
+            self.btn_page_setup.setToolTip(
+                self.tr("Page setup: %1 (Click to edit)").replace("%1", summary)
+            )
         if hasattr(self, "lbl_paper_status"):
-            self.lbl_paper_status.setText(f"Blatt: {summary}")
+            self.lbl_paper_status.setText(self.tr("Sheet: %1").replace("%1", summary))
 
     def _on_document_modified(self):
         self.canvas.viewport().update()
@@ -586,12 +686,31 @@ class MainWindow(QMainWindow):
         self._on_selection_changed()
 
     def _on_item_drag_finished(self, item: ImportItem, old_t: AffineTransform, new_t: AffineTransform):
-        scale_diff = abs(math.hypot(old_t.a, old_t.b) - math.hypot(new_t.a, new_t.b))
-        action_name = "skalieren" if scale_diff > 1e-4 else "verschieben"
-        cmd = TransformItemCommand(
-            item, old_t, new_t, self._on_item_transformed, text=f"{item.name} {action_name}"
-        )
-        self.undo_stack.push(cmd)
+        self._on_items_drag_finished([(item, old_t, new_t)])
+
+    def _on_items_drag_finished(self, changes: list[tuple[ImportItem, AffineTransform, AffineTransform]]):
+        if not changes:
+            return
+        if len(changes) == 1:
+            item, old_t, new_t = changes[0]
+            scale_diff = abs(math.hypot(old_t.a, old_t.b) - math.hypot(new_t.a, new_t.b))
+            if scale_diff > 1e-4:
+                text = self.tr("Scale %1").replace("%1", item.name)
+            else:
+                text = self.tr("Move %1").replace("%1", item.name)
+            cmd = TransformItemCommand(
+                item, old_t, new_t, self._on_item_transformed, text=text
+            )
+            self.undo_stack.push(cmd)
+        else:
+            macro_text = self.tr("Move %1 objects").replace("%1", str(len(changes)))
+            self.undo_stack.beginMacro(macro_text)
+            for item, old_t, new_t in changes:
+                cmd = TransformItemCommand(
+                    item, old_t, new_t, self._on_item_transformed, text=macro_text
+                )
+                self.undo_stack.push(cmd)
+            self.undo_stack.endMacro()
 
     def rotate_selected_items(self, angle_degrees: float):
         """Rotate all currently selected unlocked items by angle_degrees."""
@@ -600,6 +719,17 @@ class MainWindow(QMainWindow):
             return
         self.transform_dock.set_selected_items(selected)
         self.transform_dock.rotate_selected(angle_degrees)
+
+    def flip_selected_items(self, horizontal: bool = True):
+        """Flip all currently selected unlocked items horizontally or vertically."""
+        selected = [it for it in self.canvas.get_selected_import_items() if not it.locked]
+        if not selected:
+            return
+        self.transform_dock.set_selected_items(selected)
+        if horizontal:
+            self.transform_dock.flip_horizontal()
+        else:
+            self.transform_dock.flip_vertical()
 
     def _on_selection_changed(self):
         selected = self.canvas.get_selected_import_items()
@@ -611,16 +741,21 @@ class MainWindow(QMainWindow):
                 pb = self.doc.page.plottable_box
                 is_oob = not pb.contains_box(b)
                 scale_pct = math.hypot(item.transform.a, item.transform.b) * 100.0
-                warn_text = " — ⚠️ Außerhalb des Plottbereichs!" if is_oob else ""
+                warn_text = self.tr(" — ⚠️ Outside printable area!") if is_oob else ""
                 if len(selected) == 1:
                     self.lbl_info.setText(
-                        f"Ausgewählt: {item.name} ({b.width:.1f} x {b.height:.1f} mm, Skalierung: {scale_pct:.0f}%){warn_text}"
+                        self.tr("Selected: %1 (%2 x %3 mm, Scale: %4%)%5")
+                        .replace("%1", item.name)
+                        .replace("%2", f"{b.width:.1f}")
+                        .replace("%3", f"{b.height:.1f}")
+                        .replace("%4", f"{scale_pct:.0f}")
+                        .replace("%5", warn_text)
                     )
                 else:
-                    self.lbl_info.setText(f"{len(selected)} Objekte ausgewählt")
+                    self.lbl_info.setText(self.tr("%1 objects selected").replace("%1", str(len(selected))))
         else:
             self.transform_dock.set_selected_items([])
-            self.lbl_info.setText(f"{len(self.doc.items)} Objekt(e) auf dem Blatt")
+            self.lbl_info.setText(self.tr("%1 object(s) on sheet").replace("%1", str(len(self.doc.items))))
 
     def _update_window_title(self, is_clean: Optional[bool] = None):
         try:
@@ -633,6 +768,33 @@ class MainWindow(QMainWindow):
                 self.setWindowTitle(f"Plotter Studio{dirty_suffix}")
         except RuntimeError:
             pass
+
+    def _confirm_abort_active_plot(self) -> bool:
+        """Ask user before aborting an active plot when closing the window."""
+        if not self.is_plot_active():
+            return True
+        if (
+            "PYTEST_CURRENT_TEST" in os.environ
+            and QMessageBox.question is _ORIG_QMESSAGEBOX_QUESTION
+            and not getattr(self, "_force_abort_prompt", False)
+        ):
+            self.plot_dock.abort_plot()
+            return True
+
+        resp = QMessageBox.question(
+            self,
+            self.tr("Plot in Progress"),
+            self.tr(
+                "A plot is currently running.\n\n"
+                "Do you want to abort the plot and lift the pen before closing?"
+            ),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if resp == QMessageBox.StandardButton.Yes:
+            self.plot_dock.abort_plot()
+            return True
+        return False
 
     def _confirm_discard_unsaved_changes(self) -> bool:
         """Ask user whether to save or discard unsaved changes. Returns True to proceed."""
@@ -647,9 +809,11 @@ class MainWindow(QMainWindow):
 
         resp = QMessageBox.question(
             self,
-            "Ungespeicherte Änderungen",
-            "Das aktuelle Dokument enthält ungespeicherte Änderungen.\n\n"
-            "Möchten Sie die Änderungen vor dem Fortfahren speichern?",
+            self.tr("Unsaved Changes"),
+            self.tr(
+                "The current document contains unsaved changes.\n\n"
+                "Do you want to save your changes before continuing?"
+            ),
             QMessageBox.StandardButton.Save
             | QMessageBox.StandardButton.Discard
             | QMessageBox.StandardButton.Cancel,
@@ -662,31 +826,49 @@ class MainWindow(QMainWindow):
         return False
 
     def new_document(self):
+        if self.is_plot_active():
+            return
         if not self._confirm_discard_unsaved_changes():
             return
+        fresh_doc = Document()
         self.doc.items.clear()
+        self.doc.page = fresh_doc.page
+        self.doc.pens = fresh_doc.pens
+        dev = self.device_manager.get_active_device() if hasattr(self, "device_manager") and self.device_manager else None
+        if dev and dev.model_id:
+            self.doc.page.apply_device_profile(
+                dev.model_id, self.doc.page.feed_edge, dev.margin_profile
+            )
         self.current_project_path = None
         self.undo_stack.clear()
         self.undo_stack.setClean()
         self._update_window_title()
+        self.canvas.update_scene_rect()
         self.canvas.rebuild_items()
+        self.canvas.zoom_to_fit()
         self.object_dock.refresh()
         self.pen_dock.refresh_table()
         self.transform_dock.set_active_item(None)
         self._update_paper_display()
-        self.lbl_info.setText("Neues Dokument erstellt")
+        if self.canvas._mode == CanvasMode.PLOT:
+            self.recompile_plot_job()
+        self.lbl_info.setText(self.tr("New document created"))
 
     def open_project_dialog(self):
+        if self.is_plot_active():
+            return
         fpath, _ = QFileDialog.getOpenFileName(
             self,
-            "Projekt oder Vektordatei öffnen",
+            self.tr("Open Project or Vector File"),
             "",
-            "Vektordateien (*.svg *.hpgl *.plt);;SVG-Dateien (*.svg);;HP-GL Plotdateien (*.hpgl *.plt);;Alle Dateien (*)",
+            self.tr("Vector Files (*.svg *.hpgl *.plt);;SVG Files (*.svg);;HP-GL Plot Files (*.hpgl *.plt);;All Files (*)"),
         )
         if fpath:
             self.load_project_file(fpath)
 
     def load_project_file(self, fpath: str):
+        if self.is_plot_active():
+            return
         if not self._confirm_discard_unsaved_changes():
             return
         try:
@@ -712,32 +894,51 @@ class MainWindow(QMainWindow):
                 self.recompile_plot_job()
 
             if is_proj:
-                self.lbl_info.setText(f"Projekt geladen: {os.path.basename(fpath)} ({len(self.doc.items)} Objekt(e))")
+                self.lbl_info.setText(
+                    self.tr("Project loaded: %1 (%2 object(s))")
+                    .replace("%1", os.path.basename(fpath))
+                    .replace("%2", str(len(self.doc.items)))
+                )
             else:
                 num_paths = sum(len(it.paths) for it in self.doc.items)
                 fmt_label = "HP-GL" if is_hpgl_file(fpath) else "SVG"
-                self.lbl_info.setText(f"{fmt_label} geladen: {os.path.basename(fpath)} ({num_paths} Pfade)")
+                self.lbl_info.setText(
+                    self.tr("%1 loaded: %2 (%3 paths)")
+                    .replace("%1", fmt_label)
+                    .replace("%2", os.path.basename(fpath))
+                    .replace("%3", str(num_paths))
+                )
         except Exception as e:
-            QMessageBox.critical(self, "Fehler beim Öffnen der Datei", f"Konnte Datei nicht laden:\n{e}")
+            QMessageBox.critical(
+                self,
+                self.tr("Error Opening File"),
+                self.tr("Could not load file:\n%1").replace("%1", str(e)),
+            )
 
     def import_svg_dialog(self):
+        if self.is_plot_active():
+            return
         fpath, _ = QFileDialog.getOpenFileName(
             self,
-            "Vektorgrafik importieren",
+            self.tr("Import Vector Artwork"),
             "",
-            "Vektordateien (*.svg *.hpgl *.plt);;SVG Dateien (*.svg);;HP-GL Plotdateien (*.hpgl *.plt);;Alle Dateien (*)",
+            self.tr("Vector Files (*.svg *.hpgl *.plt);;SVG Files (*.svg);;HP-GL Plot Files (*.hpgl *.plt);;All Files (*)"),
         )
         if fpath:
             self.import_svg_file(fpath)
 
     def import_svg_file(self, fpath: str):
+        if self.is_plot_active():
+            return
         try:
             if not is_hpgl_file(fpath) and is_project_file(fpath):
                 resp = QMessageBox.question(
                     self,
-                    "Projektdatei erkannt",
-                    f"Die Datei »{os.path.basename(fpath)}« ist ein vollständiges Plotter-Studio-Projekt.\n\n"
-                    "Möchten Sie das Projekt vollständig öffnen (Ja) oder als einzelnes Objekt in das aktuelle Blatt importieren (Nein)?",
+                    self.tr("Project File Detected"),
+                    self.tr(
+                        "The file '%1' is a complete Plotter Studio project.\n\n"
+                        "Do you want to open the full project (Yes) or import it as a single object onto the current sheet (No)?"
+                    ).replace("%1", os.path.basename(fpath)),
                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel,
                     QMessageBox.StandardButton.Yes,
                 )
@@ -763,12 +964,19 @@ class MainWindow(QMainWindow):
                 item.transform.ty = ty
 
             cmd = AddItemCommand(
-                self.doc, item, self._on_item_structure_changed, text=f"Import {os.path.basename(fpath)}"
+                self.doc,
+                item,
+                lambda: self._on_item_structure_changed(select_id=item.item_id),
+                text=self.tr("Import %1").replace("%1", os.path.basename(fpath)),
             )
             self.undo_stack.push(cmd)
-            self.lbl_info.setText(f"Importiert: {os.path.basename(fpath)}")
+            self.lbl_info.setText(self.tr("Imported: %1").replace("%1", os.path.basename(fpath)))
         except Exception as e:
-            QMessageBox.critical(self, "Fehler beim Import", f"Konnte Datei nicht importieren:\n{e}")
+            QMessageBox.critical(
+                self,
+                self.tr("Import Error"),
+                self.tr("Could not import file:\n%1").replace("%1", str(e)),
+            )
 
     def _save_project_to_path(self, fpath: str) -> bool:
         try:
@@ -776,10 +984,14 @@ class MainWindow(QMainWindow):
             self.current_project_path = fpath
             self.undo_stack.setClean()
             self._update_window_title()
-            self.lbl_info.setText(f"Gespeichert unter: {os.path.basename(fpath)}")
+            self.lbl_info.setText(self.tr("Saved to: %1").replace("%1", os.path.basename(fpath)))
             return True
         except Exception as e:
-            QMessageBox.critical(self, "Fehler beim Speichern", f"Fehler beim Speichern:\n{e}")
+            QMessageBox.critical(
+                self,
+                self.tr("Save Error"),
+                self.tr("Error saving file:\n%1").replace("%1", str(e)),
+            )
             return False
 
     def save_project(self) -> bool:
@@ -791,7 +1003,10 @@ class MainWindow(QMainWindow):
     def save_project_dialog(self) -> bool:
         default_path = self.current_project_path or "projekt.svg"
         fpath, _ = QFileDialog.getSaveFileName(
-            self, "Projekt speichern unter", default_path, "SVG Projektdatei (*.svg)"
+            self,
+            self.tr("Save Project As"),
+            default_path,
+            self.tr("SVG Project File (*.svg)"),
         )
         if fpath:
             return self._save_project_to_path(fpath)
@@ -799,37 +1014,50 @@ class MainWindow(QMainWindow):
 
     def delete_selected_items(self):
         selected = [it for it in self.canvas.get_selected_import_items() if not it.locked]
+        if not selected and hasattr(self, "object_dock"):
+            selected = [it for it in self.object_dock._get_selected_doc_items() if not it.locked]
         if not selected:
             return
         cmd = DeleteItemsCommand(
-            self.doc, selected, self._on_item_structure_changed, text="Auswahl löschen"
+            self.doc,
+            selected,
+            self._on_item_structure_changed,
+            text=self.tr("Delete selection"),
         )
         self.undo_stack.push(cmd)
 
-    def _on_item_structure_changed(self):
+    def _on_item_structure_changed(self, select_id: Optional[str] = None):
         self.canvas.rebuild_items()
+        if select_id and select_id in self.canvas._item_map:
+            self.canvas._item_map[select_id].setSelected(True)
         self.object_dock.refresh()
-        if self.doc.items and self.doc.items[-1].item_id in self.canvas._item_map:
-            self.canvas._item_map[self.doc.items[-1].item_id].setSelected(True)
+        self.object_dock.sync_from_canvas_selection()
         self._on_selection_changed()
+        if self.canvas._mode == CanvasMode.PLOT:
+            self.recompile_plot_job()
 
     def assign_selection_to_pen(self, pen_id: int):
         selected = [it for it in self.canvas.get_selected_import_items() if not it.locked]
         if not selected:
             return
         cmd = AssignPenCommand(
-            selected, pen_id, self._on_pens_changed, text=f"Auswahl Stift {pen_id} zuweisen"
+            selected,
+            pen_id,
+            self._on_pens_changed,
+            text=self.tr("Assign selection to Pen %1").replace("%1", str(pen_id)),
         )
         self.undo_stack.push(cmd)
-        self.lbl_info.setText(f"Objekt(e) Stift {pen_id} zugewiesen")
+        self.lbl_info.setText(self.tr("Object(s) assigned to Pen %1").replace("%1", str(pen_id)))
 
     def show_about(self):
         QMessageBox.about(
             self,
-            "Über Plotter Studio",
-            "<b>Plotter Studio</b> v0.1.0<br>"
-            "Modularer Slicer & Layout-Studio für Stiftplotter unter Linux.<br><br>"
-            "Lizenz: GPLv3"
+            self.tr("About Plotter Studio"),
+            self.tr(
+                "<b>Plotter Studio</b> v0.1.0<br>"
+                "Modular Slicer & Layout Studio for Pen Plotters on Linux.<br><br>"
+                "License: GPLv3"
+            ),
         )
 
     def showEvent(self, event):
@@ -879,18 +1107,21 @@ class MainWindow(QMainWindow):
                     dock.setTitleBarWidget(None)
 
     def dragEnterEvent(self, event):
-        if extract_droppable_files(event.mimeData()):
+        if not self.is_plot_active() and extract_droppable_files(event.mimeData()):
             event.acceptProposedAction()
         else:
             event.ignore()
 
     def dragMoveEvent(self, event):
-        if extract_droppable_files(event.mimeData()):
+        if not self.is_plot_active() and extract_droppable_files(event.mimeData()):
             event.acceptProposedAction()
         else:
             event.ignore()
 
     def dropEvent(self, event):
+        if self.is_plot_active():
+            event.ignore()
+            return
         files = extract_droppable_files(event.mimeData())
         if files:
             for fpath in files:
@@ -902,6 +1133,8 @@ class MainWindow(QMainWindow):
     def switch_to_plot_mode(self):
         """Switch view and controls into Plot/Slice mode."""
         self.act_mode_plot.setChecked(True)
+        for act in getattr(self, "_layout_editing_actions", []):
+            act.setEnabled(False)
         self.recompile_plot_job()
         self.canvas.set_mode(CanvasMode.PLOT)
 
@@ -917,11 +1150,16 @@ class MainWindow(QMainWindow):
         target_w = max(self.plot_dock.minimum_content_width(), self.plot_dock.width(), 380)
         self.resizeDocks([self.plot_dock], [target_w], Qt.Horizontal)
         self._schedule_dock_title_update()
-        self.lbl_info.setText("Ausgabe aktiv")
+        self.lbl_info.setText(self.tr("Output active"))
 
     def switch_to_layout_mode(self):
         """Switch view and controls back into Layout mode."""
+        if self.is_plot_active():
+            self.act_mode_plot.setChecked(True)
+            return
         self.act_mode_layout.setChecked(True)
+        for act in getattr(self, "_layout_editing_actions", []):
+            act.setEnabled(True)
         self.simulation_bar.pause()
         self.simulation_bar.hide()
         self.canvas.set_mode(CanvasMode.LAYOUT)
@@ -939,10 +1177,12 @@ class MainWindow(QMainWindow):
         self._schedule_dock_title_update()
         self.object_dock.refresh()
         self.transform_dock.refresh_item_fields()
-        self.lbl_info.setText("Layout aktiv")
+        self.lbl_info.setText(self.tr("Layout active"))
 
     def recompile_plot_job(self):
         """Compile document paths through pipeline and update preview, scrubber and stats."""
+        if self.is_plot_active():
+            return
         cfg = self.plot_dock.get_pipeline_config()
         self._current_job = compile_document_to_plot_job(self.doc, cfg)
         self.canvas.set_plot_job(self._current_job)
@@ -958,11 +1198,18 @@ class MainWindow(QMainWindow):
         ):
             self.recompile_plot_job()
         if not self._current_job or not self._current_job.layers:
-            QMessageBox.information(self, "Export nicht möglich", "Keine Pfade zum Exportieren vorhanden.")
+            QMessageBox.information(
+                self,
+                self.tr("Export Not Possible"),
+                self.tr("No paths available for export."),
+            )
             return
 
         fpath, _ = QFileDialog.getSaveFileName(
-            self, "Plotdatei exportieren", "job.hpgl", "HP-GL Plotdatei (*.hpgl *.plt);;Alle Dateien (*)"
+            self,
+            self.tr("Export Plot File"),
+            "job.hpgl",
+            self.tr("HP-GL Plot File (*.hpgl *.plt);;All Files (*)"),
         )
         if not fpath:
             return
@@ -1005,9 +1252,13 @@ class MainWindow(QMainWindow):
         try:
             with open(fpath, "w", encoding="ascii") as f:
                 f.write(hpgl_content)
-            self.lbl_info.setText(f"HP-GL exportiert: {os.path.basename(fpath)}")
+            self.lbl_info.setText(self.tr("HP-GL exported: %1").replace("%1", os.path.basename(fpath)))
         except Exception as e:
-            QMessageBox.critical(self, "Fehler beim Export", f"HP-GL-Export fehlgeschlagen:\n{e}")
+            QMessageBox.critical(
+                self,
+                self.tr("Export Error"),
+                self.tr("HP-GL export failed:\n%1").replace("%1", str(e)),
+            )
 
     def export_plot_svg_dialog(self):
         """Export compiled polylines into a clean SVG file grouped by pen."""
@@ -1018,20 +1269,31 @@ class MainWindow(QMainWindow):
         ):
             self.recompile_plot_job()
         if not self._current_job or not self._current_job.layers:
-            QMessageBox.information(self, "Export nicht möglich", "Keine Pfade zum Exportieren vorhanden.")
+            QMessageBox.information(
+                self,
+                self.tr("Export Not Possible"),
+                self.tr("No paths available for export."),
+            )
             return
 
         fpath, _ = QFileDialog.getSaveFileName(
-            self, "Plot-Vektoren exportieren", "plot_output.svg", "SVG Vektordatei (*.svg);;Alle Dateien (*)"
+            self,
+            self.tr("Export Plot Vectors"),
+            "plot_output.svg",
+            self.tr("SVG Vector File (*.svg);;All Files (*)"),
         )
         if not fpath:
             return
 
         try:
             export_plot_job_to_svg(self._current_job, self.doc.page, fpath)
-            self.lbl_info.setText(f"Plot-SVG exportiert: {os.path.basename(fpath)}")
+            self.lbl_info.setText(self.tr("Plot SVG exported: %1").replace("%1", os.path.basename(fpath)))
         except Exception as e:
-            QMessageBox.critical(self, "Fehler beim Export", f"SVG-Export fehlgeschlagen:\n{e}")
+            QMessageBox.critical(
+                self,
+                self.tr("Export Error"),
+                self.tr("SVG export failed:\n%1").replace("%1", str(e)),
+            )
 
     def cleanup(self):
         """Clean up canvas and docks to ensure safe, warning-free Qt teardown."""
@@ -1044,6 +1306,9 @@ class MainWindow(QMainWindow):
             self.canvas.cleanup()
 
     def closeEvent(self, event):
+        if not self._confirm_abort_active_plot():
+            event.ignore()
+            return
         if not self._confirm_discard_unsaved_changes():
             event.ignore()
             return

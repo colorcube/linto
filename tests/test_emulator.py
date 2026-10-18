@@ -371,8 +371,8 @@ def test_tcp_streamer_large_buffer_backpressure():
     try:
         time.sleep(0.05)
         cmds = [
-            EmittedCommand(hpgl=f"PA {i * 10},{i * 10};\n", step_index=i, pen=1, is_draw=True, dist_mm=5.0)
-            for i in range(160)  # ~1.9 KB, well exceeding 1000 bytes
+            EmittedCommand(hpgl=f"PD;PA {i * 50},{(i % 2) * 2000};\n", step_index=i, pen=1, is_draw=True, dist_mm=50.0)
+            for i in range(160)  # ~2.5 KB, well exceeding 1000 bytes
         ]
 
         statuses: list[StreamerState] = []

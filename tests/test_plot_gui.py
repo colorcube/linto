@@ -424,5 +424,176 @@ def test_export_hpgl_uses_active_device_and_options(qapp, tmp_path, monkeypatch)
     win.cleanup()
 
 
+def test_plot_active_lock_and_close_prompt(qapp, tmp_path, monkeypatch):
+    """Verify UI lock, job protection, and close confirmation while a plot is streaming."""
+    from PySide6.QtWidgets import QMessageBox
+
+    doc = Document()
+    win = MainWindow(doc)
+    win.show()
+
+    svg_content = """<svg width="50mm" height="50mm" viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg">
+      <line x1="10" y1="10" x2="40" y2="40" stroke="#000000"/>
+    </svg>"""
+    test_svg = str(tmp_path / "lock_test.svg")
+    with open(test_svg, "w", encoding="utf-8") as f:
+        f.write(svg_content)
+    win.import_svg_file(test_svg)
+    win.switch_to_plot_mode()
+
+    # In Plot mode, layout editing actions must be disabled
+    assert not win.act_duplicate.isEnabled()
+    assert not win.act_delete.isEnabled()
+    assert not win.act_rotate_cw.isEnabled()
+    assert not win.act_flip_h.isEnabled()
+    for act in win._pen_actions:
+        assert not act.isEnabled()
+
+    # Simulate active streamer
+    class DummyStreamer:
+        def __init__(self):
+            self.active = True
+            self.aborted = False
+
+        def is_active(self):
+            return self.active
+
+        def is_user_paused(self):
+            return False
+
+        def abort(self):
+            self.aborted = True
+            self.active = False
+
+    dummy = DummyStreamer()
+    win.plot_dock._streamer = dummy
+    win.plot_dock.stream_active_changed.emit(True)
+
+    assert win.is_plot_active() is True
+    assert not win.act_mode_layout.isEnabled()
+    assert not win.act_new.isEnabled()
+    assert not win.act_open_project.isEnabled()
+    assert not win.act_import_svg.isEnabled()
+    assert not win.combo_active_device.isEnabled()
+
+    # Attempting to switch to layout mode while streaming is blocked
+    win.switch_to_layout_mode()
+    assert win.act_mode_plot.isChecked()
+
+    # Attempting to overwrite job mid-stream is ignored
+    orig_job = win.plot_dock.job
+    win.plot_dock.set_job(None)
+    assert win.plot_dock.job is orig_job
+
+    # Close event asks for confirmation; declining keeps window open and stream running
+    win._force_abort_prompt = True
+    monkeypatch.setattr(
+        QMessageBox, "question", lambda *args, **kwargs: QMessageBox.StandardButton.No
+    )
+    assert win.close() is False
+    assert win.isVisible()
+    assert dummy.aborted is False
+
+    # Accepting abort confirmation aborts streamer
+    monkeypatch.setattr(
+        QMessageBox, "question", lambda *args, **kwargs: QMessageBox.StandardButton.Yes
+    )
+    assert win._confirm_abort_active_plot() is True
+    assert dummy.aborted is True
+
+    win.plot_dock._on_stream_finished(False, "Abgebrochen")
+    assert win.act_mode_layout.isEnabled()
+    win.close()
+    win.cleanup()
+
+
+def test_plot_dock_emitter_sync_and_preflight_confirm(qapp, tmp_path, monkeypatch):
+    """Verify rotation/axes sync back to ConfiguredDevice and pre-flight confirmation dialog."""
+    from PySide6.QtWidgets import QMessageBox
+
+    doc = Document()
+    win = MainWindow(doc)
+    win.show()
+
+    svg_content = """<svg width="40mm" height="40mm" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+      <line x1="5" y1="5" x2="35" y2="35" stroke="#000000"/>
+    </svg>"""
+    test_svg = str(tmp_path / "sync_test.svg")
+    with open(test_svg, "w", encoding="utf-8") as f:
+        f.write(svg_content)
+    win.import_svg_file(test_svg)
+    win.switch_to_plot_mode()
+
+    dock = win.plot_dock
+    dev = win.device_manager.get_active_device()
+    assert dev is not None
+
+    # Changing rotation and axis checkboxes in plot_dock updates active ConfiguredDevice
+    dock.combo_rotation.setCurrentIndex(dock.combo_rotation.findData(180))
+    dock.chk_invert_x.setChecked(True)
+    assert dev.rotation == 180
+    assert dev.invert_x is True
+
+    # Test pre-flight confirmation dialog cancellation
+    dock._force_plot_confirm = True
+    captured_msg = []
+
+    def fake_question(parent, title, text, *args, **kwargs):
+        captured_msg.append((title, text))
+        return QMessageBox.StandardButton.Cancel
+
+    monkeypatch.setattr(QMessageBox, "question", fake_question)
+    assert dock._confirm_start_plot("/dev/ttyUSB0", dev.name) is False
+    assert len(captured_msg) == 1
+    assert dev.name in captured_msg[0][1]
+    assert "SP1" in captured_msg[0][1]
+
+    win.close()
+    win.cleanup()
+
+
+def test_output_mode_preview_updates_on_delete_and_new_document(qapp, tmp_path):
+    """Verify deleting objects or creating a new document in Output mode refreshes plot preview and resets page/pens."""
+    doc = Document()
+    win = MainWindow(doc)
+    win.show()
+
+    svg_content = """<svg width="40mm" height="40mm" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+      <line x1="5" y1="5" x2="35" y2="35" stroke="#000000"/>
+    </svg>"""
+    test_svg = str(tmp_path / "preview_refresh.svg")
+    with open(test_svg, "w", encoding="utf-8") as f:
+        f.write(svg_content)
+    win.import_svg_file(test_svg)
+    win.switch_to_plot_mode()
+
+    assert win.plot_dock.job is not None
+    assert len(win.plot_dock.job.steps) > 0
+
+    # Delete item via DeleteItemsCommand / _on_item_structure_changed while in Output mode
+    win.canvas._item_map[doc.items[0].item_id].setSelected(True)
+    win.delete_selected_items()
+    assert len(doc.items) == 0
+    assert len(win.plot_dock.job.steps) == 0
+
+    # Undo restores item and recompiles plot job in Output mode
+    win.undo_stack.undo()
+    assert len(doc.items) == 1
+    assert len(win.plot_dock.job.steps) > 0
+
+    # Modify page preset and pen speed, then call new_document()
+    doc.page.apply_preset("A4", "portrait")
+    doc.pens[0].speed_cm_s = 12.0
+    win.new_document()
+    assert len(doc.items) == 0
+    assert doc.page.preset == "A3"
+    assert doc.pens[0].speed_cm_s != 12.0
+    assert len(win.plot_dock.job.steps) == 0
+
+    win.close()
+    win.cleanup()
+
+
+
 
 

@@ -92,13 +92,13 @@ class PlotSimulationBar(QWidget):
         # Rewind button
         self.btn_rewind = QPushButton()
         self.btn_rewind.setIcon(get_icon("skip-back", size=16, color="#f0f0f0"))
-        self.btn_rewind.setToolTip("Zum Anfang springen")
+        self.btn_rewind.setToolTip(self.tr("Jump to start"))
         self.btn_rewind.setFixedWidth(32)
         self.btn_rewind.clicked.connect(self.rewind)
         layout.addWidget(self.btn_rewind)
 
         # Play/Pause button
-        self.btn_play = QPushButton("Abspielen")
+        self.btn_play = QPushButton(self.tr("Play"))
         self.btn_play.setIcon(get_icon("play", size=16, color="#f0f0f0"))
         self.btn_play.setFixedWidth(100)
         self.btn_play.clicked.connect(self.toggle_play)
@@ -107,7 +107,7 @@ class PlotSimulationBar(QWidget):
         # Forward button
         self.btn_forward = QPushButton()
         self.btn_forward.setIcon(get_icon("skip-forward", size=16, color="#f0f0f0"))
-        self.btn_forward.setToolTip("Zum Ende springen")
+        self.btn_forward.setToolTip(self.tr("Jump to end"))
         self.btn_forward.setFixedWidth(32)
         self.btn_forward.clicked.connect(self.jump_to_end)
         layout.addWidget(self.btn_forward)
@@ -128,12 +128,14 @@ class PlotSimulationBar(QWidget):
         layout.addWidget(self.slider, 1)
 
         # Step and progress label
-        self.lbl_progress = QLabel("Schritt: 0 / 0 (100 %)")
+        self.lbl_progress = QLabel(
+            self.tr("Step: %1 / %2 (%3 %)").replace("%1", "0").replace("%2", "0").replace("%3", "100")
+        )
         self.lbl_progress.setMinimumWidth(160)
         layout.addWidget(self.lbl_progress)
 
         # Active pen label
-        self.lbl_pen = QLabel("Stift: -")
+        self.lbl_pen = QLabel(self.tr("Pen: -"))
         self.lbl_pen.setMinimumWidth(120)
         layout.addWidget(self.lbl_pen)
 
@@ -183,13 +185,13 @@ class PlotSimulationBar(QWidget):
             self.slider.setValue(0)
         self.is_playing = True
         self.btn_play.setIcon(get_icon("pause", size=16, color="#f0f0f0"))
-        self.btn_play.setText("Pause")
+        self.btn_play.setText(self.tr("Pause"))
         self._timer.start()
 
     def pause(self):
         self.is_playing = False
         self.btn_play.setIcon(get_icon("play", size=16, color="#f0f0f0"))
-        self.btn_play.setText("Abspielen")
+        self.btn_play.setText(self.tr("Play"))
         self._timer.stop()
 
     def _on_speed_changed(self, index: int):
@@ -218,15 +220,20 @@ class PlotSimulationBar(QWidget):
     def _update_labels(self):
         if self.total_steps > 0:
             pct = int((self.current_step / float(self.total_steps)) * 100.0)
-            self.lbl_progress.setText(f"Schritt: {self.current_step} / {self.total_steps} ({pct} %)")
+            self.lbl_progress.setText(
+                self.tr("Step: %1 / %2 (%3 %)")
+                .replace("%1", str(self.current_step))
+                .replace("%2", str(self.total_steps))
+                .replace("%3", str(pct))
+            )
         else:
-            self.lbl_progress.setText("Keine Pfade vorhanden")
+            self.lbl_progress.setText(self.tr("No paths available"))
 
         if self.job and self.current_step > 0 and self.current_step <= len(self.job.steps):
             active_step = self.job.steps[self.current_step - 1]
             layer = self.job.layers.get(active_step.pen_id)
-            pen_name = layer.pen.name if layer else f"Stift {active_step.pen_id}"
-            action_desc = "Zeichnen" if active_step.action == "DRAW" else "Leerfahrt"
+            pen_name = layer.pen.name if layer else self.tr("Pen %1").replace("%1", str(active_step.pen_id))
+            action_desc = self.tr("Draw") if active_step.action == "DRAW" else self.tr("Travel")
             self.lbl_pen.setText(f"{pen_name} ({action_desc})")
         else:
-            self.lbl_pen.setText("Stift: -")
+            self.lbl_pen.setText(self.tr("Pen: -"))
