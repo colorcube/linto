@@ -170,7 +170,7 @@ class HPGLEmitter:
 
             # Draw each polyline
             for poly in lines:
-                if len(poly) < 2:
+                if len(poly) < 1:
                     continue
 
                 # Lift pen and travel to start point (PU)
@@ -186,6 +186,19 @@ class HPGLEmitter:
                     )
                 )
                 global_step_idx += 1
+
+                if len(poly) == 1:
+                    commands.append(
+                        EmittedCommand(
+                            hpgl=f"PD{u_x0},{u_y0};\r\n",
+                            step_index=global_step_idx,
+                            pen=current_pen,
+                            is_draw=True,
+                            dist_mm=0.0,
+                        )
+                    )
+                    global_step_idx += 1
+                    continue
 
                 # Segment into coordinate chains (PD x1,y1, x2,y2, ...)
                 remaining_pts = poly[1:]

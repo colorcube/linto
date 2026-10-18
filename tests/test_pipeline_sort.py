@@ -59,7 +59,7 @@ def test_sort_random_order():
 
 
 def test_sort_no_reverse():
-    """Verify allow_reverse=False preserves original line directions."""
+    """Verify allow_reverse=False preserves original line directions both with and without 2-opt."""
     l0 = np.array([[0.0, 0.0], [100.0, 0.0]])
     l1 = np.array([[0.0, 10.0], [100.0, 10.0]])
     opt_lines, travels, travel_mm, _ = sort_and_optimize_lines(
@@ -68,6 +68,21 @@ def test_sort_no_reverse():
     assert np.allclose(opt_lines[0][0], [0.0, 0.0])
     assert np.allclose(opt_lines[1][0], [0.0, 10.0])
     assert travel_mm > 100.0
+
+    # Also test with >= 4 lines and use_2opt=True where 2-opt would otherwise flip line directions
+    lines_4 = [
+        np.array([[0.0, 0.0], [10.0, 0.0]]),
+        np.array([[30.0, 0.0], [20.0, 0.0]]),
+        np.array([[20.0, 0.0], [10.0, 0.0]]),
+        np.array([[30.0, 0.0], [40.0, 0.0]]),
+    ]
+    orig_Copy = [(float(l[0, 0]), float(l[-1, 0])) for l in lines_4]
+    opt_4, _, _, _ = sort_and_optimize_lines(
+        lines_4, start_pos=(0.0, 0.0), allow_reverse=False, use_2opt=True
+    )
+    # Every line in opt_4 must still have its original (start_x, end_x) direction, never reversed
+    opt_dirs = [(float(l[0, 0]), float(l[-1, 0])) for l in opt_4]
+    assert sorted(opt_dirs) == sorted(orig_Copy)
 
 
 def test_2opt_uncrosses_paths_and_maintains_endpoints():

@@ -113,11 +113,14 @@ def compile_document_to_plot_job(
                 # Fallback to default pen 1
                 pen = pens_dict.get(1, LogicalPen(pen_id=1, name="Standard", color_hex="#000000"))
 
-            # Skip disabled pens
+            # Skip disabled pens (both source pen and remapped target pen)
             if not pen.enabled:
                 continue
 
             eff_id = pen.effective_pen_id
+            target_pen = pens_dict.get(eff_id)
+            if target_pen is not None and not target_pen.enabled:
+                continue
             pts = path.to_polyline(
                 tolerance_mm=cfg.flatten_tolerance_mm,
                 transform=item.transform,

@@ -52,7 +52,8 @@ class SerialStreamer:
         self.write_timeout = write_timeout
         self.end_settle_delay_s = end_settle_delay_s
 
-        self.state = StreamerState.IDLE
+        self._lock = threading.RLock()
+        self._state = StreamerState.IDLE
         self._thread: Optional[threading.Thread] = None
 
         self._pause_event = threading.Event()
@@ -63,15 +64,24 @@ class SerialStreamer:
         self._serial: Optional[serial.Serial] = None
         self._socket: Optional[socket.socket] = None
 
-        self._lock = threading.Lock()
+    @property
+    def state(self) -> StreamerState:
+        with self._lock:
+            return self._state
+
+    @state.setter
+    def state(self, value: StreamerState) -> None:
+        with self._lock:
+            self._state = value
 
     def is_active(self) -> bool:
-        return self.state in (
-            StreamerState.CONNECTING,
-            StreamerState.STREAMING,
-            StreamerState.PAUSED,
-            StreamerState.ABORTING,
-        )
+        with self._lock:
+            return self._state in (
+                StreamerState.CONNECTING,
+                StreamerState.STREAMING,
+                StreamerState.PAUSED,
+                StreamerState.ABORTING,
+            )
 
     def start_stream(
         self,
@@ -96,7 +106,7 @@ class SerialStreamer:
             if self.is_active():
                 return False
 
-            self.state = StreamerState.CONNECTING
+            self._state = StreamerState.CONNECTING
             self._abort_requested = False
             self._xoff_paused = False
             self._pause_event.set()
@@ -134,27 +144,34 @@ class SerialStreamer:
 
     def pause(self) -> None:
         """Pause the current plot transmission (manual user pause)."""
+        should_emit = False
         with self._lock:
             if self.is_active() and not self.is_user_paused():
-                self.state = StreamerState.PAUSED
+                self._state = StreamerState.PAUSED
                 self._pause_event.clear()
-                self._emit_status(StreamerState.PAUSED, "Plot pausiert")
+                should_emit = True
+        if should_emit:
+            self._emit_status(StreamerState.PAUSED, "Plot pausiert")
 
     def resume(self) -> None:
         """Resume transmission from manual user pause."""
+        new_state: Optional[StreamerState] = None
+        msg = ""
         with self._lock:
             if self.is_user_paused():
                 self._pause_event.set()
                 new_state = StreamerState.PAUSED if self._xoff_paused else StreamerState.STREAMING
+                self._state = new_state
                 msg = "Plotter-Puffer voll (XOFF) – warte auf Plotter..." if self._xoff_paused else "Plot fortgesetzt"
-                self._emit_status(new_state, msg)
+        if new_state is not None:
+            self._emit_status(new_state, msg)
 
     def abort(self) -> None:
         """Immediately abort current plot job, flush host buffer, and lift pen."""
         with self._lock:
             if not self.is_active():
                 return
-            self.state = StreamerState.ABORTING
+            self._state = StreamerState.ABORTING
             self._abort_requested = True
             self._pause_event.set()  # Wake up if paused
             if self._serial and hasattr(self._serial, "reset_output_buffer"):
@@ -169,9 +186,11 @@ class SerialStreamer:
                     pass
 
     def _emit_status(self, state: StreamerState, msg: str) -> None:
-        self.state = state
-        if self.on_status:
-            self.on_status(state, msg)
+        with self._lock:
+            self._state = state
+            cb = self.on_status
+        if cb:
+            cb(state, msg)
 
     def _send_raw(self, data: bytes) -> bool:
         """Send raw bytes, retrying cleanly if hardware CTS blocks longer than write_timeout.
@@ -440,14 +459,17 @@ class SerialStreamer:
                         # Synchronize with plotter buffer via OA; before prompting user to swap pens
                         if sync_with_oa:
                             self._sync_plotter_ready(timeout_s=5.0)
+                        should_pause_pen = False
                         with self._lock:
                             if not self._abort_requested:
-                                self.state = StreamerState.PAUSED
+                                self._state = StreamerState.PAUSED
                                 self._pause_event.clear()
-                                self._emit_status(
-                                    StreamerState.PAUSED,
-                                    f"Stiftwechsel auf SP{cmd.pen} – Bitte Stift wechseln und Fortsetzen klicken",
-                                )
+                                should_pause_pen = True
+                        if should_pause_pen:
+                            self._emit_status(
+                                StreamerState.PAUSED,
+                                f"Stiftwechsel auf SP{cmd.pen} – Bitte Stift wechseln und Fortsetzen klicken",
+                            )
                     active_pen = cmd.pen
 
                 # Wait if paused (manual or pen-change pause)

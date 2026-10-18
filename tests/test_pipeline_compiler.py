@@ -59,6 +59,13 @@ def test_compile_pen_disabled_and_remapping():
     # Both lines now in layer 1
     assert len(job_mono.layers[1].lines) == 2
 
+    # If target pen 1 is disabled while pen 2 is enabled and mapped to pen 1, nothing should be plotted
+    pen1 = doc.get_pen(1)
+    assert pen1 is not None
+    pen1.enabled = False
+    job_target_disabled = compile_document_to_plot_job(doc)
+    assert len(job_target_disabled.layers) == 0
+
 
 def test_compile_overhang_warning_and_clipping():
     doc = Document()

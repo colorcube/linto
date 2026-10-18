@@ -119,3 +119,17 @@ def test_load_classic_examples():
         item_w = load_hpgl(str(walker))
         assert len(item_w.paths) > 400
 
+
+def test_hpgl_ip_sc_ro_er_and_dots():
+    """Verify IP/SC user-unit scaling, RO rotation, ER relative rectangle, and PD;PU single-point dots."""
+    # P1=(0,0), P2=(4000,4000) -> 100mm x 100mm; SC 0,100,0,100 -> 1 user unit = 1 mm!
+    # ER 50,25 draws a 50mm x 25mm relative rectangle; RO90 rotates; PD;PU draws a dot
+    hpgl = "IN;IP0,0,4000,4000;SC0,100,0,100;SP1;PU0,0;ER50,25;PU10,10;PD;PU;RO90;PU0,0;PD0,20;PU;"
+    item = load_hpgl(hpgl, name="ScaledHPGL")
+    assert len(item.paths) == 3
+    assert item.original_bounds is not None
+    # Width spans from -20mm (from RO90 of (0,20) -> (-20,0)) to +50mm (from ER50,25) = 70mm
+    assert math.isclose(item.original_bounds.width, 70.0, abs_tol=1e-3)
+    assert math.isclose(item.original_bounds.height, 25.0, abs_tol=1e-3)
+
+

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 import math
-from typing import List, Tuple, Optional
+from typing import List, Tuple
 import numpy as np
 
 
@@ -91,9 +91,11 @@ def optimize_paths_2opt(
     total_travel: float,
     start_pos: Tuple[float, float] = (0.0, 0.0),
     max_passes: int = 5,
+    allow_reverse: bool = True,
 ) -> Tuple[List[np.ndarray], List[Tuple[Tuple[float, float], Tuple[float, float]]], float]:
     """
     Refine line order using vectorized 2-opt swaps to resolve crossing travel lines.
+    When allow_reverse=False, individual line directions are strictly preserved.
     """
     n = len(lines)
     if n < 4:
@@ -110,39 +112,61 @@ def optimize_paths_2opt(
         improved = False
         passes += 1
 
-        for i in range(1, n - 1):
-            p_prev_end = ends[i - 1]
-            p_i_start = starts[i]
-            d_i = float(np.hypot(p_i_start[0] - p_prev_end[0], p_i_start[1] - p_prev_end[1]))
+        if allow_reverse:
+            for i in range(1, n - 1):
+                p_prev_end = ends[i - 1]
+                p_i_start = starts[i]
+                d_i = float(np.hypot(p_i_start[0] - p_prev_end[0], p_i_start[1] - p_prev_end[1]))
 
-            # Vectorized candidate j in range(i + 1, n)
-            j_ends = ends[i + 1 : n]
-            new_d_i = np.hypot(j_ends[:, 0] - p_prev_end[0], j_ends[:, 1] - p_prev_end[1])
+                # Vectorized candidate j in range(i + 1, n)
+                j_ends = ends[i + 1 : n]
+                new_d_i = np.hypot(j_ends[:, 0] - p_prev_end[0], j_ends[:, 1] - p_prev_end[1])
 
-            d_j = np.zeros(n - (i + 1), dtype=float)
-            new_d_j = np.zeros(n - (i + 1), dtype=float)
-            if i + 2 < n:
-                next_starts = starts[i + 2 : n]
-                d_j[:-1] = np.hypot(
-                    next_starts[:, 0] - j_ends[:-1, 0],
-                    next_starts[:, 1] - j_ends[:-1, 1],
+                d_j = np.zeros(n - (i + 1), dtype=float)
+                new_d_j = np.zeros(n - (i + 1), dtype=float)
+                if i + 2 < n:
+                    next_starts = starts[i + 2 : n]
+                    d_j[:-1] = np.hypot(
+                        next_starts[:, 0] - j_ends[:-1, 0],
+                        next_starts[:, 1] - j_ends[:-1, 1],
+                    )
+                    new_d_j[:-1] = np.hypot(
+                        next_starts[:, 0] - p_i_start[0],
+                        next_starts[:, 1] - p_i_start[1],
+                    )
+
+                gains = (d_i + d_j) - (new_d_i + new_d_j)
+                best_local = int(np.argmax(gains))
+                if gains[best_local] > 1e-4:
+                    j = i + 1 + best_local
+                    current_lines[i : j + 1] = [l[::-1] for l in reversed(current_lines[i : j + 1])]
+                    # Flip and swap starts/ends in-place for slice [i : j + 1]
+                    new_starts = ends[i : j + 1][::-1].copy()
+                    new_ends = starts[i : j + 1][::-1].copy()
+                    starts[i : j + 1] = new_starts
+                    ends[i : j + 1] = new_ends
+                    improved = True
+        else:
+            # Direction-preserving adjacent swap refinement
+            for i in range(n - 1):
+                prev_pt = np.asarray(start_pos, dtype=float) if i == 0 else ends[i - 1]
+                old_cost = (
+                    float(np.hypot(starts[i, 0] - prev_pt[0], starts[i, 1] - prev_pt[1]))
+                    + float(np.hypot(starts[i + 1, 0] - ends[i, 0], starts[i + 1, 1] - ends[i, 1]))
                 )
-                new_d_j[:-1] = np.hypot(
-                    next_starts[:, 0] - p_i_start[0],
-                    next_starts[:, 1] - p_i_start[1],
+                new_cost = (
+                    float(np.hypot(starts[i + 1, 0] - prev_pt[0], starts[i + 1, 1] - prev_pt[1]))
+                    + float(np.hypot(starts[i, 0] - ends[i + 1, 0], starts[i, 1] - ends[i + 1, 1]))
                 )
-
-            gains = (d_i + d_j) - (new_d_i + new_d_j)
-            best_local = int(np.argmax(gains))
-            if gains[best_local] > 1e-4:
-                j = i + 1 + best_local
-                current_lines[i : j + 1] = [l[::-1] for l in reversed(current_lines[i : j + 1])]
-                # Flip and swap starts/ends in-place for slice [i : j + 1]
-                new_starts = ends[i : j + 1][::-1].copy()
-                new_ends = starts[i : j + 1][::-1].copy()
-                starts[i : j + 1] = new_starts
-                ends[i : j + 1] = new_ends
-                improved = True
+                if i + 2 < n:
+                    next_pt = starts[i + 2]
+                    old_cost += float(np.hypot(next_pt[0] - ends[i + 1, 0], next_pt[1] - ends[i + 1, 1]))
+                    new_cost += float(np.hypot(next_pt[0] - ends[i, 0], next_pt[1] - ends[i, 1]))
+                if old_cost - new_cost > 1e-4:
+                    current_lines[i], current_lines[i + 1] = current_lines[i + 1], current_lines[i]
+                    starts[[i, i + 1]] = starts[[i + 1, i]]
+                    ends[[i, i + 1]] = ends[[i + 1, i]]
+                    improved = True
 
     # Rebuild travels
     rebuilt_travels: List[Tuple[Tuple[float, float], Tuple[float, float]]] = []
@@ -178,7 +202,7 @@ def sort_and_optimize_lines(
 
     if use_2opt and len(sorted_lines) > 3:
         sorted_lines, travels, final_travel = optimize_paths_2opt(
-            sorted_lines, travels, greedy_travel, start_pos=start_pos
+            sorted_lines, travels, greedy_travel, start_pos=start_pos, allow_reverse=allow_reverse
         )
     else:
         final_travel = greedy_travel

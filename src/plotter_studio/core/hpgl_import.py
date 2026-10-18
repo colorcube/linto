@@ -48,7 +48,9 @@ NUMERIC_COMMANDS = {
     "AR",
     "CI",
     "EA",
+    "ER",
     "RA",
+    "RR",
     "SI",
     "SL",
     "DI",
@@ -250,6 +252,17 @@ class PlotState:
     char_slant: float = 0.0
     text_dir_x: float = 1.0
     text_dir_y: float = 0.0
+    p1_x: float = 0.0
+    p1_y: float = 0.0
+    p2_x: float = 10000.0
+    p2_y: float = 7000.0
+    sc_active: bool = False
+    sc_xmin: float = 0.0
+    sc_xmax: float = 10000.0
+    sc_ymin: float = 0.0
+    sc_ymax: float = 7000.0
+    sc_type: int = 0
+    rotation_deg: int = 0
 
 
 class HPGLParser:
@@ -258,6 +271,54 @@ class HPGLParser:
     def __init__(self, source_unit_mm: float = 0.025) -> None:
         self.source_unit_mm = source_unit_mm
         self.tokenizer = HPGLTokenizer()
+
+    def _scale_factors_pu(self, state: PlotState) -> Tuple[float, float]:
+        """Return user-unit to plotter-unit scale factors (sx, sy)."""
+        if not state.sc_active:
+            return (1.0, 1.0)
+        if state.sc_type == 2:
+            return (state.sc_xmax, state.sc_ymax)
+        dx_u = state.sc_xmax - state.sc_xmin
+        dy_u = state.sc_ymax - state.sc_ymin
+        sx = (state.p2_x - state.p1_x) / dx_u if abs(dx_u) > 1e-12 else 1.0
+        sy = (state.p2_y - state.p1_y) / dy_u if abs(dy_u) > 1e-12 else 1.0
+        if state.sc_type == 1:
+            s = min(abs(sx), abs(sy))
+            sx = math.copysign(s, sx)
+            sy = math.copysign(s, sy)
+        return (sx, sy)
+
+    def _to_mm(self, x: float, y: float, state: PlotState, *, relative: bool = False) -> Tuple[float, float]:
+        """Convert HP-GL user/plotter coordinates into rotated millimeter coordinates."""
+        if state.sc_active:
+            sx, sy = self._scale_factors_pu(state)
+            if relative:
+                pu_x = x * sx
+                pu_y = y * sy
+            elif state.sc_type == 1:
+                dx_u = state.sc_xmax - state.sc_xmin
+                dy_u = state.sc_ymax - state.sc_ymin
+                span_x = (state.p2_x - state.p1_x) - dx_u * sx
+                span_y = (state.p2_y - state.p1_y) - dy_u * sy
+                pu_x = state.p1_x + span_x * 0.5 + (x - state.sc_xmin) * sx
+                pu_y = state.p1_y + span_y * 0.5 + (y - state.sc_ymin) * sy
+            else:
+                pu_x = state.p1_x + (x - state.sc_xmin) * sx
+                pu_y = state.p1_y + (y - state.sc_ymin) * sy
+        else:
+            pu_x, pu_y = x, y
+
+        mm_x = pu_x * self.source_unit_mm
+        mm_y = pu_y * self.source_unit_mm
+
+        rot = state.rotation_deg % 360
+        if rot == 90:
+            mm_x, mm_y = -mm_y, mm_x
+        elif rot == 180:
+            mm_x, mm_y = -mm_x, -mm_y
+        elif rot == 270:
+            mm_x, mm_y = mm_y, -mm_x
+        return (mm_x, mm_y)
 
     def parse(self, text: str) -> List[HPGLPolyline]:
         state = PlotState()
@@ -268,6 +329,9 @@ class HPGLParser:
             nonlocal current_points
             if len(current_points) >= 2:
                 polylines.append(HPGLPolyline(points=list(current_points), pen=max(1, min(8, state.pen))))
+            elif len(current_points) == 1:
+                pt = current_points[0]
+                polylines.append(HPGLPolyline(points=[pt, pt], pen=max(1, min(8, state.pen))))
             current_points = []
 
         for command in self.tokenizer.tokenize(text):
@@ -276,7 +340,49 @@ class HPGLParser:
 
             if name in {"IN", "DF"}:
                 flush_current()
-                state = PlotState(pen=state.pen if name == "DF" else 1)
+                if name == "DF":
+                    state = PlotState(
+                        pen=state.pen,
+                        p1_x=state.p1_x,
+                        p1_y=state.p1_y,
+                        p2_x=state.p2_x,
+                        p2_y=state.p2_y,
+                        rotation_deg=state.rotation_deg,
+                    )
+                else:
+                    state = PlotState()
+                continue
+
+            if name == "IP":
+                if len(args) >= 4:
+                    state.p1_x, state.p1_y, state.p2_x, state.p2_y = args[0], args[1], args[2], args[3]
+                elif len(args) >= 2:
+                    dx = state.p2_x - state.p1_x
+                    dy = state.p2_y - state.p1_y
+                    state.p1_x, state.p1_y = args[0], args[1]
+                    state.p2_x, state.p2_y = state.p1_x + dx, state.p1_y + dy
+                else:
+                    state.p1_x, state.p1_y, state.p2_x, state.p2_y = 0.0, 0.0, 10000.0, 7000.0
+                continue
+
+            if name == "SC":
+                if len(args) >= 4:
+                    state.sc_active = True
+                    state.sc_xmin, state.sc_xmax, state.sc_ymin, state.sc_ymax = args[0], args[1], args[2], args[3]
+                    state.sc_type = int(round(args[4])) if len(args) >= 5 else 0
+                else:
+                    state.sc_active = False
+                    state.sc_type = 0
+                continue
+
+            if name == "RO":
+                flush_current()
+                if args:
+                    rot_val = int(round(args[0])) % 360
+                    if rot_val in (0, 90, 180, 270):
+                        state.rotation_deg = rot_val
+                else:
+                    state.rotation_deg = 0
                 continue
 
             if name == "SP":
@@ -312,11 +418,12 @@ class HPGLParser:
                 continue
 
             if name in {"AA", "AR"} and len(args) >= 3:
-                center_x = args[0] * self.source_unit_mm
-                center_y = args[1] * self.source_unit_mm
                 if name == "AR":
-                    center_x += state.x_mm
-                    center_y += state.y_mm
+                    dx, dy = self._to_mm(args[0], args[1], state, relative=True)
+                    center_x = state.x_mm + dx
+                    center_y = state.y_mm + dy
+                else:
+                    center_x, center_y = self._to_mm(args[0], args[1], state, relative=False)
                 sweep_deg = args[2]
                 chord_deg = abs(args[3]) if len(args) >= 4 else 5.0
                 arc_points = self._approximate_arc(
@@ -334,7 +441,9 @@ class HPGLParser:
 
             if name == "CI" and args:
                 flush_current()
-                radius_mm = abs(args[0]) * self.source_unit_mm
+                sx, sy = self._scale_factors_pu(state)
+                scale_r = 0.5 * (abs(sx) + abs(sy)) if state.sc_active else 1.0
+                radius_mm = abs(args[0]) * scale_r * self.source_unit_mm
                 chord_deg = abs(args[1]) if len(args) >= 2 else 5.0
                 circle = self._approximate_circle(
                     (state.x_mm, state.y_mm), radius_mm, max(chord_deg, 1.0)
@@ -342,10 +451,14 @@ class HPGLParser:
                 polylines.append(HPGLPolyline(points=circle, pen=max(1, min(8, state.pen))))
                 continue
 
-            if name in {"EA", "RA"} and len(args) >= 2:
+            if name in {"EA", "RA", "ER", "RR"} and len(args) >= 2:
                 flush_current()
-                corner_x = args[0] * self.source_unit_mm
-                corner_y = args[1] * self.source_unit_mm
+                if name in {"ER", "RR"}:
+                    dx, dy = self._to_mm(args[0], args[1], state, relative=True)
+                    corner_x = state.x_mm + dx
+                    corner_y = state.y_mm + dy
+                else:
+                    corner_x, corner_y = self._to_mm(args[0], args[1], state, relative=False)
                 rect = [
                     (state.x_mm, state.y_mm),
                     (corner_x, state.y_mm),
@@ -354,7 +467,7 @@ class HPGLParser:
                     (state.x_mm, state.y_mm),
                 ]
                 polylines.append(HPGLPolyline(points=rect, pen=max(1, min(8, state.pen))))
-                if name == "RA":
+                if name in {"RA", "RR"}:
                     polylines.extend(
                         self._hatch_rectangle(
                             state.x_mm, state.y_mm, corner_x, corner_y, max(1, min(8, state.pen))
@@ -414,8 +527,7 @@ class HPGLParser:
         if state.pen_down and not current_points:
             current_points.append((state.x_mm, state.y_mm))
         for index in range(0, len(args) - 1, 2):
-            dx = args[index] * self.source_unit_mm
-            dy = args[index + 1] * self.source_unit_mm
+            dx, dy = self._to_mm(args[index], args[index + 1], state, relative=relative)
             if relative:
                 state.x_mm += dx
                 state.y_mm += dy
@@ -700,6 +812,8 @@ def load_hpgl(
             p1 = norm_pts[i + 1]
             if math.hypot(p1[0] - p0[0], p1[1] - p0[1]) > 1e-9:
                 segs.append(LineSegment(start=p0, end=p1))
+        if not segs and len(norm_pts) >= 2:
+            segs.append(LineSegment(start=norm_pts[0], end=norm_pts[0]))
         if not segs:
             continue
         pts_array = np.asarray(norm_pts, dtype=np.float64)
