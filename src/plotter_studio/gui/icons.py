@@ -160,6 +160,19 @@ SVG_TEMPLATES: Dict[str, str] = {
         '<rect x="6" y="6" width="12" height="12" rx="1" fill="none" stroke="{color}" stroke-width="2"/>'
         '</svg>'
     ),
+    "fit-sheet": (
+        '<svg viewBox="0 0 24 24" width="24" height="24">'
+        '<rect x="2" y="2" width="20" height="20" rx="2" fill="none" stroke="{color}" stroke-width="1.5" stroke-dasharray="3 2"/>'
+        '<rect x="6" y="6" width="12" height="12" rx="1" fill="none" stroke="{color}" stroke-width="2"/>'
+        '</svg>'
+    ),
+    "fit-plottable": (
+        '<svg viewBox="0 0 24 24" width="24" height="24">'
+        '<rect x="2" y="2" width="20" height="20" rx="1" fill="none" stroke="{color}" stroke-width="1.2" stroke-dasharray="2 2" stroke-opacity="0.6"/>'
+        '<rect x="5" y="5" width="14" height="14" rx="1" fill="none" stroke="{color}" stroke-width="1.5"/>'
+        '<rect x="8" y="8" width="8" height="8" rx="0.5" fill="{color}" fill-opacity="0.2" stroke="{color}" stroke-width="1.5"/>'
+        '</svg>'
+    ),
     "original-size": (
         '<svg viewBox="0 0 24 24" width="24" height="24">'
         '<rect x="3" y="3" width="18" height="18" rx="2" fill="none" stroke="{color}" stroke-width="1.5"/>'

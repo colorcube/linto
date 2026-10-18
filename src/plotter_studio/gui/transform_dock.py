@@ -302,7 +302,49 @@ class TransformDockWidget(QDockWidget):
         # 5. Group "Scale"
         self.grp_scaling = SectionGroup(self.tr("Scale"))
 
-        # Row 1: Zoom
+        # Row 1: Fit to Printable Area
+        fit_plottable_row = QHBoxLayout()
+        fit_plottable_row.setContentsMargins(0, 0, 0, 0)
+        fit_plottable_row.setSpacing(6)
+
+        self.btn_fit_plottable = QPushButton(self.tr("Fit to Printable Area"))
+        self.btn_fit_plottable.setIcon(get_icon("fit-plottable", size=16))
+        self.btn_fit_plottable.setToolTip(self.tr("Fit proportionally to printable area with margin"))
+        self.btn_fit_plottable.clicked.connect(lambda: self.fit_to_plottable())
+        fit_plottable_row.addWidget(self.btn_fit_plottable)
+        fit_plottable_row.addStretch()
+        self.grp_scaling.addLayout(fit_plottable_row)
+
+        # Row 2: Fit to Sheet & Margin
+        fit_sheet_row = QHBoxLayout()
+        fit_sheet_row.setContentsMargins(0, 0, 0, 0)
+        fit_sheet_row.setSpacing(6)
+
+        self.btn_fit_sheet = QPushButton(self.tr("Fit to Sheet"))
+        self.btn_fit_sheet.setIcon(get_icon("fit-page", size=16))
+        self.btn_fit_sheet.setToolTip(self.tr("Fit proportionally to sheet with margin"))
+        self.btn_fit_sheet.clicked.connect(lambda: self.fit_to_sheet())
+        self.btn_fit = self.btn_fit_sheet  # Backward compatibility alias
+        fit_sheet_row.addWidget(self.btn_fit_sheet)
+
+        lbl_margin = QLabel(self.tr("Margin:"))
+        lbl_margin.setStyleSheet("font-weight: 500; color: #4b5563;")
+        lbl_margin.setToolTip(self.tr("Safety margin to sheet edges or printable area when fitting"))
+        fit_sheet_row.addWidget(lbl_margin)
+
+        self.spin_fit_margin = QDoubleSpinBox()
+        self.spin_fit_margin.setAlignment(Qt.AlignLeft)
+        self.spin_fit_margin.setRange(0.0, 500.0)
+        self.spin_fit_margin.setDecimals(1)
+        self.spin_fit_margin.setValue(15.0)
+        self.spin_fit_margin.setSuffix(" mm")
+        self.spin_fit_margin.setToolTip(self.tr("Safety margin to sheet edges or printable area when fitting in mm"))
+        fit_sheet_row.addWidget(self.spin_fit_margin)
+
+        fit_sheet_row.addStretch()
+        self.grp_scaling.addLayout(fit_sheet_row)
+
+        # Row 3: Zoom
         zoom_row = QHBoxLayout()
         zoom_row.setContentsMargins(0, 0, 0, 0)
         zoom_row.setSpacing(6)
@@ -343,34 +385,6 @@ class TransformDockWidget(QDockWidget):
 
         zoom_row.addStretch()
         self.grp_scaling.addLayout(zoom_row)
-
-        # Row 2: Fit to Sheet & Margin
-        fit_row = QHBoxLayout()
-        fit_row.setContentsMargins(0, 0, 0, 0)
-        fit_row.setSpacing(6)
-
-        self.btn_fit = QPushButton(self.tr("Fit to Sheet"))
-        self.btn_fit.setIcon(get_icon("fit-page", size=16))
-        self.btn_fit.setToolTip(self.tr("Fit proportionally to reference frame with margin"))
-        self.btn_fit.clicked.connect(lambda: self.fit_to_page())
-        fit_row.addWidget(self.btn_fit)
-
-        lbl_margin = QLabel(self.tr("Margin:"))
-        lbl_margin.setStyleSheet("font-weight: 500; color: #4b5563;")
-        lbl_margin.setToolTip(self.tr("Safety margin to sheet edges when fitting"))
-        fit_row.addWidget(lbl_margin)
-
-        self.spin_fit_margin = QDoubleSpinBox()
-        self.spin_fit_margin.setAlignment(Qt.AlignLeft)
-        self.spin_fit_margin.setRange(0.0, 500.0)
-        self.spin_fit_margin.setDecimals(1)
-        self.spin_fit_margin.setValue(15.0)
-        self.spin_fit_margin.setSuffix(" mm")
-        self.spin_fit_margin.setToolTip(self.tr("Safety margin to sheet edges when fitting in mm"))
-        fit_row.addWidget(self.spin_fit_margin)
-
-        fit_row.addStretch()
-        self.grp_scaling.addLayout(fit_row)
 
         self.main_layout.addWidget(self.grp_scaling)
         self.main_layout.addStretch()
@@ -444,6 +458,8 @@ class TransformDockWidget(QDockWidget):
         self.btn_center_h.setEnabled(enabled)
         self.btn_center_v.setEnabled(enabled)
         self.btn_center_both.setEnabled(enabled)
+        self.btn_fit_plottable.setEnabled(enabled)
+        self.btn_fit_sheet.setEnabled(enabled)
         self.btn_fit.setEnabled(enabled)
         self.spin_fit_margin.setEnabled(enabled)
         self.btn_original_size.setEnabled(enabled)
@@ -681,27 +697,26 @@ class TransformDockWidget(QDockWidget):
             changes.append((it, old_t, new_t))
         self._apply_multi_transforms(changes, "Originalgröße (1:1)")
 
-    def fit_to_page(self, margin_mm: Optional[float] = None):
+    def fit_to_box(self, target_box: BoundingBox, action_name: str, margin_mm: Optional[float] = None):
         unlocked = self._get_unlocked_items()
         if not unlocked:
             return
         if margin_mm is None:
             margin_mm = self.spin_fit_margin.value()
 
-        tb = self._get_target_box()
         cb = self._get_selection_bounds(unlocked)
         if cb is None or cb.width <= 0 or cb.height <= 0:
             return
 
-        avail_w = max(10.0, tb.width - 2 * margin_mm)
-        avail_h = max(10.0, tb.height - 2 * margin_mm)
+        avail_w = max(10.0, target_box.width - 2 * margin_mm)
+        avail_h = max(10.0, target_box.height - 2 * margin_mm)
 
         scale_factor = min(avail_w / cb.width, avail_h / cb.height)
         cx, cy = cb.center.x, cb.center.y
 
         t1 = AffineTransform.translation(-cx, -cy)
         s = AffineTransform(scale_factor, 0.0, 0.0, scale_factor, 0.0, 0.0)
-        t2 = AffineTransform.translation(tb.center.x, tb.center.y)
+        t2 = AffineTransform.translation(target_box.center.x, target_box.center.y)
         fit_t = t2.multiply(s.multiply(t1))
 
         changes = []
@@ -709,7 +724,17 @@ class TransformDockWidget(QDockWidget):
             old_t = copy.deepcopy(it.transform)
             new_t = fit_t.multiply(old_t)
             changes.append((it, old_t, new_t))
-        self._apply_multi_transforms(changes, "Auf Blatt einpassen")
+        self._apply_multi_transforms(changes, action_name)
+
+    def fit_to_plottable(self, margin_mm: Optional[float] = None):
+        self.fit_to_box(self.doc.page.plottable_box, "Auf plottbaren Bereich einpassen", margin_mm)
+
+    def fit_to_sheet(self, margin_mm: Optional[float] = None):
+        self.fit_to_box(self.doc.page.sheet_box, "Auf Blatt einpassen", margin_mm)
+
+    def fit_to_page(self, margin_mm: Optional[float] = None):
+        """Backward compatibility alias for fit_to_sheet."""
+        self.fit_to_sheet(margin_mm)
 
     # --- Position and Alignment ---
     def _on_pos_mm_changed(self):

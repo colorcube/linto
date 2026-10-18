@@ -53,6 +53,22 @@ def test_main_window_headless(qapp, tmp_path):
     assert fit_rect.height() > 200.0
     assert abs(fit_rect.height() - b_fit.height - 6.0) < 1.0
 
+    # Fit to plottable area explicitly
+    win.transform_dock.fit_to_plottable(margin_mm=10.0)
+    b_plot = item.current_bounds
+    assert b_plot is not None
+    pb = doc.page.plottable_box
+    assert abs(b_plot.center.x - pb.center.x) < 1.0
+    assert abs(b_plot.center.y - pb.center.y) < 1.0
+
+    # Fit to sheet explicitly
+    win.transform_dock.fit_to_sheet(margin_mm=15.0)
+    b_sheet = item.current_bounds
+    assert b_sheet is not None
+    sb = doc.page.sheet_box
+    assert abs(b_sheet.center.x - sb.center.x) < 1.0
+    assert abs(b_sheet.center.y - sb.center.y) < 1.0
+
     # Test scale relative (-10%)
     h_before = fit_rect.height()
     win.transform_dock.scale_relative(0.9)
@@ -95,6 +111,11 @@ def test_docks_and_page_setup_dialog(qapp):
     assert win.transform_dock.grp_rotation.title() == "Rotation"
     assert win.transform_dock.grp_placement.title() == "Platzieren"
     assert win.transform_dock.grp_scaling.title() == "Skalierung"
+    assert win.transform_dock.btn_fit_plottable.text() == "Auf plottbaren Bereich einpassen"
+    assert not win.transform_dock.btn_fit_plottable.icon().isNull()
+    assert win.transform_dock.btn_fit_sheet.text() == "Auf Blatt einpassen"
+    assert not win.transform_dock.btn_fit_sheet.icon().isNull()
+    assert win.transform_dock.btn_fit is win.transform_dock.btn_fit_sheet
     assert win.transform_dock.btn_scale_up.text() == "+"
     assert win.transform_dock.btn_scale_down.text() == "-"
     assert win.transform_dock.btn_original_size.text() == "Original"
