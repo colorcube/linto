@@ -1,11 +1,16 @@
-# Plotter Studio – Konzept v2.3
+# Plotter Studio – Konzept v2.4
 
-Stand: 2026-10-16 · Status: **Gelebte Architektur & Systementwurf v2.3**
+Stand: 2026-10-18 · Status: **Gelebte Architektur & Systementwurf v2.4**
 Gerätedokumentation: [devices/mutoh-xp500/](../devices/mutoh-xp500/README.md).
 Roadmap & Aufgaben: [TODO.md](TODO.md).
 
+Änderungen zu v2.3:
+- **Streaming im Hintergrund-Thread statt eigenem Dienst:** `plotd` als separater Prozess ist nicht nötig und wandert in den Ideenspeicher (§6.1, §9).
+- **Gerät als Wahrheitsquelle:** Was der Plotter meldet (`OF;`, `OH;`), gilt. Profilwerte sind nur Fallback (§4.2a).
+- **Achsenmodell XP-500 bestätigt:** Die Einlage-Matrix ist fest und hängt nicht von der Papierlage ab (§4.3).
+
 Änderungen zu v2.1:
-- **Multi-Geräte-Architektur geschärft:** Vollständig getrennter Kern (`core`, `pipeline`, `plotd`), ansteuerbar für beliebige Stiftplotter (HP-GL, MH-GL, HP-GL/2, Roland, G-Code/GRBL wie AxiDraw). Mutoh XP-500 ist Referenz- und Erstzielgerät.
+- **Multi-Geräte-Architektur geschärft:** Vollständig getrennter Kern (`core`, `pipeline`, `device`), ansteuerbar für beliebige Stiftplotter (HP-GL, MH-GL, HP-GL/2, Roland, G-Code/GRBL wie AxiDraw). Mutoh XP-500 ist Referenz- und Erstzielgerät.
 - **Beliebige Papierformate (Custom Sheet Sizes):** Papiergröße hängt beim XP-500 von den manuell verschiebbaren Andruckrollen ab; jedes Format ist möglich. Trennung zwischen Dokumentformat (DIN oder frei) und gemessenen Hard-Clip-Grenzen.
 - **Erkenntnisse aus Handbuch Kap. 7 eingearbeitet:** Einstellbare Zeicheneinheit (0,025 mm vs. 0,010 mm), Pufferumschaltung am Panel (`Small` = 1000 Zeichen), Firmware-Sortierung (`Sort: Off`), Stiftparameter (`VS, AS, FS: Good`), Hard-Clip-Ränder laut Abb. 7.3.
 - **Bandbreiten- und Streaming-Strategie:** Optimierung für serielle Engpässe (Koordinatenketten, relative Koordinaten `PR`).
@@ -21,7 +26,7 @@ Analog zu PrusaSlicer/Cura beim 3D-Druck: Inhalte **importieren → auf beliebig
 Obwohl das Projekt primär für den vorhandenen **Mutoh XP-500** entwickelt wird, ist die gesamte Softwarearchitektur **strikt hersteller- und geräteneutral** entworfen:
 - **Geräteunabhängiger Kern:** Dokumentenmodell, Importe, Gruppierung, Pfadtransformationen, Optimierungs-Pipeline (Clipping, Vereinfachung, 2-Opt-Sortierung) und Werkzeugverwaltung arbeiten rein in metrischen Koordinaten (Millimeter).
 - **Geräte-Abstraktion (`plotter_studio.device`):** Trennt *Geräteprofil* (YAML), *Koordinatenabbildung* (Center- vs. Corner-Origin, Ausrichtung), *Protokoll-Treiber* (Emitter für HP-GL, MH-GL, G-Code etc.) und *Fähigkeiten* (Capabilities wie Abfragemöglichkeiten, Puffertiefe, Werkzeugwechsel).
-- **Universeller Streaming-Dienst (`plotter_studio.plotd`):** Unterstützt serielle TTYs, USB, TCP-Sockets oder Pipes mit konfigurierbaren Flusskontroll- und Quittierungsstrategien (Hardware-Handshake, XON/XOFF, Ping-Pong-Polling, Buffer-Counting).
+- **Streaming (`plotter_studio.device.streamer`):** Sendet im Hintergrund-Thread über serielle TTYs, USB-Seriell-Adapter oder TCP-Sockets, mit konfigurierbarer Flusskontrolle (Hardware-Handshake, XON/XOFF im Userspace).
 
 **Referenzgerät Mutoh XP-500:**
 Großformat-Stiftplotter (A4 bis A0 sowie beliebige Zwischengrößen dank verschiebbarer Andruckrollen). Meldet sich als HP-7585B-Emulation (MH-GL / HP-GL), RS-232 mit bis zu 19200 Baud 8N1 und Hardware-Handshake (DTR/CTS) über USB-Seriell-Adapter, 8 Stifte.
@@ -39,8 +44,8 @@ Nicht-Ziele: Vollwertiges Vektor-Zeichenprogramm (kein Inkscape-Ersatz), Schneid
 ### Leitprinzipien
 1. **Headless first:** Alles außer der Darstellung läuft ohne GUI (CLI, Skripte, Tests, automatisierte Pipelines).
 2. **Nicht-destruktiv:** Importe bleiben als Objekte mit ihrer inneren Struktur erhalten. Linien entstehen erst beim „Kompilieren“.
-3. **Geräteabstraktion & Messung vor Annahme:** Gerätespezifika liegen in Profilen und werden – wo möglich – dynamisch vom Gerät abgefragt (z. B. Einheiten via `OF;`, Grenzen via `OH;`).
-4. **Lange Jobs sind der Normalfall:** Ein mehrstündiger Großformat-Plot darf durch keinen GUI-Absturz verloren gehen und muss sich fortsetzen lassen.
+3. **Was der Plotter meldet, gilt:** Gerätespezifika liegen in Profilen, werden aber – wo möglich – vom Gerät abgefragt (Einheiten via `OF;`, plottbarer Bereich via `OH;`). Abgefragte Werte haben immer Vorrang vor Profilwerten (§4.2a).
+4. **Lange Jobs sind der Normalfall:** Ein mehrstündiger Großformat-Plot darf nicht durch Bedienfehler (Fenster schließen, Moduswechsel) verloren gehen und muss sich nach einem Abbruch fortsetzen lassen.
 
 ---
 
@@ -53,25 +58,23 @@ flowchart LR
   COMP --> PIPE["Pipeline: Clip, Merge, Simplify, Sort"]
   PIPE --> JOB["Plot-Job: Polylinien je Stift + Index"]
   JOB --> DRV["Geräte-Treiber / Emitter (Profile)"]
-  DRV --> PLOTD["Plot-Dienst plotd"]
-  PLOTD --> CONN["Verbindung (TTY / USB / TCP)"]
+  DRV --> STREAM["Streamer (Hintergrund-Thread)"]
+  STREAM --> CONN["Verbindung (TTY / USB / TCP)"]
   GUI["GUI (Qt)"] -.-> DOC
-  GUI -.-> PLOTD
-  CLI["CLI"] -.-> DOC
-  CLI -.-> PLOTD
+  GUI -.-> STREAM
 ```
 
 ### Pakete / Schichten
 
 | Paket | Qt? | Inhalt |
 |---|---|---|
-| `plotter_studio.core` | nein | Dokumentmodell, Geometrie (Flatten, Transform), Pipeline-Schritte, Stifte, Werkzeugbibliothek, Persistenz, Undo-Kommandos |
-| `plotter_studio.device` | nein | Geräte-Abstraktionsschicht: Profile (YAML/Pydantic), Treiber/Emitter (MH-GL, HP-GL generic, G-Code), Koordinatentransformation (Center/Corner-Origin, Einlage), Blatterkennung, Zeitschätzer, Kalibrierplots |
-| `plotter_studio.plotd` | nein | Transport (TTY, Socket), Pufferstrategie (RTS/CTS, XON/XOFF, Poll, Sync), Job-Queue, Zustandsautomat, lokale HTTP/WS-API |
-| `plotter_studio.cli` | nein | `plotter-studio plot|preview|probe|calibrate|jobs …` |
-| `plotter_studio.gui` | **ja** | Hauptfenster, Canvas, Panels. Hängt nur von den Paketen oben ab. |
+| `plotter_studio.core` | nein | Dokumentmodell, Geometrie, Import/Export (SVG, HP-GL), Stifte, Persistenz |
+| `plotter_studio.pipeline` | nein | Flatten, Clip, Merge, Simplify, Sort, Compiler → Plot-Job |
+| `plotter_studio.device` | nein | Profile (YAML), Emitter (HP-GL/MH-GL), Koordinatenabbildung (Center/Corner-Origin, Einlage), Geräteabfrage (`probe`), Streamer mit Flusskontrolle, Geräteverwaltung |
+| `plotter_studio.emulator` | nein | Virtueller XP-500 (PTY/TCP) für Tests ohne Hardware |
+| `plotter_studio.gui` | **ja** | Hauptfenster, Canvas, Docks, Dialoge. Hängt nur von den Paketen oben ab. |
 
-Abhängigkeitsregel: `gui → (core, device, plotd-Client)`, niemals umgekehrt. Kern und Plot-Dienst können vollständig ohne installierte GUI/Qt-Bibliotheken (z. B. auf einem Raspberry Pi oder Server) betrieben werden.
+Abhängigkeitsregel: `gui → (core, pipeline, device)`, niemals umgekehrt. Alles außer der GUI läuft ohne installierte Qt-Bibliotheken.
 
 ### Technologie
 - **Lizenz: GPLv3** (entschieden).
@@ -246,6 +249,21 @@ Da viele Plotter (z. B. HP 7475A, Roland, AxiDraw, GRBL) über keinerlei Sensori
   - Wagenachse Y: $C = 5\text{ mm}$ (links zu den Rollen), $D = 5\text{ mm}$ (rechts zu den Rollen) bei `Exp` ($15 / 15\text{ mm}$ bei `Norm`).
 - Die Software fragt `OH;` nach jedem Einlegen neu ab.
 
+### 4.2a Gerät als Wahrheitsquelle
+
+Grundidee von Plotter Studio: Der XP-500 kann mit beliebigen Papiergrößen umgehen und meldet, was eingelegt ist. Andere Software zwingt dich zum Messen und Anpassen. Deshalb gilt: **Was der Plotter meldet, hat Vorrang.**
+
+| Wert | Quelle (Vorrang) | Fallback |
+|---|---|---|
+| Einheiten pro mm | `OF;` | `units_per_mm` aus dem Profil |
+| Plottbarer Bereich (Hard-Clip) | `OH;` (exakt, nach jedem Blattwechsel neu) | Blattmaß minus Profilränder |
+| Ursprung (Mitte des Hard-Clips) | aus `OH;` | aus Blattmaß und Profilrändern |
+| Papierkante | **nicht abfragbar**: Hard-Clip plus Fensterränder (Profil, verfeinert per Kalibrierplot) | Blattmaß aus der Seiteneinrichtung |
+
+**Was `OH;` liefert:** nur den plottbaren Bereich (`xmin,ymin,xmax,ymax`, symmetrisch um die Mitte), nicht das Papier. Die Papierkante wird geschätzt. Deshalb ist Platzierung relativ zum plottbaren Bereich exakt und relativ zur Blattkante auf wenige Millimeter genau (Kalibrierungs-Assistent, siehe TODO).
+
+**Andere Geräte:** Echte HP-GL-Stiftplotter (HP 7475/7550/7585, Roland DXY) kennen meist `OI;`, `OH;` bzw. `OP;`. Viele Schneideplotter senden nur und antworten nicht. Ablauf deshalb: abfragen, wenn das Profil es erlaubt; bei Antwort übernehmen; sonst Profilwerte nutzen und per Kalibrierplot prüfen.
+
 ### 4.3 Abbildung Papier-mm → Geräte-Units
 
 Für ein beliebiges Blattmaß $W \times H$ mm (Standard oder benutzerdefiniert):
@@ -258,7 +276,7 @@ Für ein beliebiges Blattmaß $W \times H$ mm (Standard oder benutzerdefiniert):
    - $m_{y\pm}$ sind die Abstände zu den Andruckrollen (bei sorgfältiger Anlage symmetrisch: $(W - 2h_y)/2$).
 2. **Einlage-Matrix $A$:**
    Eine $2\times 2$-Matrix ($0/\pm 1$) beschreibt Drehung und Achsentausch zwischen Modellraum ($x \to, y \downarrow$) und Plotterachsen.
-   Kandidat XP-500: $\begin{pmatrix}0 & 1\\ 1 & 0\end{pmatrix}$ (X = Papiervorschub entspricht Hochachse des Papiers, Oberkante links).
+   **XP-500:** $\begin{pmatrix}0 & 1\\ 1 & 0\end{pmatrix}$, also Blatt-y → Plotter-X (Vorschub) und Blatt-x → Plotter-Y (Wagen). Der Plotter dreht nicht selbst: Sein Koordinatensystem ist fest an die Mechanik gebunden. Die Messungen bestätigen das: A3 mit der langen Seite quer zum Vorschub liefert X ±270 mm / Y ±410 mm, mit der langen Seite in Vorschubrichtung X ±394 mm / Y ±289 mm. Der Tausch gilt also für **jede** Einlage. Die Papierlage selbst lässt sich aus `OH` ablesen. Die Vorzeichen bestätigt ein Orientierungsplot ([testplan.md](../devices/mutoh-xp500/testplan.md)).
 3. **Gesamt-Transformation:**
    $$\begin{pmatrix}X_{\text{dev}}\\Y_{\text{dev}}\end{pmatrix} = u_{\text{mm}} \cdot \Big(S\,\big(A\,\vec p + \vec t\big)\Big)$$
    - $u_{\text{mm}}$: Einheiten pro mm (beim XP-500 dynamisch aus `OF;`, sonst aus Profil).
@@ -320,23 +338,23 @@ Der Emitter bietet daher pro Geräteprofil:
 
 ---
 
-## 6. Plot-Dienst `plotd` und Streaming
+## 6. Streaming
 
-### 6.1 Warum ein eigener Dienstprozess
-- Ein GUI-Absturz oder -Neustart bricht einen mehrstündigen A0-Plot nicht ab.
-- GUI und CLI teilen sich **einen** exklusiven Port-Besitzer mit Job-Warteschlange.
-- Lokale Entkopplung: Kern/Plot-Dienst kann headless (z. B. auf RasPi am Plotter) laufen, GUI verbindet sich lokal oder per Socket.
+### 6.1 Entscheidung: Hintergrund-Thread statt eigenem Dienst
+Der `SerialStreamer` läuft als Thread im GUI-Prozess. Die Oberfläche bleibt während des Plots bedienbar, Fortschritt und Status kommen per Qt-Signal in den GUI-Thread.
 
-Umsetzung: Python-asyncio-Dienst. Lokale API: **HTTP + WebSocket auf `127.0.0.1`** (Browser-Monitor oder Fernanzeige später ohne Mehraufwand möglich).
+- **Vorteil:** keine Installation eines Daemons, keine Socket-API, keine Portkonflikte zwischen Dienst und GUI.
+- **Preis:** Beendest du die App, endet auch der Plot. Deshalb braucht die GUI einen „Plot läuft“-Schutz (Rückfrage beim Schließen, keine Modus- oder Gerätewechsel während des Plots) und Resume ab Checkpoint.
+- Ein eigener Dienst (`plotd`, z. B. headless auf einem Raspberry Pi am Plotter) steht im Ideenspeicher (§9).
 
 ### 6.2 Modulare Architektur des Streaming-Kerns
-Um beliebige Geräte und Protokolle anzusteuern, trennt `plotd`:
+Um beliebige Geräte und Protokolle anzusteuern, trennt der Streamer:
 1. **Transport Layer:** Seriell (pyserial, `rtscts=True`), Raw-TCP (Netzwerk-Plotter/Printserver), Pseudo-TTY (virtueller Plotter für Tests).
 2. **Protocol Engine:**
    - *Stream-Befehle:* HP-GL / MH-GL (ASCII mit `;` bzw. CR-Terminator).
    - *Line-Ack-Befehle:* G-Code (Befehl senden, auf `ok` warten).
 3. **Flow Control & Buffer Management:**
-   - `hardware`: Hardware-Handshake (CTS/RTS bzw. DTR).
+   - `hardware`: Hardware-Handshake über RTS/CTS. Das „Busy“-Signal des XP-500 (DTR, Pin 20) liegt per Kabel auf CTS des PCs. Eine DSR/DTR-Flusskontrolle kennt pyserial unter Linux nicht.
    - `userspace_xonxoff`: Software-Handshake für Adapter mit fehlerhafter Kernel-Implementierung.
    - `windowed_inflight`: Begrenzung unquittierter Bytes im Übertragungskanal.
 
@@ -487,6 +505,7 @@ Zwei Betriebsmodi im Hauptfenster (Tabs):
 | **DXF-Import** | Technischer CAD-Import (`ezdxf`) |
 | **Stipple / TSP-Art** | Konvertierung von Rastergrafiken in Punktmuster oder durchgehende Linien |
 | **Rollenmedien / Banner** | Endlospapier-Plots (Vorschub ohne Längenlimit) |
-| **Web-Fernanzeige** | Status und Webcam-Stream im Browser über `plotd` |
+| **Plot-Dienst `plotd`** | Eigener Prozess als exklusiver Port-Besitzer mit Job-Warteschlange und lokaler HTTP/WebSocket-API. Nutzen: Plot läuft weiter, wenn die GUI beendet wird; headless auf einem Raspberry Pi direkt am Plotter. |
+| **Web-Fernanzeige** | Status und Webcam-Stream im Browser (setzt `plotd` voraus) |
 | **Standalone-Packaging** | Bündelung als Single-File Executable (`pyinstaller` / `AppImage` / `.exe`) für klickbare Distribution ohne Python-Installation |
 

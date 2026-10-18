@@ -1,6 +1,6 @@
 # Mutoh XP-500 – Gerätedokumentation
 
-Gesammelte, geprüfte Informationen zum Mutoh XP-500 (DIN-A0-Stiftplotter, MH-GL / HP-GL), aufbereitet für Plotter Studio (Geräteprofil, Treiber, `plotd`).
+Gesammelte, geprüfte Informationen zum Mutoh XP-500 (DIN-A0-Stiftplotter, MH-GL / HP-GL), aufbereitet für Plotter Studio (Geräteprofil, Emitter, Streamer).
 
 ## Inhalt
 
@@ -40,6 +40,6 @@ Extrahierte Handbuchseiten:
 
 1. **Die Zeicheneinheit ist einstellbar:** 0,1 / 0,05 / 0,025 / 0,0125 / 0,01 mm (📘 „Software Resolution“). Deshalb liefert dein `OF;` den Wert 40, während MutohPlot mit 0,01 mm arbeitet. → **Einheit immer per `OF;` lesen**, nie fest annehmen.
 2. **Die serielle Leitung ist der Flaschenhals:** Bei 19200 Baud kommen maximal ca. 1900 Zeichen/s an. Bei dichten Kurven begrenzt das die Zeichengeschwindigkeit stärker als die Mechanik (900 mm/s). → Kompakte Kodierung (Koordinatenketten, `PR`, ggf. gröbere Einheit), siehe [schnittstelle.md](schnittstelle.md#durchsatz).
-3. **Device-Control ist vorhanden:** `ESC.B` (freier Puffer), `ESC.L`, `ESC.K` (Abbruch), `ESC.E`/`ESC.O` (Status) stehen im Handbuch → Grundlage für die Puffer-, Fortschritts- und Abbruchstrategie in `plotd`.
+3. **Device-Control ist vorhanden:** `ESC.B` (freier Puffer), `ESC.L`, `ESC.K` (Abbruch), `ESC.E`/`ESC.O` (Status) stehen im Handbuch → Grundlage für die Puffer-, Fortschritts- und Abbruchstrategie im Streamer.
 4. **Pro-Stift-Parameter in Firmware:** `VS v,pen`, `FS force,pen`, `AS acc,pen` → Werkzeugbibliothek kann direkt auf Gerätebefehle abgebildet werden. Andruck 15–450 g.
 5. **Hard-Clip-Fenster** sind Herstellerangaben (Norm/Exp/Type 1/Type 3). Deine `OH`-Messungen passen in Y zu `Exp`, in X fehlen ca. 3,5 mm → am Gerät klären.

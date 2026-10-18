@@ -1,7 +1,7 @@
 # Mutoh XP-500 – Software-Emulator (`virtual_plotter`)
 
 Der Software-Emulator simuliert das Verhalten eines Mutoh XP-500 Plotters (HP-7585B Emulation) unter Linux.
-Er stellt eine virtuelle serielle Schnittstelle (Linux-PTY oder TCP-Socket) bereit, mit der sich Plotter Studio, `plotd`, `pyserial`, aber auch externe Tools (wie MutohPlot oder InkCut) verbinden können – exakt so, als wäre ein physischer USB-Seriell-Adapter angeschlossen.
+Er stellt eine virtuelle serielle Schnittstelle (Linux-PTY oder TCP-Socket) bereit, mit der sich Plotter Studio, `pyserial`, aber auch externe Tools (wie MutohPlot oder InkCut) verbinden können – exakt so, als wäre ein physischer USB-Seriell-Adapter angeschlossen.
 
 ---
 

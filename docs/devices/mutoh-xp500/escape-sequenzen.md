@@ -6,7 +6,7 @@ Status: alle 📘, noch **nicht am Gerät getestet**.
 
 ## Plotterverwaltung
 
-| Befehl | Parameter | Funktion | Nutzung in `plotd` |
+| Befehl | Parameter | Funktion | Nutzung im Streamer |
 |---|---|---|---|
 | `ESC.A` | – | Identifikation ausgeben | ○ Verbindungstest |
 | **`ESC.B`** | – | **Freier Platz im logischen Eingangspuffer** | ● Fortschritt, Pufferstrategie `+poll` |
@@ -36,7 +36,7 @@ Status: alle 📘, noch **nicht am Gerät getestet**.
 
 Für dein Setup (Hardware-Handshake über DTR→CTS) wird davon nichts benötigt. `ESC.M` kann relevant sein, falls Antworten ein unerwartetes Abschlusszeichen haben (Standard: CR).
 
-## Konsequenzen für `plotd` (→ [konzept.md §6](../../project/konzept.md))
+## Konsequenzen für den Streamer (→ [konzept.md §6](../../project/konzept.md))
 
 1. **Verbindungsaufbau:** `ESC.R` → `ESC.L` (Puffergröße) → `IN;` → `OI;` `OF;` `OH;` `OT;`.
 2. **Puffergrenze per Software:** `ESC.@1000;…:` könnte den logischen Puffer auf ~1000 Zeichen begrenzen, **ohne am Panel umzustellen** (Q-18). Dann reagieren Pause und Abbruch schnell, während andere Programme (InkCut, `cat`) nach einem `ESC.R`/Neustart weiter den vollen Puffer nutzen. → testen.
