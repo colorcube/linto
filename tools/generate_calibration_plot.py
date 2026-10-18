@@ -74,8 +74,8 @@ def generate_svg(format_name: str, width_mm: float, height_mm: float) -> str:
     header_x = plot_x + 14.0
     title_y = plot_y + 15.0 if is_a3 else plot_y + 13.5
     sub_y = title_y + 5.5
-    lines.append(f'  <text x="{header_x}" y="{title_y}" class="title">MUTOH XP-500 KALIBRIER- &amp; TESTPLOT ({format_name} QUER)</text>')
-    lines.append(f'  <text x="{header_x}" y="{sub_y}">Plotter Studio Hardware-Verifikation · AP0 Testplan · Maße in Millimeter</text>')
+    lines.append(f'  <text x="{header_x}" y="{title_y}" class="title">KALIBRIER- &amp; TESTPLOT ({format_name} QUER)</text>')
+    lines.append(f'  <text x="{header_x}" y="{sub_y}">Maße in Millimeter</text>')
 
     # 3. Orientation arrows (+X and +Y) directly below Header
     arrow_ox = header_x + 2.0

@@ -14,8 +14,8 @@
   <text x="148.5" y="201.5" text-anchor="middle" class="edge-label">▼ HINTERKANTE / TRAILING EDGE (SOLL-ABSTAND UNTEN: 5.0 mm) ▼</text>
   <text x="10.5" y="115.0" text-anchor="middle" transform="rotate(-90 10.5 115.0)" class="edge-label">▲ LINKS (SOLL: 5.0 mm) ▲</text>
   <text x="286.5" y="115.0" text-anchor="middle" transform="rotate(90 286.5 115.0)" class="edge-label">▲ RECHTS (SOLL: 5.0 mm) ▲</text>
-  <text x="19.0" y="38.5" class="title">MUTOH XP-500 KALIBRIER- &amp; TESTPLOT (DIN A4 QUER)</text>
-  <text x="19.0" y="44.0">Plotter Studio Hardware-Verifikation · AP0 Testplan · Maße in Millimeter</text>
+  <text x="19.0" y="38.5" class="title">KALIBRIER- &amp; TESTPLOT (DIN A4 QUER)</text>
+  <text x="19.0" y="44.0">Maße in Millimeter</text>
   <!-- Orientation Coordinate System -->
   <g stroke="#d32f2f" stroke-width="0.5" fill="none">
     <line x1="21.0" y1="51.0" x2="39.0" y2="51.0"/>
