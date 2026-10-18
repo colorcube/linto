@@ -224,4 +224,40 @@ def test_layout_ops_and_page_probe_helpers():
     assert math.isclose(page.width_mm, 300.0 + page.margin_left_mm + page.margin_right_mm, abs_tol=1e-5)
 
 
+def test_deduplicate_polylines_pen_luminance_order_and_svg_text_warning():
+    """Verify duplicate segment removal (A->B and B->A), luminance pen ordering, and SVG <text> warning."""
+    from plotter_studio.pipeline.merge import deduplicate_polylines
+    from plotter_studio.pipeline.compiler import compile_document_to_plot_job, PipelineConfig
+    from plotter_studio.core.document import Document, ImportItem, VectorPath
+    from plotter_studio.core.svg_import import load_svg
+
+    # 1. Duplicate segment removal (including reversed segment)
+    l1 = np.array([[0.0, 0.0], [10.0, 0.0], [10.0, 10.0]])
+    l2 = np.array([[10.0, 0.0], [0.0, 0.0]])  # Exact reverse of first segment of l1
+    cleaned, removed = deduplicate_polylines([l1, l2], tolerance_mm=0.02)
+    assert removed == 1
+    assert len(cleaned) == 1
+
+    # 2. Luminance pen order (Pen 4 yellow #eab308 is lighter than Pen 1 black #1a1a1a)
+    doc = Document()
+    item = ImportItem(
+        name="TwoPens",
+        paths=[
+            VectorPath(points=np.array([[10.0, 30.0], [20.0, 30.0]]), pen_id=1),  # Dark (#1a1a1a)
+            VectorPath(points=np.array([[10.0, 40.0], [20.0, 40.0]]), pen_id=4),  # Light (#eab308)
+        ],
+    )
+    doc.items.append(item)
+    job_lum = compile_document_to_plot_job(doc, PipelineConfig(pen_order="luminance"))
+    assert list(job_lum.layers.keys()) == [4, 1]
+
+    # 3. SVG <text> warning on load_svg and compile_document_to_plot_job
+    svg_with_text = '<svg xmlns="http://www.w3.org/2000/svg" width="100mm" height="100mm"><line x1="10" y1="10" x2="50" y2="50" stroke="#000"/><text x="20" y="20">Hello</text></svg>'
+    imported = load_svg(svg_with_text)
+    assert imported.ignored_text_count == 1
+    doc.items.append(imported)
+    job_warn = compile_document_to_plot_job(doc)
+    assert any("<text>" in w for w in job_warn.warnings)
+
+
 

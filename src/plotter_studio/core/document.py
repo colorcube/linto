@@ -329,6 +329,7 @@ class ImportItem:
     original_bounds: Optional[BoundingBox] = None  # Bounds before item transform
     visible: bool = True
     locked: bool = False
+    ignored_text_count: int = 0
 
     def __post_init__(self):
         if self.original_bounds is None:

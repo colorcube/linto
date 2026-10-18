@@ -7,10 +7,17 @@ from typing import List, Dict, Tuple, Optional
 import numpy as np
 
 from ..core.document import Document, LogicalPen
-from .merge import merge_polylines
+from ..core.color_cluster import hex_to_rgb
+from .merge import merge_polylines, deduplicate_polylines
 from .simplify import ramer_douglas_peucker
 from .sort import sort_and_optimize_lines, compute_polyline_length, compute_unsorted_travel_distance
 from .clip import clip_polylines_to_box
+
+
+def _pen_luminance(color_hex: str) -> float:
+    """Compute relative luminance (0.0 dark .. 255.0 light) of a hex color."""
+    r, g, b = hex_to_rgb(color_hex)
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
 
 
 @dataclass
@@ -19,6 +26,8 @@ class PipelineConfig:
     flatten_tolerance_mm: float = 0.05
     merge_tolerance_mm: float = 0.10
     simplify_tolerance_mm: float = 0.02
+    deduplicate_segments: bool = True
+    pen_order: str = "id"                  # "id" (1..8) or "luminance" (lightest colors first)
     sort_paths: bool = True
     use_2opt: bool = True
     clip_to_plottable: bool = False
@@ -65,6 +74,8 @@ class PlotJob:
     warnings: List[str] = field(default_factory=list)
     steps: List[PlotStep] = field(default_factory=list)
     total_points: int = 0
+    removed_duplicate_segments: int = 0
+    has_out_of_bounds: bool = False
 
     @property
     def travel_savings_pct(self) -> float:
@@ -103,10 +114,12 @@ def compile_document_to_plot_job(
     # Bounding box check for warnings
     pb = doc.page.plottable_box
     max_overhang = 0.0
+    total_ignored_texts = 0
 
     for item in doc.items:
         if not item.visible:
             continue
+        total_ignored_texts += int(getattr(item, "ignored_text_count", 0) or 0)
         for path in item.paths:
             pen = pens_dict.get(path.pen_id)
             if pen is None:
@@ -144,15 +157,30 @@ def compile_document_to_plot_job(
             raw_by_pen[eff_id].append(pts)
 
     if max_overhang > 0.2:
+        job.has_out_of_bounds = True
         job.warnings.append(
             f"Zeichnung ragt um {max_overhang:.1f} mm über den plottbaren Bereich hinaus."
+        )
+
+    if total_ignored_texts > 0:
+        job.warnings.append(
+            f"Hinweis: {total_ignored_texts} SVG-<text>-Element(e) wurden ignoriert (Text vor dem Import in Pfade umwandeln)."
         )
 
     # Step 2: Process each pen layer
     cur_sim_pos = (0.0, 0.0)
     step_counter = 0
 
-    sorted_pen_ids = sorted(raw_by_pen.keys())
+    if cfg.pen_order == "luminance":
+        sorted_pen_ids = sorted(
+            raw_by_pen.keys(),
+            key=lambda pid: (
+                -_pen_luminance(pens_dict[pid].color_hex if pid in pens_dict else "#000000"),
+                pid,
+            ),
+        )
+    else:
+        sorted_pen_ids = sorted(raw_by_pen.keys())
 
     for pen_id in sorted_pen_ids:
         raw_lines = raw_by_pen[pen_id]
@@ -164,11 +192,18 @@ def compile_document_to_plot_job(
         else:
             clipped = raw_lines
 
+        # Optional duplicate segment removal
+        if cfg.deduplicate_segments:
+            deduped, removed_cnt = deduplicate_polylines(clipped, tolerance_mm=max(0.01, cfg.simplify_tolerance_mm or 0.02))
+            job.removed_duplicate_segments += removed_cnt
+        else:
+            deduped = clipped
+
         # Merge
         if cfg.merge_tolerance_mm > 0:
-            merged = merge_polylines(clipped, tolerance_mm=cfg.merge_tolerance_mm)
+            merged = merge_polylines(deduped, tolerance_mm=cfg.merge_tolerance_mm)
         else:
-            merged = clipped
+            merged = deduped
 
         # Simplify
         if cfg.simplify_tolerance_mm > 0:

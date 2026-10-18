@@ -228,8 +228,14 @@ def load_svg(
     # Collect raw paths as native geometric segments and their stroke colors
     raw_subpaths: List[Tuple[List[PathSegment], str, bool]] = []
     found_colors: List[str] = []
+    ignored_text_count = 0
 
     for elem in svg.elements():
+        if isinstance(elem, svgelements.Text):
+            txt = getattr(elem, "text", None)
+            if txt is None or str(txt).strip():
+                ignored_text_count += 1
+            continue
         if isinstance(elem, (svgelements.Path, svgelements.Shape)):
             # Convert shapes (circle, rect, line, etc.) to Path
             p = svgelements.Path(elem) if not isinstance(elem, svgelements.Path) else elem
@@ -255,6 +261,7 @@ def load_svg(
         name=item_name,
         paths=vector_paths,
         source_path=source_path,
+        ignored_text_count=ignored_text_count,
     )
     return item
 

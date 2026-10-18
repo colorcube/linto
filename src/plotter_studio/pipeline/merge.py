@@ -82,3 +82,46 @@ def merge_polylines(lines: List[np.ndarray], tolerance_mm: float = 0.1) -> List[
             merged.append(np.vstack(chunks))
 
     return merged
+
+
+def deduplicate_polylines(
+    lines: List[np.ndarray],
+    tolerance_mm: float = 0.02,
+) -> tuple[List[np.ndarray], int]:
+    """
+    Remove duplicate/overlapping segments (both A->B and B->A) across polylines.
+    Returns (cleaned_polylines, removed_segment_count).
+    """
+    if not lines:
+        return [], 0
+
+    grid = max(1e-4, float(tolerance_mm))
+    seen_segments: set[tuple[tuple[int, int], tuple[int, int]]] = set()
+    cleaned: List[np.ndarray] = []
+    removed_count = 0
+
+    for poly in lines:
+        if len(poly) < 2:
+            continue
+        current_run: list[np.ndarray] = [poly[0]]
+        for idx in range(len(poly) - 1):
+            p0 = poly[idx]
+            p1 = poly[idx + 1]
+            q0 = (int(round(float(p0[0]) / grid)), int(round(float(p0[1]) / grid)))
+            q1 = (int(round(float(p1[0]) / grid)), int(round(float(p1[1]) / grid)))
+            if q0 != q1:
+                seg_key = (q0, q1) if q0 <= q1 else (q1, q0)
+                if seg_key in seen_segments:
+                    removed_count += 1
+                    if len(current_run) >= 2:
+                        cleaned.append(np.array(current_run, dtype=np.float64))
+                    current_run = [p1]
+                    continue
+                seen_segments.add(seg_key)
+            current_run.append(p1)
+
+        if len(current_run) >= 2:
+            cleaned.append(np.array(current_run, dtype=np.float64))
+
+    return cleaned, removed_count
+
