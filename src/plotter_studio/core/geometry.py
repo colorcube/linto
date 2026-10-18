@@ -52,12 +52,12 @@ class BoundingBox:
     def contains_point(self, pt: Point) -> bool:
         return self.min_x <= pt.x <= self.max_x and self.min_y <= pt.y <= self.max_y
 
-    def contains_box(self, other: BoundingBox) -> bool:
+    def contains_box(self, other: BoundingBox, tol: float = 1e-3) -> bool:
         return (
-            self.min_x <= other.min_x
-            and self.max_x >= other.max_x
-            and self.min_y <= other.min_y
-            and self.max_y >= other.max_y
+            self.min_x - tol <= other.min_x
+            and self.max_x + tol >= other.max_x
+            and self.min_y - tol <= other.min_y
+            and self.max_y + tol >= other.max_y
         )
 
     def expanded_to(self, other: BoundingBox) -> BoundingBox:
