@@ -186,6 +186,74 @@ _CUSTOM_GLYPHS: dict[str, Tuple[int, int, List[List[Tuple[float, float]]]]] = {
             [(-9.0, 1.0), (3.0, 1.0)],
         ],
     ),
+    "▲": (
+        -9,
+        9,
+        [
+            [(0.0, -11.0), (-6.0, 5.0), (6.0, 5.0), (0.0, -11.0)],
+        ],
+    ),
+    "▼": (
+        -9,
+        9,
+        [
+            [(-6.0, -9.0), (6.0, -9.0), (0.0, 7.0), (-6.0, -9.0)],
+        ],
+    ),
+    "◄": (
+        -9,
+        9,
+        [
+            [(6.0, -9.0), (-6.0, -1.0), (6.0, 7.0), (6.0, -9.0)],
+        ],
+    ),
+    "►": (
+        -9,
+        9,
+        [
+            [(-6.0, -9.0), (6.0, -1.0), (-6.0, 7.0), (-6.0, -9.0)],
+        ],
+    ),
+    "·": (
+        -5,
+        5,
+        [
+            [(-1.0, -3.0), (0.0, -4.0), (1.0, -3.0), (0.0, -2.0), (-1.0, -3.0)],
+        ],
+    ),
+    "•": (
+        -6,
+        6,
+        [
+            [(-2.0, -3.0), (0.0, -5.0), (2.0, -3.0), (0.0, -1.0), (-2.0, -3.0)],
+            [(-1.0, -3.0), (1.0, -3.0)],
+        ],
+    ),
+    "…": (
+        -12,
+        12,
+        [
+            [(-7.0, 8.0), (-8.0, 9.0), (-7.0, 10.0), (-6.0, 9.0), (-7.0, 8.0)],
+            [(0.0, 8.0), (-1.0, 9.0), (0.0, 10.0), (1.0, 9.0), (0.0, 8.0)],
+            [(7.0, 8.0), (6.0, 9.0), (7.0, 10.0), (8.0, 9.0), (7.0, 8.0)],
+        ],
+    ),
+    "Ø": (
+        -11,
+        11,
+        [
+            [(-2.0, -12.0), (-5.0, -10.0), (-7.0, -6.0), (-7.0, 1.0), (-5.0, 5.0), (-2.0, 8.0), (2.0, 8.0), (5.0, 5.0), (7.0, 1.0), (7.0, -6.0), (5.0, -10.0), (2.0, -12.0), (-2.0, -12.0)],
+            [(-8.0, 9.0), (8.0, -13.0)],
+        ],
+    ),
+    "ø": (
+        -9,
+        9,
+        [
+            [(-1.0, -5.0), (-4.0, -3.0), (-5.0, 0.0), (-5.0, 3.0), (-4.0, 6.0), (-1.0, 8.0), (1.0, 8.0), (4.0, 6.0), (5.0, 3.0), (5.0, 0.0), (4.0, -3.0), (1.0, -5.0), (-1.0, -5.0)],
+            [(-6.0, 9.0), (6.0, -6.0)],
+        ],
+    ),
 }
 
 
@@ -260,8 +328,9 @@ def render_text_to_subpaths(
         return []
 
     eff_font_size = max(1.0, float(font_size or 12.0))
-    # Cap height is ~0.72 of nominal CSS/SVG font-size
-    unit_scale = (eff_font_size * 0.72) / _CAP_HEIGHT_UNITS
+    # Cap height is ~0.72 of nominal CSS/SVG font-size; 0.85 horizontal factor matches standard sans-serif advance widths
+    unit_scale_y = (eff_font_size * 0.72) / _CAP_HEIGHT_UNITS
+    unit_scale_x = unit_scale_y * 0.85
 
     # First pass: collect glyph strokes and compute total advance width in Hershey units
     glyphs: List[Tuple[int, int, List[List[Tuple[float, float]]]]] = []
@@ -275,7 +344,7 @@ def render_text_to_subpaths(
         glyphs.append(g)
         total_units_w += float(g[1] - g[0])
 
-    total_width_user = total_units_w * unit_scale
+    total_width_user = total_units_w * unit_scale_x
     anc = (anchor or "start").strip().lower()
     if anc == "middle":
         cursor_x = float(x) - total_width_user / 2.0
@@ -297,10 +366,10 @@ def render_text_to_subpaths(
                 hx0, hy0 = poly[idx]
                 hx1, hy1 = poly[idx + 1]
 
-                ux0 = cursor_x + (hx0 - l_m) * unit_scale
-                uy0 = baseline_y + (hy0 - _BASELINE_Y_UNITS) * unit_scale
-                ux1 = cursor_x + (hx1 - l_m) * unit_scale
-                uy1 = baseline_y + (hy1 - _BASELINE_Y_UNITS) * unit_scale
+                ux0 = cursor_x + (hx0 - l_m) * unit_scale_x
+                uy0 = baseline_y + (hy0 - _BASELINE_Y_UNITS) * unit_scale_y
+                ux1 = cursor_x + (hx1 - l_m) * unit_scale_x
+                uy1 = baseline_y + (hy1 - _BASELINE_Y_UNITS) * unit_scale_y
 
                 if transform is not None:
                     tx0 = transform.a * ux0 + transform.c * uy0 + transform.tx
@@ -318,6 +387,6 @@ def render_text_to_subpaths(
             if segs:
                 subpaths.append(segs)
 
-        cursor_x += advance_units * unit_scale
+        cursor_x += advance_units * unit_scale_x
 
     return subpaths
