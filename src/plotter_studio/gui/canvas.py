@@ -32,6 +32,7 @@ class PlotterCanvas(QGraphicsView):
     item_drag_finished = Signal(object, object, object)  # (item, old_transform, new_transform)
     items_drag_finished = Signal(list)  # list of (item, old_transform, new_transform)
     item_transformed_live = Signal()
+    context_menu_requested = Signal(object)  # QPoint globalPos
 
     def __init__(self, doc: Document, parent=None):
         super().__init__(parent)
@@ -243,6 +244,10 @@ class PlotterCanvas(QGraphicsView):
             self.setCursor(Qt.OpenHandCursor)
             event.accept()
             return
+        if event.key() == Qt.Key_Escape:
+            self._scene.clearSelection()
+            event.accept()
+            return
         super().keyPressEvent(event)
 
     def keyReleaseEvent(self, event):
@@ -252,6 +257,21 @@ class PlotterCanvas(QGraphicsView):
             event.accept()
             return
         super().keyReleaseEvent(event)
+
+    def contextMenuEvent(self, event):
+        if self._mode == CanvasMode.LAYOUT:
+            sp = self.mapToScene(event.pos())
+            item_at = self.scene().itemAt(sp, QTransform())
+            cur = item_at
+            while cur and not isinstance(cur, GraphicsImportItem):
+                cur = cur.parentItem()
+            if isinstance(cur, GraphicsImportItem) and not cur.isSelected():
+                self._scene.clearSelection()
+                cur.setSelected(True)
+            self.context_menu_requested.emit(event.globalPos())
+            event.accept()
+            return
+        super().contextMenuEvent(event)
 
     def mousePressEvent(self, event: QMouseEvent):
         if event.button() == Qt.MiddleButton or (event.button() == Qt.LeftButton and self._space_pressed):
@@ -391,6 +411,23 @@ class PlotterCanvas(QGraphicsView):
             if isinstance(g_item, GraphicsImportItem):
                 selected.append(g_item.item)
         return selected
+
+    def select_all_items(self):
+        """Select all visible, unlocked items on the canvas."""
+        if self._mode != CanvasMode.LAYOUT:
+            return
+        self._scene.blockSignals(True)
+        try:
+            for g_item in self._item_map.values():
+                if g_item.item.visible and not g_item.item.locked:
+                    g_item.setSelected(True)
+        finally:
+            self._scene.blockSignals(False)
+        self.selection_changed_signal.emit()
+
+    def clear_selection(self):
+        """Deselect all items on the canvas."""
+        self._scene.clearSelection()
 
     def dragEnterEvent(self, event: QDragEnterEvent):
         if extract_droppable_files(event.mimeData()):

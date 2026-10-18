@@ -9,7 +9,7 @@ from PySide6.QtGui import QAction, QKeySequence, QUndoStack, QActionGroup
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QGridLayout, QToolBar,
     QStatusBar, QLabel, QFileDialog, QMessageBox, QTabWidget,
-    QSizePolicy, QComboBox, QToolButton
+    QSizePolicy, QComboBox, QToolButton, QMenu
 )
 from ..core.document import Document, ImportItem
 from ..core.geometry import AffineTransform
@@ -237,6 +237,20 @@ class MainWindow(QMainWindow):
         self.act_redo.setShortcuts([QKeySequence.Redo, QKeySequence("Ctrl+Y"), QKeySequence("Ctrl+Shift+Z")])
         self.act_redo.setToolTip(self._format_action_tooltip(self.act_redo, self.tr("Redo (Ctrl+Y)")))
         menu_edit.addAction(self.act_redo)
+
+        menu_edit.addSeparator()
+
+        self.act_select_all = QAction(self.tr("Select &All"), self)
+        self.act_select_all.setShortcut(QKeySequence.SelectAll)
+        self.act_select_all.setToolTip(self._format_action_tooltip(self.act_select_all, self.tr("Select all objects on sheet (Ctrl+A)")))
+        self.act_select_all.triggered.connect(self.canvas.select_all_items)
+        menu_edit.addAction(self.act_select_all)
+
+        self.act_deselect_all = QAction(self.tr("Deselect All"), self)
+        self.act_deselect_all.setShortcut(QKeySequence("Esc"))
+        self.act_deselect_all.setToolTip(self.tr("Deselect all objects (Esc)"))
+        self.act_deselect_all.triggered.connect(self.canvas.clear_selection)
+        menu_edit.addAction(self.act_deselect_all)
 
         menu_edit.addSeparator()
 
@@ -497,6 +511,7 @@ class MainWindow(QMainWindow):
         self.canvas.file_dropped.connect(self.import_svg_file)
         self.canvas.selection_changed_signal.connect(self._on_selection_changed)
         self.canvas.items_drag_finished.connect(self._on_items_drag_finished)
+        self.canvas.context_menu_requested.connect(self._show_canvas_context_menu)
 
         # Pen dock
         self.pen_dock.pen_changed.connect(self._on_pens_changed)
@@ -975,13 +990,65 @@ class MainWindow(QMainWindow):
                 text=self.tr("Import %1").replace("%1", os.path.basename(fpath)),
             )
             self.undo_stack.push(cmd)
-            self.lbl_info.setText(self.tr("Imported: %1").replace("%1", os.path.basename(fpath)))
+            if getattr(item, "ignored_text_count", 0) > 0:
+                self.lbl_info.setText(
+                    self.tr("Imported: %1 (⚠️ %2 <text> element(s) ignored – convert text to paths)")
+                    .replace("%1", os.path.basename(fpath))
+                    .replace("%2", str(item.ignored_text_count))
+                )
+            else:
+                self.lbl_info.setText(self.tr("Imported: %1").replace("%1", os.path.basename(fpath)))
         except Exception as e:
             QMessageBox.critical(
                 self,
                 self.tr("Import Error"),
                 self.tr("Could not import file:\n%1").replace("%1", str(e)),
             )
+
+    def _show_canvas_context_menu(self, global_pos):
+        """Show context menu for right-click on canvas in Layout mode."""
+        if self.is_plot_active():
+            return
+        menu = QMenu(self)
+        selected = self.canvas.get_selected_import_items()
+        unlocked = [it for it in selected if not it.locked]
+
+        if selected:
+            pen_menu = menu.addMenu(self.tr("Assign to Pen"))
+            pen_menu.setEnabled(bool(unlocked))
+            for p in self.doc.pens:
+                act_p = pen_menu.addAction(f"SP{p.pen_id} — {p.name}")
+                act_p.triggered.connect(lambda checked=False, pid=p.pen_id: self.assign_selection_to_pen(pid))
+
+            menu.addSeparator()
+            menu.addAction(self.act_rotate_ccw)
+            menu.addAction(self.act_rotate_cw)
+            menu.addAction(self.act_flip_h)
+            menu.addAction(self.act_flip_v)
+            menu.addSeparator()
+            menu.addAction(self.act_duplicate)
+
+            all_locked = all(it.locked for it in selected)
+            act_lock = menu.addAction(self.tr("Unlock") if all_locked else self.tr("Lock"))
+
+            def _toggle_lock():
+                target_lock = not all_locked
+                for it in selected:
+                    it.locked = target_lock
+                self.object_dock.refresh()
+                self._on_document_modified()
+
+            act_lock.triggered.connect(_toggle_lock)
+            menu.addAction(self.act_delete)
+            menu.addSeparator()
+            menu.addAction(self.act_zoom_selection)
+        else:
+            menu.addAction(self.act_import_svg)
+            menu.addAction(self.act_select_all)
+            menu.addSeparator()
+
+        menu.addAction(self.act_zoom_fit)
+        menu.exec(global_pos)
 
     def _save_project_to_path(self, fpath: str) -> bool:
         try:

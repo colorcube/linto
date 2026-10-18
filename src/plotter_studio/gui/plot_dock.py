@@ -10,9 +10,9 @@ from typing import Optional, Set, Any
 from PySide6.QtCore import Qt, Signal, QObject, QEvent, QSize, QTimer
 from PySide6.QtWidgets import (
     QDockWidget, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
-    QLabel, QDoubleSpinBox, QCheckBox, QPushButton,
+    QLabel, QDoubleSpinBox, QSpinBox, QCheckBox, QPushButton,
     QScrollArea, QMessageBox, QFrame, QComboBox, QProgressBar,
-    QStyle
+    QStyle, QDialog, QPlainTextEdit
 )
 from ..core.document import Document
 from ..pipeline.compiler import PipelineConfig, PlotJob
@@ -247,10 +247,28 @@ class PlotDockWidget(QDockWidget):
         self.chk_sort.setChecked(True)
         self.grp_pipeline.addWidget(self.chk_sort)
 
+        self.chk_dedup = QCheckBox(self.tr("Remove overlapping segments"))
+        self.chk_dedup.setToolTip(self.tr("Remove duplicate or overlapping line segments within the same pen layer"))
+        self.chk_dedup.setChecked(True)
+        self.grp_pipeline.addWidget(self.chk_dedup)
+
         self.chk_clip = QCheckBox(self.tr("Clip to printable area"))
         self.chk_clip.setToolTip(self.tr("Clip paths to hardware or page-specific printable area"))
         self.chk_clip.setChecked(False)
         self.grp_pipeline.addWidget(self.chk_clip)
+
+        hbox_pen_order = QHBoxLayout()
+        hbox_pen_order.setContentsMargins(0, 0, 0, 0)
+        hbox_pen_order.setSpacing(6)
+        lbl_pen_order = QLabel(self.tr("Pen order:"))
+        lbl_pen_order.setStyleSheet("font-weight: 500; color: #374151;")
+        hbox_pen_order.addWidget(lbl_pen_order)
+        self.combo_pen_order = QComboBox()
+        self.combo_pen_order.addItem(self.tr("By Pen Number (1–8)"), "id")
+        self.combo_pen_order.addItem(self.tr("Lightest Colors First"), "luminance")
+        self.combo_pen_order.setToolTip(self.tr("Order in which pens are plotted (plotting light colors first prevents dark ink smudging)"))
+        hbox_pen_order.addWidget(self.combo_pen_order, 1)
+        self.grp_pipeline.addLayout(hbox_pen_order)
 
         self.chk_show_travels = QCheckBox(self.tr("Show rapid moves"))
         self.chk_show_travels.setToolTip(self.tr("Show pen-up travel moves on canvas"))
@@ -273,7 +291,9 @@ class PlotDockWidget(QDockWidget):
         self.spin_merge.valueChanged.connect(self._on_pipeline_param_changed)
         self.spin_simplify.valueChanged.connect(self._on_pipeline_param_changed)
         self.chk_sort.toggled.connect(self._on_pipeline_param_changed)
+        self.chk_dedup.toggled.connect(self._on_pipeline_param_changed)
         self.chk_clip.toggled.connect(self._on_pipeline_param_changed)
+        self.combo_pen_order.currentIndexChanged.connect(self._on_pipeline_param_changed)
 
         layout.addWidget(self.grp_pipeline)
 
@@ -441,6 +461,23 @@ class PlotDockWidget(QDockWidget):
         )
         self.grp_device.addWidget(self.chk_pause_pen_change)
 
+        hbox_resume = QHBoxLayout()
+        hbox_resume.setContentsMargins(0, 0, 0, 0)
+        hbox_resume.setSpacing(6)
+        lbl_resume = QLabel(self.tr("Start from step:"))
+        lbl_resume.setStyleSheet("font-weight: 500; color: #374151;")
+        hbox_resume.addWidget(lbl_resume)
+        self.spin_start_step = QSpinBox()
+        self.spin_start_step.setKeyboardTracking(False)
+        self.spin_start_step.setRange(0, 999999)
+        self.spin_start_step.setValue(0)
+        self.spin_start_step.setToolTip(
+            self.tr("Resume plot from step N (0 = start from beginning; automatically set to last step after abort)")
+        )
+        hbox_resume.addWidget(self.spin_start_step)
+        hbox_resume.addStretch()
+        self.grp_device.addLayout(hbox_resume)
+
         self.btn_start_plot = QPushButton(self.tr("Send Plot"))
         self.btn_start_plot.setIcon(get_icon("play", size=16))
         self.btn_start_plot.setStyleSheet("font-weight: 600; padding: 5px;")
@@ -478,6 +515,11 @@ class PlotDockWidget(QDockWidget):
         self.lbl_stream_status.setStyleSheet("color: #64748b;")
         self.lbl_stream_status.setWordWrap(True)
         self.grp_device.addWidget(self.lbl_stream_status)
+
+        self.btn_diag_log = QPushButton(self.tr("Diagnostic Log..."))
+        self.btn_diag_log.setToolTip(self.tr("Show transmitted and received HP-GL bytes for hardware diagnostics"))
+        self.btn_diag_log.clicked.connect(self.show_diagnostic_log)
+        self.grp_device.addWidget(self.btn_diag_log)
 
         layout.addWidget(self.grp_device)
 
@@ -731,12 +773,19 @@ class PlotDockWidget(QDockWidget):
         paper_info = f"{fmt_str} ({page.width_mm:.0f} × {page.height_mm:.0f} mm)"
         pen_list = ", ".join(
             f"SP{pid} ({layer.pen.name})"
-            for pid, layer in sorted(self.job.layers.items())
+            for pid, layer in self.job.layers.items()
         ) if self.job and self.job.layers else "-"
         duration_str = self.job.formatted_duration if self.job else "00m 00s"
-        warn_block = ""
-        if self.job and self.job.warnings:
-            warn_block = "\n\n⚠️ " + "\n⚠️ ".join(self.job.warnings)
+        warn_lines = list(self.job.warnings) if (self.job and self.job.warnings) else []
+        if self.job and getattr(self.job, "has_out_of_bounds", False) and not self.chk_clip.isChecked():
+            warn_lines.append(
+                self.tr("Paths extend beyond printable margins while 'Clip to printable area' is disabled!")
+            )
+        start_step = self.spin_start_step.value()
+        if start_step > 0:
+            warn_lines.append(self.tr("Resuming plot from step %1").replace("%1", str(start_step)))
+
+        warn_block = ("\n\n⚠️ " + "\n⚠️ ".join(warn_lines)) if warn_lines else ""
 
         msg = (
             self.tr(
@@ -822,6 +871,7 @@ class PlotDockWidget(QDockWidget):
         self.btn_abort_plot.setEnabled(True)
         self.btn_probe.setEnabled(False)
         self.chk_pause_pen_change.setEnabled(False)
+        self.spin_start_step.setEnabled(False)
         self.grp_pipeline.setEnabled(False)
         self.combo_port.setEnabled(False)
         self.combo_margins.setEnabled(False)
@@ -842,6 +892,7 @@ class PlotDockWidget(QDockWidget):
             bytesize=profile.connection.bytesize,
             parity=profile.connection.parity,
             stopbits=profile.connection.stopbits,
+            start_step_index=self.spin_start_step.value(),
         )
         if not started:
             self._on_stream_finished(False, self.tr("Could not start streamer."))
@@ -893,6 +944,7 @@ class PlotDockWidget(QDockWidget):
         self.btn_abort_plot.setEnabled(False)
         self.btn_probe.setEnabled(True)
         self.chk_pause_pen_change.setEnabled(True)
+        self.spin_start_step.setEnabled(True)
         self.grp_pipeline.setEnabled(True)
         self.combo_port.setEnabled(True)
         self.combo_margins.setEnabled(True)
@@ -904,11 +956,44 @@ class PlotDockWidget(QDockWidget):
 
         if success:
             self.progress_bar.setValue(100)
+            self.spin_start_step.setValue(0)
             self.lbl_stream_status.setText(f"✓ {msg}")
             if self.job:
                 self.stream_step_changed.emit(len(self.job.steps))
         else:
+            last_step = getattr(self._streamer, "last_completed_step_index", 0) if self._streamer else 0
+            if last_step > 0:
+                self.spin_start_step.setValue(last_step)
             self.lbl_stream_status.setText(f"⚠️ {msg}")
+
+    def show_diagnostic_log(self):
+        """Open a modal dialog displaying the recorded HP-GL TX/RX trace log."""
+        dlg = QDialog(self)
+        dlg.setWindowTitle(self.tr("HP-GL Diagnostic Log (TX/RX)"))
+        dlg.resize(620, 420)
+        vbox = QVBoxLayout(dlg)
+        txt = QPlainTextEdit(dlg)
+        txt.setReadOnly(True)
+        entries = self._streamer.get_trace_log() if self._streamer else []
+        txt.setPlainText("\n".join(entries) if entries else self.tr("No transmission log entries recorded yet."))
+        vbox.addWidget(txt)
+
+        hbox_btn = QHBoxLayout()
+        btn_clear = QPushButton(self.tr("Clear Log"), dlg)
+
+        def _clear():
+            if self._streamer:
+                self._streamer.clear_trace_log()
+            txt.setPlainText(self.tr("No transmission log entries recorded yet."))
+
+        btn_clear.clicked.connect(_clear)
+        hbox_btn.addWidget(btn_clear)
+        hbox_btn.addStretch()
+        btn_close = QPushButton(self.tr("Close"), dlg)
+        btn_close.clicked.connect(dlg.accept)
+        hbox_btn.addWidget(btn_close)
+        vbox.addLayout(hbox_btn)
+        dlg.exec()
 
     def closeEvent(self, event):
         if self._streamer and self._streamer.is_active():
@@ -920,6 +1005,8 @@ class PlotDockWidget(QDockWidget):
             flatten_tolerance_mm=self.spin_flatten.value(),
             merge_tolerance_mm=self.spin_merge.value(),
             simplify_tolerance_mm=self.spin_simplify.value(),
+            deduplicate_segments=self.chk_dedup.isChecked(),
+            pen_order=str(self.combo_pen_order.currentData() or "id"),
             sort_paths=self.chk_sort.isChecked(),
             clip_to_plottable=self.chk_clip.isChecked(),
         )
@@ -932,6 +1019,8 @@ class PlotDockWidget(QDockWidget):
         self._pipeline_dirty = False
         self.btn_recompute.setText(self.tr("Recompute Pipeline"))
         self.btn_recompute.setStyleSheet("")
+        max_step = max(0, len(job.steps)) if (job and job.steps) else 0
+        self.spin_start_step.setRange(0, max_step)
 
         if not (self._streamer and self._streamer.is_active()):
             self.btn_start_plot.setEnabled(bool(job and job.steps))
