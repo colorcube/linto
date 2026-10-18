@@ -41,13 +41,15 @@ def test_device_profile():
 
 def test_hpgl_emitter():
     profile = get_default_profile()
+    assert profile.swap_xy is True
+    assert profile.invert_y is True
     emitter = HPGLEmitter(profile, margin_profile="exp")
 
     doc = Document()
     doc.page.width = 420.0
     doc.page.height = 297.0
 
-    # 1 line with pen 1 from (210, 158.5) [center] to (235, 158.5) [+25mm]
+    # 1 line with pen 1 from (210, 158.5) [center] to (235, 158.5) [+25mm in sheet X = +1000 units in plotter Y (carriage)]
     path = VectorPath(
         points=np.array([[210.0, 158.5], [235.0, 158.5]]),
         pen_id=1,
@@ -63,8 +65,8 @@ def test_hpgl_emitter():
     assert "SP1;" in hpgl_str
     # At center (210, 158.5), plotter units should be (0, 0)
     assert "PU0,0;" in hpgl_str
-    # At (235, 158.5) -> dx = +25mm * 40 = 1000 units in X
-    assert "PD1000,0;" in hpgl_str
+    # At (235, 158.5) -> dx_sheet = +25mm -> plotter (X=feed=0, Y=carriage=+1000)
+    assert "PD0,1000;" in hpgl_str
     assert "PU;SP0;" in hpgl_str
 
 
@@ -204,35 +206,46 @@ def test_axis_transformations():
     # Point at +25mm X: (235.0, 158.5) -> dx=+25mm -> 1000 units
     # Point at -10mm Y: (210.0, 148.5) -> y_mm is 10mm higher on sheet -> dy_c = +10mm (upwards) -> 400 units
 
-    # 1. Standard (0 deg, no invert, no swap)
-    e_std = HPGLEmitter(profile, margin_profile="exp")
+    # 0. Mutoh XP-500 default (swap_xy=True, invert_y=True -> X=feed down, Y=carriage right)
+    e_xp500 = HPGLEmitter(profile, margin_profile="exp")
+    assert e_xp500.to_plotter_units(210.0, 158.5, 420.0, 297.0) == (0, 0)
+    # +25mm right on sheet -> (0, +1000)
+    assert e_xp500.to_plotter_units(235.0, 158.5, 420.0, 297.0) == (0, 1000)
+    # 10mm higher on sheet (y=148.5) -> -400 in X (feed down)
+    assert e_xp500.to_plotter_units(210.0, 148.5, 420.0, 297.0) == (-400, 0)
+    # Plottable corners for A3 EXP (left=5, right=415, top=25, bottom=292) map to X: ±5340, Y: ±8200
+    assert e_xp500.to_plotter_units(5.0, 25.0, 420.0, 297.0) == (-5340, -8200)
+    assert e_xp500.to_plotter_units(415.0, 292.0, 420.0, 297.0) == (5340, 8200)
+
+    # 1. Unswapped Cartesian (0 deg, no invert, no swap)
+    e_std = HPGLEmitter(profile, margin_profile="exp", swap_xy=False, invert_x=False, invert_y=False)
     assert e_std.to_plotter_units(210.0, 158.5, 420.0, 297.0) == (0, 0)
     assert e_std.to_plotter_units(235.0, 158.5, 420.0, 297.0) == (1000, 0)
     assert e_std.to_plotter_units(210.0, 148.5, 420.0, 297.0) == (0, 400)
 
     # 2. Invert X
-    e_inv_x = HPGLEmitter(profile, margin_profile="exp", invert_x=True)
+    e_inv_x = HPGLEmitter(profile, margin_profile="exp", swap_xy=False, invert_x=True, invert_y=False)
     assert e_inv_x.to_plotter_units(235.0, 158.5, 420.0, 297.0) == (-1000, 0)
 
     # 3. Invert Y
-    e_inv_y = HPGLEmitter(profile, margin_profile="exp", invert_y=True)
+    e_inv_y = HPGLEmitter(profile, margin_profile="exp", swap_xy=False, invert_x=False, invert_y=True)
     assert e_inv_y.to_plotter_units(210.0, 148.5, 420.0, 297.0) == (0, -400)
 
-    # 4. Swap XY
-    e_swap = HPGLEmitter(profile, margin_profile="exp", swap_xy=True)
+    # 4. Swap XY only
+    e_swap = HPGLEmitter(profile, margin_profile="exp", swap_xy=True, invert_x=False, invert_y=False)
     assert e_swap.to_plotter_units(235.0, 158.5, 420.0, 297.0) == (0, 1000)
     assert e_swap.to_plotter_units(210.0, 148.5, 420.0, 297.0) == (400, 0)
 
     # 5. Rotation 90° (CCW in Cartesian: (1, 0) -> (0, 1))
-    e_rot90 = HPGLEmitter(profile, margin_profile="exp", rotation_deg=90)
+    e_rot90 = HPGLEmitter(profile, margin_profile="exp", rotation_deg=90, swap_xy=False, invert_x=False, invert_y=False)
     assert e_rot90.to_plotter_units(235.0, 158.5, 420.0, 297.0) == (0, 1000)
 
     # 6. Rotation 180°
-    e_rot180 = HPGLEmitter(profile, margin_profile="exp", rotation_deg=180)
+    e_rot180 = HPGLEmitter(profile, margin_profile="exp", rotation_deg=180, swap_xy=False, invert_x=False, invert_y=False)
     assert e_rot180.to_plotter_units(235.0, 158.5, 420.0, 297.0) == (-1000, 0)
 
     # 7. Rotation 270°
-    e_rot270 = HPGLEmitter(profile, margin_profile="exp", rotation_deg=270)
+    e_rot270 = HPGLEmitter(profile, margin_profile="exp", rotation_deg=270, swap_xy=False, invert_x=False, invert_y=False)
     assert e_rot270.to_plotter_units(235.0, 158.5, 420.0, 297.0) == (0, -1000)
 
 
@@ -484,5 +497,175 @@ def test_streamer_pause_on_pen_change(monkeypatch):
     assert finished == [True, True]
     assert any("SP2;" in c for c in written_chunks)
     assert flushed[0] is True
+
+
+def test_xp500_golden_oh_measurements():
+    """Golden test verifying HPGLEmitter and probe_plotter against real Mutoh XP-500 OH; measurements."""
+    profile = get_default_profile()
+    emitter = HPGLEmitter(profile, margin_profile="exp")
+
+    # A3 landscape (420 x 297 mm), EXP margins: top=25, bottom=5, left=5, right=5
+    # Plottable box: x in [5, 415] (width 410 mm), y in [25, 292] (height 267 mm)
+    # Measured OH on XP-500 for A3 landscape: -5399,-8209,5399,8209 (X=feed ±270mm, Y=carriage ±410.5mm)
+    # Theoretical EXP in 40 units/mm: X in [-5340, 5340], Y in [-8200, 8200]
+    px_tl, py_tl = emitter.to_plotter_units(5.0, 25.0, 420.0, 297.0)
+    px_tr, py_tr = emitter.to_plotter_units(415.0, 25.0, 420.0, 297.0)
+    px_bl, py_bl = emitter.to_plotter_units(5.0, 292.0, 420.0, 297.0)
+    px_br, py_br = emitter.to_plotter_units(415.0, 292.0, 420.0, 297.0)
+
+    assert (px_tl, py_tl) == (-5340, -8200)
+    assert (px_tr, py_tr) == (-5340, 8200)
+    assert (px_bl, py_bl) == (5340, -8200)
+    assert (px_br, py_br) == (5340, 8200)
+
+    # Dynamic units_per_mm (e.g. OF; = 100,100 -> 0.01 mm step)
+    emitter_100 = HPGLEmitter(profile, margin_profile="exp", units_per_mm=100.0)
+    assert emitter_100.to_plotter_units(415.0, 292.0, 420.0, 297.0) == (13350, 20500)
+
+
+def test_abort_during_xoff_on_last_command(monkeypatch):
+    """Verify aborting while XOFF-paused on the final command reports abort (False), never success (0.4)."""
+    import serial
+    from plotter_studio.device.emitter import EmittedCommand
+
+    written = []
+    output_flushed = [False]
+
+    class MockXoffSerial:
+        def __init__(self, *args, **kwargs):
+            self.in_waiting = 1
+            self._sent_xoff = False
+            self.rtscts = False
+
+        def reset_input_buffer(self):
+            pass
+
+        def reset_output_buffer(self):
+            output_flushed[0] = True
+
+        def read(self, n=1):
+            if not self._sent_xoff:
+                self._sent_xoff = True
+                self.in_waiting = 0
+                return b"\x13"  # XOFF
+            return b""
+
+        def write(self, data: bytes):
+            written.append(data)
+            return len(data)
+
+        def flush(self):
+            pass
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(serial, "Serial", MockXoffSerial)
+
+    # Single command = last command in loop
+    cmds = [EmittedCommand(hpgl="PD100,100;\r\n", step_index=0, pen=1, is_draw=True, dist_mm=5.0)]
+    finished_res = [None, ""]
+    streamer = SerialStreamer(
+        on_finished=lambda ok, msg: finished_res.__setitem__(0, ok) or finished_res.__setitem__(1, msg),
+    )
+
+    streamer.start_stream("/dev/ttyUSB0", cmds, flow_control="xonxoff", sync_with_oa=False)
+
+    # Wait until XOFF pause triggers
+    start_t = time.time()
+    while not streamer._xoff_paused and (time.time() - start_t < 1.0):
+        time.sleep(0.01)
+    assert streamer._xoff_paused is True
+
+    # Abort while waiting for XON on the last command
+    streamer.abort()
+
+    start_t = time.time()
+    while finished_res[0] is None and (time.time() - start_t < 1.0):
+        time.sleep(0.01)
+
+    assert finished_res[0] is False
+    assert "abgebrochen" in finished_res[1].lower()
+    assert output_flushed[0] is True
+    assert any(b"\x1b.K" in chunk for chunk in written)
+
+
+def test_cts_stall_and_serial_framing(monkeypatch):
+    """Verify CTS stall retries without killing the job (0.2, 0.3) and 7E1 framing is passed (0.9)."""
+    import serial
+    from plotter_studio.device.emitter import EmittedCommand
+
+    recorded_kwargs = {}
+    written = []
+    cts_flag = [False]  # Start with CTS low (buffer full)
+
+    class MockCtsSerial:
+        def __init__(self, *args, **kwargs):
+            recorded_kwargs.update(kwargs)
+            self.rtscts = kwargs.get("rtscts", False)
+            self.in_waiting = 0
+
+        @property
+        def cts(self):
+            return cts_flag[0]
+
+        def reset_input_buffer(self):
+            pass
+
+        def reset_output_buffer(self):
+            pass
+
+        def write(self, data: bytes):
+            written.append(data)
+            return len(data)
+
+        def read(self, n=1):
+            return b"0,0,0\r"
+
+        def flush(self):
+            pass
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(serial, "Serial", MockCtsSerial)
+
+    cmds = [EmittedCommand(hpgl="PD100,100;\r\n", step_index=0, pen=1, is_draw=True, dist_mm=5.0)]
+    statuses = []
+    finished = [None]
+    streamer = SerialStreamer(
+        on_status=lambda st, msg: statuses.append((st, msg)),
+        on_finished=lambda ok, msg: finished.__setitem__(0, ok),
+        end_settle_delay_s=0.0,
+    )
+
+    streamer.start_stream(
+        "/dev/ttyUSB0",
+        cmds,
+        flow_control="rtscts",
+        bytesize=7,
+        parity="E",
+        stopbits=2,
+        sync_with_oa=True,
+    )
+
+    # Wait until streamer enters PAUSED due to CTS low
+    start_t = time.time()
+    while not any(st == StreamerState.PAUSED for st, _ in statuses) and (time.time() - start_t < 1.0):
+        time.sleep(0.01)
+    assert any("CTS low" in msg for _, msg in statuses)
+
+    # Release CTS -> job should resume and finish cleanly with OA; sync
+    cts_flag[0] = True
+    start_t = time.time()
+    while finished[0] is None and (time.time() - start_t < 1.0):
+        time.sleep(0.01)
+
+    assert finished[0] is True
+    assert recorded_kwargs["bytesize"] == serial.SEVENBITS
+    assert recorded_kwargs["parity"] == serial.PARITY_EVEN
+    assert recorded_kwargs["stopbits"] == serial.STOPBITS_TWO
+    assert any(b"OA;\r" in chunk for chunk in written)
+
 
 
