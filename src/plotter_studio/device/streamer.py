@@ -119,7 +119,7 @@ class SerialTransport(Transport):
         self.ser: Optional[serial.Serial] = None
 
     def open(self) -> None:
-        self.ser = serial.Serial(
+        kwargs = dict(
             port=self.port,
             baudrate=self.baudrate,
             bytesize=self.bytesize,
@@ -131,6 +131,17 @@ class SerialTransport(Transport):
             timeout=self.timeout,
             write_timeout=self.write_timeout,
         )
+        try:
+            self.ser = serial.Serial(**kwargs, exclusive=True)
+        except (TypeError, ValueError):
+            self.ser = serial.Serial(**kwargs)
+        except (serial.SerialException, OSError) as exc:
+            # Some virtual PTYs do not support TIOCEXCL (exclusive=True); retry without exclusive if errno is ENOTTY/EINVAL
+            err_str = str(exc).lower()
+            if "exclusive" in err_str or "inappropriate ioctl" in err_str or getattr(exc, "errno", None) in (22, 25):
+                self.ser = serial.Serial(**kwargs)
+            else:
+                raise
         self.reset_input()
         self.discard_output()
 
@@ -438,8 +449,9 @@ class SerialStreamer:
         if new_state is not None:
             self._emit_status(new_state, msg)
 
-    def abort(self) -> None:
+    def abort(self, wait: bool = False, timeout: float = 1.0) -> None:
         """Immediately abort current plot job, flush host buffer, and lift pen."""
+        thread_to_join: Optional[threading.Thread] = None
         with self._lock:
             if not self.is_active():
                 return
@@ -448,6 +460,10 @@ class SerialStreamer:
             self._pause_event.set()  # Wake up if paused
             if self._transport:
                 self._transport.discard_output()
+            if wait and self._thread and self._thread is not threading.current_thread():
+                thread_to_join = self._thread
+        if thread_to_join is not None and thread_to_join.is_alive():
+            thread_to_join.join(timeout=max(0.0, float(timeout)))
 
     def _emit_status(self, state: StreamerState, msg: str) -> None:
         with self._lock:

@@ -26,7 +26,17 @@ class EmittedCommand:
 
 
 class HPGLEmitter:
-    """Translates compiled PlotJob layers into HP-GL instructions."""
+    """Translates compiled PlotJob layers into HP-GL instructions.
+
+    Axis handling has two layers:
+
+    1. **Intrinsic device mapping** from the profile (``profile.swap_xy``,
+       ``invert_x``, ``invert_y``, ``rotation_deg``). It describes the hardware,
+       e.g. XP-500: X = paper feed, Y = carriage. Always applied.
+    2. **User correction** (``swap_xy``, ``invert_x``, ``invert_y``,
+       ``rotation_deg`` arguments). Applied on top in the centered sheet frame.
+       Default: no correction.
+    """
 
     def __init__(
         self,
@@ -45,14 +55,33 @@ class HPGLEmitter:
         self.profile = profile
         self.margin_profile = margin_profile
         self.points_per_cmd = max(1, points_per_cmd)
-        self.swap_xy = profile.swap_xy if swap_xy is None else swap_xy
-        self.invert_x = profile.invert_x if invert_x is None else invert_x
-        self.invert_y = profile.invert_y if invert_y is None else invert_y
-        self.rotation_deg = profile.rotation_deg if rotation_deg is None else rotation_deg
+        # User corrections (identity by default)
+        self.swap_xy = bool(swap_xy)
+        self.invert_x = bool(invert_x)
+        self.invert_y = bool(invert_y)
+        self.rotation_deg = int(rotation_deg or 0)
         self.units_per_mm = float(units_per_mm) if (units_per_mm is not None and units_per_mm > 0) else profile.units_per_mm
         self.feed_edge = feed_edge or "top"
         self.include_handshake_init = include_handshake_init
         self.include_iw_clip = include_iw_clip
+
+    @staticmethod
+    def _apply_axis_ops(
+        x: float, y: float, rotation_deg: int, invert_x: bool, invert_y: bool, swap_xy: bool
+    ) -> tuple[float, float]:
+        """Rotate (CCW, degrees), then invert, then swap."""
+        if rotation_deg % 360 != 0:
+            rad = math.radians(rotation_deg)
+            cos_a = math.cos(rad)
+            sin_a = math.sin(rad)
+            x, y = x * cos_a - y * sin_a, x * sin_a + y * cos_a
+        if invert_x:
+            x = -x
+        if invert_y:
+            y = -y
+        if swap_xy:
+            x, y = y, x
+        return x, y
 
     def to_plotter_units(
         self,
@@ -79,25 +108,15 @@ class HPGLEmitter:
             x_c = x_mm
             y_c = sheet_h_mm - y_mm
 
-        # 1. Apply rotation around origin
-        if self.rotation_deg % 360 != 0:
-            rad = math.radians(self.rotation_deg)
-            cos_a = math.cos(rad)
-            sin_a = math.sin(rad)
-            rx = x_c * cos_a - y_c * sin_a
-            ry = x_c * sin_a + y_c * cos_a
-        else:
-            rx, ry = x_c, y_c
-
-        # 2. Invert axes if requested
-        if self.invert_x:
-            rx = -rx
-        if self.invert_y:
-            ry = -ry
-
-        # 3. Swap axes if requested
-        if self.swap_xy:
-            rx, ry = ry, rx
+        # 1. User correction (identity by default)
+        rx, ry = self._apply_axis_ops(
+            x_c, y_c, self.rotation_deg, self.invert_x, self.invert_y, self.swap_xy
+        )
+        # 2. Intrinsic device mapping from the profile
+        p = self.profile
+        rx, ry = self._apply_axis_ops(
+            rx, ry, int(p.rotation_deg or 0), bool(p.invert_x), bool(p.invert_y), bool(p.swap_xy)
+        )
 
         px = int(round(rx * self.units_per_mm))
         py = int(round(ry * self.units_per_mm))
@@ -282,8 +301,11 @@ def build_emitter(
     """Build an HPGLEmitter with a consistent priority order:
 
     1. Profile defaults and document.page (margin_profile, feed_edge).
-    2. Active ConfiguredDevice settings (profile, margin_profile, probed_units_per_mm, axis options).
-    3. Explicit margin_profile and GUI overrides (rotation_deg, swap_xy, invert_x, invert_y).
+       The profile's intrinsic axis mapping is always applied by the emitter.
+    2. Active ConfiguredDevice settings (profile, margin_profile, probed_units_per_mm,
+       axis *corrections*).
+    3. Explicit margin_profile and GUI overrides (axis corrections rotation_deg,
+       swap_xy, invert_x, invert_y). These replace the device corrections.
     """
     from .profile import get_default_profile
 
@@ -305,10 +327,10 @@ def build_emitter(
             margin_key = dev_margin
         units_override = getattr(device, "probed_units_per_mm", None)
         emitter_opts = {
-            "rotation_deg": getattr(device, "rotation", profile.rotation_deg),
-            "swap_xy": getattr(device, "swap_xy", profile.swap_xy),
-            "invert_x": getattr(device, "invert_x", profile.invert_x),
-            "invert_y": getattr(device, "invert_y", profile.invert_y),
+            "rotation_deg": getattr(device, "rotation", 0),
+            "swap_xy": getattr(device, "swap_xy", False),
+            "invert_x": getattr(device, "invert_x", False),
+            "invert_y": getattr(device, "invert_y", False),
         }
 
     if margin_profile:

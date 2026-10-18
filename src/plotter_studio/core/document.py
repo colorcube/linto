@@ -186,20 +186,37 @@ class Page:
             or bounds.max_y > pb.max_y + tol_mm
         )
 
-    def apply_probe_result(self, result: Any) -> bool:
-        """Update page preset or custom sheet dimensions from a hardware ProbeResult."""
+    def apply_probe_result(self, result: Any, tolerance_mm: float = 15.0) -> bool:
+        """Update the sheet from a hardware ProbeResult (what the plotter reports wins).
+
+        The plotter reports only the hard-clip window. The sheet is estimated as
+        hard-clip + current margins. If that matches a preset (in either orientation)
+        within `tolerance_mm`, the preset is used with the detected orientation;
+        otherwise a custom size is set.
+        """
         if not getattr(result, "success", False):
             return False
-        detected_format = getattr(result, "detected_format", "")
-        if detected_format and detected_format in PAPER_PRESETS:
-            self.apply_preset(detected_format, "landscape")
-            return True
         hard_clip_mm = getattr(result, "hard_clip_mm", None)
         if hard_clip_mm:
-            w, h = hard_clip_mm
-            sheet_w = w + self.margin_left_mm + self.margin_right_mm
-            sheet_h = h + self.margin_top_mm + self.margin_bottom_mm
-            self.set_custom_size(sheet_w, sheet_h)
+            clip_w, clip_h = hard_clip_mm
+            sheet_w = clip_w + self.margin_left_mm + self.margin_right_mm
+            sheet_h = clip_h + self.margin_top_mm + self.margin_bottom_mm
+            orientation = "landscape" if sheet_w >= sheet_h else "portrait"
+            best: Optional[Tuple[str, float]] = None
+            for name, (pw, ph) in PAPER_PRESETS.items():
+                long_side, short_side = max(pw, ph), min(pw, ph)
+                exp_w, exp_h = (long_side, short_side) if orientation == "landscape" else (short_side, long_side)
+                err = max(abs(sheet_w - exp_w), abs(sheet_h - exp_h))
+                if err <= tolerance_mm and (best is None or err < best[1]):
+                    best = (name, err)
+            if best is not None:
+                self.apply_preset(best[0], orientation)
+            else:
+                self.set_custom_size(sheet_w, sheet_h)
+            return True
+        detected_format = getattr(result, "detected_format", "")
+        if detected_format and detected_format in PAPER_PRESETS:
+            self.apply_preset(detected_format, self.orientation)
             return True
         return False
 

@@ -259,7 +259,7 @@ def test_deduplicate_polylines_pen_luminance_order_and_svg_text_warning():
     assert all(p.pen_id == 2 for p in imported.paths)  # Mapped to red pen 2 (#dc2626)
     doc.items.append(imported)
     job_warn = compile_document_to_plot_job(doc)
-    assert any("durch einfache Linienschrift ersetzt" in w for w in job_warn.warnings)
+    assert any(i.code == "text_replaced" for i in job_warn.issues)
 
 
 

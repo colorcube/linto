@@ -34,7 +34,7 @@ def test_device_manager_defaults_and_persistence(tmp_path):
         model_id="mutoh_xp500",
         port="/dev/ttyUSB1",
         baudrate=9600,
-        flow_control="dsrdtr",
+        flow_control="none",
         margin_profile="norm",
         rotation=90,
         swap_xy=True,
@@ -50,7 +50,7 @@ def test_device_manager_defaults_and_persistence(tmp_path):
     assert loaded_dev is not None
     assert loaded_dev.name == "Mein Custom Plotter"
     assert loaded_dev.baudrate == 9600
-    assert loaded_dev.flow_control == "dsrdtr"
+    assert loaded_dev.flow_control == "none"
     assert loaded_dev.swap_xy is True
 
     # Update device
@@ -90,7 +90,7 @@ def test_device_dialog_headless(qapp, tmp_path):
 
     flow_keys = [dlg.combo_flow.itemData(i) for i in range(dlg.combo_flow.count())]
     assert "rtscts" in flow_keys
-    assert "dsrdtr" in flow_keys
+    assert "dsrdtr" not in flow_keys
     assert "xonxoff" in flow_keys
     assert "none" in flow_keys
 
@@ -131,3 +131,65 @@ def test_device_manager_pure_python_signals_without_qobject(tmp_path):
     mgr.add_device(new_dev)
     assert len(updated_events) == 1
 
+
+
+OLD_DEVICES_YAML = """active_device_id: mutoh_xp500_usb
+devices:
+- id: mutoh_xp500_usb
+  name: Mutoh XP-500 (Seriell)
+  model_id: mutoh_xp500
+  port: /dev/ttyUSB0
+  baudrate: 19200
+  flow_control: dsrdtr
+  margin_profile: exp
+  rotation: 0
+  swap_xy: false
+  invert_x: false
+  invert_y: false
+- id: interim
+  name: Interim build
+  model_id: mutoh_xp500
+  port: tcp://127.0.0.1:9999
+  baudrate: 19200
+  flow_control: xonxoff
+  margin_profile: exp
+  rotation: 0
+  swap_xy: true
+  invert_x: false
+  invert_y: true
+  some_future_key: 42
+"""
+
+
+def test_old_devices_yaml_migrates_to_axis_corrections(tmp_path):
+    """Old configs (absolute axis values) must not override the XP-500 profile mapping."""
+    from plotter_studio.core.document import Document
+    from plotter_studio.device import build_emitter
+
+    config_file = tmp_path / "devices.yaml"
+    config_file.write_text(OLD_DEVICES_YAML, encoding="utf-8")
+    mgr = DeviceManager(config_path=config_file)
+
+    usb = mgr.get_device("mutoh_xp500_usb")
+    interim = mgr.get_device("interim")
+    assert usb.flow_control == "rtscts"  # dsrdtr does nothing on Linux
+    for dev in (usb, interim):
+        assert (dev.rotation, dev.swap_xy, dev.invert_x, dev.invert_y) == (0, False, False, False)
+        assert dev.axis_schema == 2
+
+    # Full chain DeviceManager -> build_emitter: A3 landscape EXP corners
+    # X = feed (sheet down), Y = carriage (sheet right); measured OH ~ +-5399 / +-8209
+    doc = Document()
+    for dev in (usb, interim):
+        em = build_emitter(document=doc, device=dev)
+        pb = doc.page.plottable_box
+        assert em.to_plotter_units(pb.min_x, pb.min_y, 420.0, 297.0, center_mm=(pb.center.x, pb.center.y)) == (-5340, -8200)
+        assert em.to_plotter_units(pb.max_x, pb.max_y, 420.0, 297.0, center_mm=(pb.center.x, pb.center.y)) == (5340, 8200)
+
+    # Migration is persisted
+    assert "axis_schema: 2" in config_file.read_text(encoding="utf-8")
+
+
+def test_new_device_defaults_have_no_axis_correction():
+    dev = ConfiguredDevice(id="x", name="HP 7475", model_id="hpgl_generic")
+    assert (dev.rotation, dev.swap_xy, dev.invert_x, dev.invert_y) == (0, False, False, False)

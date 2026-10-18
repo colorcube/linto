@@ -24,8 +24,8 @@ class ProbeResult:
     success: bool
     model: str = ""
     units_per_mm: float = 40.0
-    hard_clip_units: Optional[tuple[int, int, int, int]] = None
-    hard_clip_mm: Optional[tuple[float, float]] = None
+    hard_clip_units: Optional[tuple[int, int, int, int]] = None  # raw OH (plotter axes)
+    hard_clip_mm: Optional[tuple[float, float]] = None  # (width, height) in *sheet* axes
     detected_format: str = ""
     error_message: str = ""
     cts: Optional[bool] = None
@@ -34,6 +34,14 @@ class ProbeResult:
     @property
     def error(self) -> str:
         return self.error_message
+
+    @property
+    def orientation(self) -> str:
+        """Sheet orientation derived from the reported hard-clip window ("" if unknown)."""
+        if not self.hard_clip_mm:
+            return ""
+        w, h = self.hard_clip_mm
+        return "landscape" if w >= h else "portrait"
 
 
 # Approximate hard-clip width ranges for format detection (mm)
@@ -78,7 +86,7 @@ def probe_plotter(
     bytesize: int = 8,
     parity: str = "N",
     stopbits: float = 1,
-    swap_xy: bool = True,
+    axes_swapped: bool = True,
 ) -> ProbeResult:
     """Send inquiry commands (OI, OF, OH) and detect plotter configuration."""
     port_clean = port.strip()
@@ -109,8 +117,7 @@ def probe_plotter(
                         break
         else:
             # Serial connection
-            with serial.Serial(
-                port_clean,
+            ser_kwargs = dict(
                 baudrate=baudrate,
                 bytesize=ser_bytesize,
                 parity=ser_parity,
@@ -118,7 +125,18 @@ def probe_plotter(
                 rtscts=False,  # Non-blocking probe without handshake stall
                 timeout=effective_timeout,
                 write_timeout=effective_timeout,
-            ) as ser:
+            )
+            try:
+                ser_ctx = serial.Serial(port_clean, **ser_kwargs, exclusive=True)
+            except (TypeError, ValueError):
+                ser_ctx = serial.Serial(port_clean, **ser_kwargs)
+            except (serial.SerialException, OSError) as exc:
+                err_str = str(exc).lower()
+                if "exclusive" in err_str or "inappropriate ioctl" in err_str or getattr(exc, "errno", None) in (22, 25):
+                    ser_ctx = serial.Serial(port_clean, **ser_kwargs)
+                else:
+                    raise
+            with ser_ctx as ser:
                 try:
                     cts_val = bool(ser.cts)
                     dsr_val = bool(ser.dsr)
@@ -170,9 +188,9 @@ def probe_plotter(
                 hard_clip_units = (xmin, ymin, xmax, ymax)
                 dx_mm = abs(xmax - xmin) / units_per_mm
                 dy_mm = abs(ymax - ymin) / units_per_mm
-                # When swap_xy is True (Mutoh XP-500: X=feed/height, Y=carriage/width),
-                # sheet width is dy_mm and sheet height is dx_mm.
-                if swap_xy:
+                # When the profile's axes are swapped (Mutoh XP-500: X=feed/height,
+                # Y=carriage/width), sheet width is dy_mm and sheet height is dx_mm.
+                if axes_swapped:
                     w_mm, h_mm = dy_mm, dx_mm
                 else:
                     w_mm, h_mm = dx_mm, dy_mm

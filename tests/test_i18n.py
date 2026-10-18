@@ -1,22 +1,17 @@
 """Tests for i18n localization and fallback mechanism."""
 
-import pytest
+import ast
+import glob
+import json
 from PySide6.QtCore import QCoreApplication
-from PySide6.QtWidgets import QApplication, QLabel
+from PySide6.QtWidgets import QLabel
 
-from plotter_studio.gui.i18n import PlotterTranslator, setup_i18n
-
-
-@pytest.fixture(scope="session")
-def qapp():
-    app = QApplication.instance()
-    if app is None:
-        app = QApplication([])
-    return app
+from plotter_studio.gui.i18n import PlotterTranslator, setup_i18n, get_translations_dir
 
 
 def test_translator_fallback_to_source_text(qapp):
     """When a string is missing in translation dict, it falls back to source text."""
+    setup_i18n(qapp, language_override="en")
     translator = PlotterTranslator(qapp)
     translator.load_dict({"&File": "&Datei"}, lang="de")
     qapp.installTranslator(translator)
@@ -29,10 +24,12 @@ def test_translator_fallback_to_source_text(qapp):
     assert lbl.tr("Nonexistent String") == "Nonexistent String"
 
     qapp.removeTranslator(translator)
+    setup_i18n(qapp, language_override="de")
 
 
 def test_translator_context_override(qapp):
     """Context-specific translation overrides global translation."""
+    setup_i18n(qapp, language_override="en")
     translator = PlotterTranslator(qapp)
     translator.load_dict({
         "Close": "Schließen",
@@ -48,6 +45,7 @@ def test_translator_context_override(qapp):
     assert QCoreApplication.translate("OtherContext", "Close") == "Schließen"
 
     qapp.removeTranslator(translator)
+    setup_i18n(qapp, language_override="de")
 
 
 def test_setup_i18n_english_fallback(qapp):
@@ -57,6 +55,7 @@ def test_setup_i18n_english_fallback(qapp):
 
     lbl = QLabel()
     assert lbl.tr("Open Project...") == "Open Project..."
+    setup_i18n(qapp, language_override="de")
 
 
 def test_setup_i18n_german_translation(qapp):
@@ -112,6 +111,7 @@ def test_setup_i18n_german_translation(qapp):
 
 def test_translator_accelerator_handling(qapp):
     """PlotterTranslator matches keys gracefully regardless of accelerator '&' differences."""
+    setup_i18n(qapp, language_override="en")
     translator = PlotterTranslator(qapp)
     translator.load_dict({
         "&Save": "&Speichern",
@@ -128,4 +128,34 @@ def test_translator_accelerator_handling(qapp):
     assert lbl.tr("&Discard") == "Verwerfen"
 
     qapp.removeTranslator(translator)
+    setup_i18n(qapp, language_override="de")
+
+
+def test_all_gui_tr_keys_translated_in_de_json():
+    """Every literal string passed to tr()/_tr() in gui/*.py must exist in de.json."""
+    de_path = get_translations_dir() / "de.json"
+    de = json.loads(de_path.read_text(encoding="utf-8"))
+    all_de_keys = set(de.keys())
+
+    gui_glob = str(de_path.parent.parent.parent / "src" / "plotter_studio" / "gui" / "*.py")
+    missing = []
+    for path in sorted(glob.glob(gui_glob)):
+        with open(path, "r", encoding="utf-8") as f:
+            tree = ast.parse(f.read(), filename=path)
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Call):
+                func_name = None
+                if isinstance(node.func, ast.Attribute) and node.func.attr in ("tr", "translate"):
+                    func_name = node.func.attr
+                elif isinstance(node.func, ast.Name) and node.func.id in ("tr", "_tr"):
+                    func_name = node.func.id
+                if func_name and node.args:
+                    arg_idx = 1 if func_name == "translate" and len(node.args) >= 2 else 0
+                    arg = node.args[arg_idx]
+                    if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+                        if arg.value not in all_de_keys:
+                            missing.append((path, node.lineno, arg.value))
+
+    assert missing == [], f"Missing keys in de.json: {missing}"
+
 

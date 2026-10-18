@@ -57,7 +57,11 @@ def import_file_to_item(
     if is_hpgl_file(filepath):
         item = load_hpgl(filepath)
     else:
-        pen_palette = [(p.pen_id, p.color_hex) for p in pens]
+        # Only match colors to pens that will actually be plotted; otherwise paths would
+        # silently land on a disabled pen (e.g. "Monochrome" preset).
+        enabled = [p for p in pens if p.enabled]
+        palette_pens = enabled or list(pens)
+        pen_palette = [(p.pen_id, p.color_hex) for p in palette_pens]
         item = load_svg(filepath, pen_palette=pen_palette)
     if target_box is not None:
         center_item_in_box(item, target_box)

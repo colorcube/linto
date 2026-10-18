@@ -16,8 +16,13 @@ from PySide6.QtWidgets import (
 )
 
 from ..device.manager import DeviceManager, ConfiguredDevice
-from ..device.profile import list_available_profiles
+from ..device.profile import list_available_profiles, load_profile, get_default_profile
 from ..device.probe import list_serial_ports, probe_plotter
+
+AXIS_CORRECTION_TIP = (
+    "Additional correction on top of the device profile's built-in axis mapping.\n"
+    "Leave off normally; only use it if an orientation test plot comes out rotated or mirrored."
+)
 from .icons import get_icon
 
 
@@ -107,14 +112,12 @@ class DeviceSettingsDialog(QDialog):
 
         self.combo_flow = QComboBox()
         self.combo_flow.addItem(self.tr("Hardware (RTS / CTS)"), "rtscts")
-        self.combo_flow.addItem(self.tr("Hardware (DTR / DSR)"), "dsrdtr")
         self.combo_flow.addItem(self.tr("Software (XON / XOFF)"), "xonxoff")
         self.combo_flow.addItem(self.tr("None"), "none")
         self.combo_flow.setToolTip(
             self.tr(
                 "Flow control (Handshake):\n"
                 "• RTS/CTS: Standard for 7/8-wire RS-232 cables (Mutoh DTR pin 20 wired to PC CTS)\n"
-                "• DTR/DSR: Legacy option (ignored by Linux kernel / POSIX termios; use RTS/CTS)\n"
                 "• XON/XOFF: Software handshake (3-wire cables & TCP simulator)\n"
                 "• None: No handshake"
             )
@@ -128,11 +131,12 @@ class DeviceSettingsDialog(QDialog):
         form.addRow(self.tr("Margin Profile:"), self.combo_margins)
 
         self.combo_rotation = QComboBox()
-        self.combo_rotation.addItem("0° (" + self.tr("Default") + ")", 0)
-        self.combo_rotation.addItem("90° (" + self.tr("Feed axis") + ")", 90)
+        self.combo_rotation.addItem(self.tr("0° (no correction)"), 0)
+        self.combo_rotation.addItem("90°", 90)
         self.combo_rotation.addItem("180°", 180)
         self.combo_rotation.addItem("270°", 270)
-        form.addRow(self.tr("Rotation:"), self.combo_rotation)
+        self.combo_rotation.setToolTip(self.tr(AXIS_CORRECTION_TIP))
+        form.addRow(self.tr("Rotation correction:"), self.combo_rotation)
 
         axes_layout = QHBoxLayout()
         self.chk_swap_xy = QCheckBox(self.tr("Swap X↔Y"))
@@ -141,7 +145,9 @@ class DeviceSettingsDialog(QDialog):
         axes_layout.addWidget(self.chk_swap_xy)
         axes_layout.addWidget(self.chk_invert_x)
         axes_layout.addWidget(self.chk_invert_y)
-        form.addRow(self.tr("Axes:"), axes_layout)
+        for chk in (self.chk_swap_xy, self.chk_invert_x, self.chk_invert_y):
+            chk.setToolTip(self.tr(AXIS_CORRECTION_TIP))
+        form.addRow(self.tr("Axis correction:"), axes_layout)
 
         e_layout.addLayout(form)
 
@@ -313,12 +319,14 @@ class DeviceSettingsDialog(QDialog):
         bytesize = 8
         parity = "N"
         stopbits = 1
-        swap_xy = self.chk_swap_xy.isChecked()
-        if self._current_device:
-            prof = self._current_device.get_profile()
-            bytesize = prof.connection.bytesize
-            parity = prof.connection.parity
-            stopbits = prof.connection.stopbits
+        try:
+            prof = load_profile(self.combo_model.currentData() or "mutoh_xp500")
+        except Exception:
+            prof = self._current_device.get_profile() if self._current_device else get_default_profile()
+        bytesize = prof.connection.bytesize
+        parity = prof.connection.parity
+        stopbits = prof.connection.stopbits
+        axes_swapped = prof.axes_swapped
         self.btn_test.setEnabled(False)
         self.lbl_test_result.setText(self.tr("Probing %1 at %2 baud...").replace("%1", port).replace("%2", str(baudrate)))
         self.lbl_test_result.setStyleSheet("padding: 4px; background: #fff9c4; color: #f57f17; border-radius: 4px; font-size: 11px;")
@@ -330,7 +338,7 @@ class DeviceSettingsDialog(QDialog):
                 bytesize=bytesize,
                 parity=parity,
                 stopbits=stopbits,
-                swap_xy=swap_xy,
+                axes_swapped=axes_swapped,
             )
             self._probe_finished.emit(res)
 

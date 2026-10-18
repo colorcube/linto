@@ -306,13 +306,13 @@ class PageSetupDialog(QDialog):
         bytesize = 8
         parity = "N"
         stopbits = 1
-        swap_xy = True
+        axes_swapped = True
         if self._active_dev:
             prof = self._active_dev.get_profile()
             bytesize = prof.connection.bytesize
             parity = prof.connection.parity
             stopbits = prof.connection.stopbits
-            swap_xy = self._active_dev.swap_xy
+            axes_swapped = prof.axes_swapped
         self.btn_fetch_device.setEnabled(False)
         self.btn_fetch_device.setText(self.tr("Querying '%1'...").replace("%1", target))
 
@@ -324,7 +324,7 @@ class PageSetupDialog(QDialog):
                 bytesize=bytesize,
                 parity=parity,
                 stopbits=stopbits,
-                swap_xy=swap_xy,
+                axes_swapped=axes_swapped,
             )
             self._probe_finished.emit(target, res)
 

@@ -49,6 +49,8 @@ class DeviceProfile:
     origin: str = "center"  # "center" or "bottom_left"
     units_per_mm: float = 40.0  # 0.025 mm / unit
     max_pens: int = 8
+    # Intrinsic axis mapping of the hardware (sheet frame -> plotter axes).
+    # Always applied by the emitter; user corrections come on top.
     swap_xy: bool = False
     invert_x: bool = False
     invert_y: bool = False
@@ -58,6 +60,12 @@ class DeviceProfile:
     default_margin_profile: str = "exp"
     force_unit: str = "grams"  # "grams" (10..500) or "hp_level" (1..8)
     decimal_speed: bool = True
+
+    @property
+    def axes_swapped(self) -> bool:
+        """True if plotter X runs along the sheet's vertical axis (e.g. XP-500: X = feed)."""
+        quarter_turn = (int(self.rotation_deg or 0) % 180) == 90
+        return bool(self.swap_xy) != quarter_turn
 
     def get_margins(self, profile_name: str = "") -> tuple[float, float, float, float]:
         """Return (top, bottom, left, right) margins in mm."""

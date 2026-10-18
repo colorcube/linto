@@ -200,13 +200,14 @@ def test_streamer_abort():
 
 
 def test_axis_transformations():
+    import dataclasses
     profile = get_default_profile()
     # Center for A3 EXP is (210.0, 158.5)
     # Point at center (210.0, 158.5) -> (0, 0)
     # Point at +25mm X: (235.0, 158.5) -> dx=+25mm -> 1000 units
     # Point at -10mm Y: (210.0, 148.5) -> y_mm is 10mm higher on sheet -> dy_c = +10mm (upwards) -> 400 units
 
-    # 0. Mutoh XP-500 default (swap_xy=True, invert_y=True -> X=feed down, Y=carriage right)
+    # 0. Mutoh XP-500 default (intrinsic swap_xy=True, invert_y=True -> X=feed down, Y=carriage right)
     e_xp500 = HPGLEmitter(profile, margin_profile="exp")
     assert e_xp500.to_plotter_units(210.0, 158.5, 420.0, 297.0) == (0, 0)
     # +25mm right on sheet -> (0, +1000)
@@ -217,35 +218,38 @@ def test_axis_transformations():
     assert e_xp500.to_plotter_units(5.0, 25.0, 420.0, 297.0) == (-5340, -8200)
     assert e_xp500.to_plotter_units(415.0, 292.0, 420.0, 297.0) == (5340, 8200)
 
+    # Neutral Cartesian center-origin profile to test pure user axis corrections
+    cart_profile = dataclasses.replace(profile, swap_xy=False, invert_x=False, invert_y=False, rotation_deg=0)
+
     # 1. Unswapped Cartesian (0 deg, no invert, no swap)
-    e_std = HPGLEmitter(profile, margin_profile="exp", swap_xy=False, invert_x=False, invert_y=False)
+    e_std = HPGLEmitter(cart_profile, margin_profile="exp", swap_xy=False, invert_x=False, invert_y=False)
     assert e_std.to_plotter_units(210.0, 158.5, 420.0, 297.0) == (0, 0)
     assert e_std.to_plotter_units(235.0, 158.5, 420.0, 297.0) == (1000, 0)
     assert e_std.to_plotter_units(210.0, 148.5, 420.0, 297.0) == (0, 400)
 
     # 2. Invert X
-    e_inv_x = HPGLEmitter(profile, margin_profile="exp", swap_xy=False, invert_x=True, invert_y=False)
+    e_inv_x = HPGLEmitter(cart_profile, margin_profile="exp", swap_xy=False, invert_x=True, invert_y=False)
     assert e_inv_x.to_plotter_units(235.0, 158.5, 420.0, 297.0) == (-1000, 0)
 
     # 3. Invert Y
-    e_inv_y = HPGLEmitter(profile, margin_profile="exp", swap_xy=False, invert_x=False, invert_y=True)
+    e_inv_y = HPGLEmitter(cart_profile, margin_profile="exp", swap_xy=False, invert_x=False, invert_y=True)
     assert e_inv_y.to_plotter_units(210.0, 148.5, 420.0, 297.0) == (0, -400)
 
     # 4. Swap XY only
-    e_swap = HPGLEmitter(profile, margin_profile="exp", swap_xy=True, invert_x=False, invert_y=False)
+    e_swap = HPGLEmitter(cart_profile, margin_profile="exp", swap_xy=True, invert_x=False, invert_y=False)
     assert e_swap.to_plotter_units(235.0, 158.5, 420.0, 297.0) == (0, 1000)
     assert e_swap.to_plotter_units(210.0, 148.5, 420.0, 297.0) == (400, 0)
 
     # 5. Rotation 90° (CCW in Cartesian: (1, 0) -> (0, 1))
-    e_rot90 = HPGLEmitter(profile, margin_profile="exp", rotation_deg=90, swap_xy=False, invert_x=False, invert_y=False)
+    e_rot90 = HPGLEmitter(cart_profile, margin_profile="exp", rotation_deg=90, swap_xy=False, invert_x=False, invert_y=False)
     assert e_rot90.to_plotter_units(235.0, 158.5, 420.0, 297.0) == (0, 1000)
 
     # 6. Rotation 180°
-    e_rot180 = HPGLEmitter(profile, margin_profile="exp", rotation_deg=180, swap_xy=False, invert_x=False, invert_y=False)
+    e_rot180 = HPGLEmitter(cart_profile, margin_profile="exp", rotation_deg=180, swap_xy=False, invert_x=False, invert_y=False)
     assert e_rot180.to_plotter_units(235.0, 158.5, 420.0, 297.0) == (-1000, 0)
 
     # 7. Rotation 270°
-    e_rot270 = HPGLEmitter(profile, margin_profile="exp", rotation_deg=270, swap_xy=False, invert_x=False, invert_y=False)
+    e_rot270 = HPGLEmitter(cart_profile, margin_profile="exp", rotation_deg=270, swap_xy=False, invert_x=False, invert_y=False)
     assert e_rot270.to_plotter_units(235.0, 158.5, 420.0, 297.0) == (0, -1000)
 
 
@@ -817,9 +821,8 @@ def test_resume_from_step_and_trace_log_and_emitter_capabilities():
     import numpy as np
     from plotter_studio.pipeline.compiler import PlotJob, PlotLayer
 
-    prof = get_default_profile()
-    prof.force_unit = "hp_level"
-    prof.decimal_speed = True
+    import dataclasses
+    prof = dataclasses.replace(get_default_profile(), force_unit="hp_level", decimal_speed=True)
     doc = Document()
     doc.pens[0].speed_cm_s = 12.5
     doc.pens[0].force_g = 100  # 100 / 25 -> FS4

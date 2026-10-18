@@ -80,7 +80,8 @@ def test_compile_overhang_warning_and_clipping():
     # Without clipping: warning present
     job_unclipped = compile_document_to_plot_job(doc, PipelineConfig(clip_to_plottable=False))
     assert len(job_unclipped.warnings) == 1
-    assert "Zeichnung ragt um 20.0 mm über den plottbaren Bereich hinaus" in job_unclipped.warnings[0]
+    assert job_unclipped.issues[0].code == "out_of_bounds"
+    assert abs(job_unclipped.issues[0].params["overhang_mm"] - 20.0) < 1e-6
     assert abs(job_unclipped.layers[1].lines[0][-1, 0] - overhang_x) < 1e-4
 
     # With clipping: clipped to pb.max_x

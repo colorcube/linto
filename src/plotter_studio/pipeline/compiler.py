@@ -63,6 +63,17 @@ class PlotLayer:
 
 
 @dataclass
+class PlotIssue:
+    """Structured pre-flight issue. The GUI translates it via `code` and `params`.
+
+    Codes: "out_of_bounds" (overhang_mm), "text_replaced" (count),
+    "disabled_pen_paths" (count).
+    """
+    code: str
+    params: Dict[str, float] = field(default_factory=dict)
+
+
+@dataclass
 class PlotJob:
     """Complete compiled plot job ready for visualization or hardware streaming."""
     layers: Dict[int, PlotLayer] = field(default_factory=dict)
@@ -72,10 +83,17 @@ class PlotJob:
     pen_changes: int = 0
     estimated_duration_s: float = 0.0
     warnings: List[str] = field(default_factory=list)
+    issues: List["PlotIssue"] = field(default_factory=list)
     steps: List[PlotStep] = field(default_factory=list)
     total_points: int = 0
     removed_duplicate_segments: int = 0
     has_out_of_bounds: bool = False
+    skipped_disabled_paths: int = 0
+
+    def add_issue(self, code: str, message: str, **params: float) -> None:
+        """Record a structured issue; `message` is an English fallback for headless use."""
+        self.issues.append(PlotIssue(code=code, params=dict(params)))
+        self.warnings.append(message)
 
     @property
     def travel_savings_pct(self) -> float:
@@ -128,11 +146,13 @@ def compile_document_to_plot_job(
 
             # Skip disabled pens (both source pen and remapped target pen)
             if not pen.enabled:
+                job.skipped_disabled_paths += 1
                 continue
 
             eff_id = pen.effective_pen_id
             target_pen = pens_dict.get(eff_id)
             if target_pen is not None and not target_pen.enabled:
+                job.skipped_disabled_paths += 1
                 continue
             pts = path.to_polyline(
                 tolerance_mm=cfg.flatten_tolerance_mm,
@@ -158,13 +178,25 @@ def compile_document_to_plot_job(
 
     if max_overhang > 0.2:
         job.has_out_of_bounds = True
-        job.warnings.append(
-            f"Zeichnung ragt um {max_overhang:.1f} mm über den plottbaren Bereich hinaus."
+        job.add_issue(
+            "out_of_bounds",
+            f"Drawing extends {max_overhang:.1f} mm beyond the printable area.",
+            overhang_mm=max_overhang,
         )
 
     if total_ignored_texts > 0:
-        job.warnings.append(
-            f"Hinweis: {total_ignored_texts} SVG-<text>-Element(e) durch einfache Linienschrift ersetzt (für Originalschriftart Text vor dem Import in Pfade umwandeln)."
+        job.add_issue(
+            "text_replaced",
+            f"{total_ignored_texts} SVG <text> element(s) replaced by single-line font "
+            "(convert text to paths before import to keep the original font).",
+            count=total_ignored_texts,
+        )
+
+    if job.skipped_disabled_paths > 0:
+        job.add_issue(
+            "disabled_pen_paths",
+            f"{job.skipped_disabled_paths} path(s) use disabled pens and will not be plotted.",
+            count=job.skipped_disabled_paths,
         )
 
     # Step 2: Process each pen layer

@@ -125,3 +125,19 @@ def test_page_setup_dialog_asymmetric_margins_and_probe_clip(qapp, monkeypatch):
     assert doc.page.width_mm == pytest.approx(400.0 + 12.0 + 5.0)
     assert doc.page.height_mm == pytest.approx(250.0 + 25.0 + 5.0)
 
+    # Test OH; probe result with A3 Portrait (297 x 420 mm outer sheet -> clip 287 x 390 mm with margins 5/5/25/5)
+    doc.page.apply_device_profile("mutoh_xp500", "top")
+    res_a3_portrait = ProbeResult(
+        port="virtual://mutoh",
+        success=True,
+        model="XP-500",
+        hard_clip_mm=(287.0, 390.0),
+        detected_format="A3",
+    )
+    doc.page.apply_probe_result(res_a3_portrait)
+    assert doc.page.preset == "A3"
+    assert doc.page.orientation == "portrait"
+    assert doc.page.width_mm == pytest.approx(297.0)
+    assert doc.page.height_mm == pytest.approx(420.0)
+
+

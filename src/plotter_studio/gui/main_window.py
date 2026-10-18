@@ -35,7 +35,8 @@ from .device_dialog import DeviceSettingsDialog
 from .page_dialog import PageSetupDialog
 from .commands import (
     TransformItemCommand, AssignPenCommand,
-    AddItemCommand, DeleteItemsCommand, PageConfigCommand
+    AddItemCommand, DeleteItemsCommand, PageConfigCommand,
+    ModifyItemPropertiesCommand,
 )
 
 
@@ -561,13 +562,19 @@ class MainWindow(QMainWindow):
         self.pen_dock.setEnabled(not active)
         self.simulation_bar.setEnabled(not active)
         if active:
+            self.act_undo.setEnabled(False)
+            self.act_redo.setEnabled(False)
             for act in self._layout_editing_actions:
                 act.setEnabled(False)
             self.lbl_info.setText(self.tr("Plot in progress..."))
         else:
+            self.act_undo.setEnabled(self.undo_stack.canUndo())
+            self.act_redo.setEnabled(self.undo_stack.canRedo())
             in_layout = (self.canvas._mode == CanvasMode.LAYOUT)
             for act in self._layout_editing_actions:
                 act.setEnabled(in_layout)
+            if not in_layout and self.plot_dock.is_pipeline_dirty():
+                self.recompile_plot_job()
             self.lbl_info.setText(self.tr("Output active") if not in_layout else self.tr("Layout active"))
 
     def _refresh_device_selector(self):
@@ -829,7 +836,7 @@ class MainWindow(QMainWindow):
             QMessageBox.StandardButton.No,
         )
         if resp == QMessageBox.StandardButton.Yes:
-            self.plot_dock.abort_plot()
+            self.plot_dock.abort_plot(wait=True, timeout=1.0)
             return True
         return False
 
@@ -1033,10 +1040,20 @@ class MainWindow(QMainWindow):
 
             def _toggle_lock():
                 target_lock = not all_locked
+                action_text = self.tr("Lock") if target_lock else self.tr("Unlock")
+                if len(selected) > 1:
+                    self.undo_stack.beginMacro(action_text)
                 for it in selected:
-                    it.locked = target_lock
-                self.object_dock.refresh()
-                self._on_document_modified()
+                    cmd = ModifyItemPropertiesCommand(
+                        it,
+                        {"locked": it.locked},
+                        {"locked": target_lock},
+                        self._on_item_structure_changed,
+                        text=action_text,
+                    )
+                    self.undo_stack.push(cmd)
+                if len(selected) > 1:
+                    self.undo_stack.endMacro()
 
             act_lock.triggered.connect(_toggle_lock)
             menu.addAction(self.act_delete)
@@ -1362,7 +1379,10 @@ class MainWindow(QMainWindow):
             self.simulation_bar.pause()
         if hasattr(self, "plot_dock") and self.plot_dock:
             if getattr(self.plot_dock, "_streamer", None) and self.plot_dock._streamer.is_active():
-                self.plot_dock._streamer.abort()
+                try:
+                    self.plot_dock._streamer.abort(wait=True, timeout=1.0)
+                except TypeError:
+                    self.plot_dock._streamer.abort()
         if hasattr(self, "canvas") and self.canvas:
             self.canvas.cleanup()
 

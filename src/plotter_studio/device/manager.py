@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, asdict
+import logging
+from dataclasses import dataclass, asdict, fields
 from pathlib import Path
 from typing import List, Optional, Any, Callable
 import yaml
 
 from .profile import DeviceProfile, load_profile, get_default_profile
 from .probe import list_serial_ports
+
+logger = logging.getLogger("plotter_studio.device.manager")
 
 
 class _EventSignal:
@@ -30,21 +33,29 @@ class _EventSignal:
             cb(*args, **kwargs)
 
 
+AXIS_SCHEMA_VERSION = 2  # 2 = rotation/swap/invert are user corrections on top of the profile
+
+
 @dataclass
 class ConfiguredDevice:
-    """User-configured plotter instance with connection settings and profile mapping."""
+    """User-configured plotter instance with connection settings and profile mapping.
+
+    ``rotation``/``swap_xy``/``invert_x``/``invert_y`` are *corrections* on top of the
+    profile's intrinsic axis mapping. Default: no correction.
+    """
     id: str
     name: str
     model_id: str = "mutoh_xp500"
     port: str = "/dev/ttyUSB0"
     baudrate: int = 19200
-    flow_control: str = "rtscts"  # "rtscts", "dsrdtr", "xonxoff", "none"
+    flow_control: str = "rtscts"  # "rtscts", "xonxoff", "none"
     margin_profile: str = "exp"
     rotation: int = 0
-    swap_xy: bool = True
+    swap_xy: bool = False
     invert_x: bool = False
-    invert_y: bool = True
+    invert_y: bool = False
     probed_units_per_mm: Optional[float] = None
+    axis_schema: int = AXIS_SCHEMA_VERSION
 
     def get_profile(self) -> DeviceProfile:
         """Load the associated DeviceProfile."""
@@ -63,9 +74,6 @@ DEFAULT_DEVICES = [
         baudrate=19200,
         flow_control="rtscts",
         margin_profile="exp",
-        swap_xy=True,
-        invert_x=False,
-        invert_y=True,
     ),
     ConfiguredDevice(
         id="mutoh_xp500_sim",
@@ -75,11 +83,38 @@ DEFAULT_DEVICES = [
         baudrate=19200,
         flow_control="xonxoff",
         margin_profile="exp",
-        swap_xy=True,
-        invert_x=False,
-        invert_y=True,
     ),
 ]
+
+
+def _migrate_axis_settings(d: dict, prof: Optional[DeviceProfile]) -> None:
+    """Convert pre-v2 absolute axis settings into corrections relative to the profile.
+
+    Before v2 the device values *replaced* the profile mapping. Values that are all
+    identity or equal to the profile mapping meant "no correction"; anything else is
+    kept as an explicit correction.
+    """
+    if int(d.get("axis_schema", 1) or 1) >= AXIS_SCHEMA_VERSION:
+        return
+    old = (
+        int(d.get("rotation", 0) or 0),
+        bool(d.get("swap_xy", False)),
+        bool(d.get("invert_x", False)),
+        bool(d.get("invert_y", False)),
+    )
+    identity = (0, False, False, False)
+    prof_axes = (
+        (int(prof.rotation_deg or 0), bool(prof.swap_xy), bool(prof.invert_x), bool(prof.invert_y))
+        if prof is not None else identity
+    )
+    if old in (identity, prof_axes):
+        d["rotation"], d["swap_xy"], d["invert_x"], d["invert_y"] = identity
+    else:
+        logger.warning(
+            "Device %s: keeping custom axis settings %s as correction on top of the profile; "
+            "please verify with an orientation plot.", d.get("id", "?"), old,
+        )
+    d["axis_schema"] = AXIS_SCHEMA_VERSION
 
 
 def _get_config_path() -> Path:
@@ -104,6 +139,7 @@ class DeviceManager:
 
     def load(self):
         """Load device list and active selection from config file or initialize defaults."""
+        migrated = False
         if self.config_path.is_file():
             try:
                 data = yaml.safe_load(self.config_path.read_text(encoding="utf-8")) or {}
@@ -120,24 +156,29 @@ class DeviceManager:
                             d["flow_control"] = prof.connection.flow_control
                         else:
                             d["flow_control"] = "xonxoff" if str(d.get("port", "")).startswith("tcp://") else "rtscts"
-                    if prof is not None:
-                        if "swap_xy" not in d:
-                            d["swap_xy"] = prof.swap_xy
-                        if "invert_x" not in d:
-                            d["invert_x"] = prof.invert_x
-                        if "invert_y" not in d:
-                            d["invert_y"] = prof.invert_y
-                        if "rotation" not in d:
-                            d["rotation"] = prof.rotation_deg
-                    dev_obj = ConfiguredDevice(**d)
+                    if str(d.get("flow_control", "")).lower() == "dsrdtr":
+                        # pyserial has no DSR/DTR flow control on Linux; the XP-500 busy
+                        # line is wired to the PC's CTS, so RTS/CTS is the right setting.
+                        d["flow_control"] = "rtscts"
+                        migrated = True
+                    if int(d.get("axis_schema", 1) or 1) < AXIS_SCHEMA_VERSION:
+                        _migrate_axis_settings(d, prof)
+                        migrated = True
+                    known = {f.name for f in fields(ConfiguredDevice)}
+                    unknown = [k for k in d if k not in known]
+                    if unknown:
+                        logger.warning("Ignoring unknown device keys %s in %s", unknown, self.config_path)
+                    dev_obj = ConfiguredDevice(**{k: v for k, v in d.items() if k in known})
                     if dev_obj.id == "mutoh_xp500_usb" and dev_obj.port.startswith("/dev/pts"):
                         dev_obj.port = "/dev/ttyUSB0"
                     self.devices.append(dev_obj)
                 self.active_device_id = str(data.get("active_device_id", ""))
             except Exception as e:
                 # Fallback to defaults on parse error
+                logger.error("Could not read %s (%s) – using default devices", self.config_path, e)
                 self.devices = [ConfiguredDevice(**asdict(d)) for d in DEFAULT_DEVICES]
                 self.active_device_id = self.devices[0].id
+                migrated = False
         else:
             self.devices = [ConfiguredDevice(**asdict(d)) for d in DEFAULT_DEVICES]
             # Try to auto-select detected USB serial port if available
@@ -150,6 +191,9 @@ class DeviceManager:
         # Ensure active_device_id is valid
         if not any(d.id == self.active_device_id for d in self.devices) and self.devices:
             self.active_device_id = self.devices[0].id
+
+        if migrated:
+            self.save()
 
     def save(self):
         """Persist current devices and active selection to config file."""

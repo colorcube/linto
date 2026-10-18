@@ -28,6 +28,7 @@ from ..device import (
 )
 from .icons import get_icon
 from .transform_dock import SectionGroup
+from .device_dialog import AXIS_CORRECTION_TIP
 
 
 class StreamerSignalBridge(QObject):
@@ -402,13 +403,13 @@ class PlotDockWidget(QDockWidget):
         hbox_rot.setContentsMargins(0, 0, 0, 0)
         hbox_rot.setSpacing(6)
 
-        lbl_rot = QLabel(self.tr("Rotation:"))
+        lbl_rot = QLabel(self.tr("Rotation correction:"))
         lbl_rot.setStyleSheet("font-weight: 500; color: #374151;")
         hbox_rot.addWidget(lbl_rot)
 
         self.combo_rotation = QComboBox()
-        self.combo_rotation.addItem("0° (" + self.tr("Default") + ")", 0)
-        self.combo_rotation.addItem("90° (" + self.tr("Feed axis") + ")", 90)
+        self.combo_rotation.addItem(self.tr("0° (no correction)"), 0)
+        self.combo_rotation.addItem("90°", 90)
         self.combo_rotation.addItem("180°", 180)
         self.combo_rotation.addItem("270°", 270)
         self.combo_rotation.currentIndexChanged.connect(self._on_emitter_option_changed)
@@ -420,18 +421,19 @@ class PlotDockWidget(QDockWidget):
         hbox_axes.setContentsMargins(0, 0, 0, 0)
         hbox_axes.setSpacing(8)
 
-        lbl_axes = QLabel(self.tr("Axes:"))
+        lbl_axes = QLabel(self.tr("Axis correction:"))
+        lbl_axes.setToolTip(self.tr(AXIS_CORRECTION_TIP))
         lbl_axes.setStyleSheet("font-weight: 500; color: #374151;")
         hbox_axes.addWidget(lbl_axes)
 
         self.chk_swap_xy = QCheckBox("X↔Y")
-        self.chk_swap_xy.setToolTip(self.tr("Swap X and Y axes (e.g. roll feed ↔ carriage)"))
+        self.chk_swap_xy.setToolTip(self.tr(AXIS_CORRECTION_TIP))
         self.chk_swap_xy.toggled.connect(self._on_emitter_option_changed)
         self.chk_invert_x = QCheckBox("X inv.")
-        self.chk_invert_x.setToolTip(self.tr("Mirror X axis"))
+        self.chk_invert_x.setToolTip(self.tr(AXIS_CORRECTION_TIP))
         self.chk_invert_x.toggled.connect(self._on_emitter_option_changed)
         self.chk_invert_y = QCheckBox("Y inv.")
-        self.chk_invert_y.setToolTip(self.tr("Mirror Y axis"))
+        self.chk_invert_y.setToolTip(self.tr(AXIS_CORRECTION_TIP))
         self.chk_invert_y.toggled.connect(self._on_emitter_option_changed)
         hbox_axes.addWidget(self.chk_swap_xy)
         hbox_axes.addWidget(self.chk_invert_x)
@@ -638,12 +640,14 @@ class PlotDockWidget(QDockWidget):
 
     def start_probe(self):
         """Inquire connected plotter (OI/OF/OH) in background thread."""
+        if self.is_streaming() or (self._probe_thread is not None and self._probe_thread.is_alive()):
+            return
         port = self.combo_port.currentText().strip()
         baud = 19200
         bytesize = 8
         parity = "N"
         stopbits = 1
-        swap_xy = True
+        axes_swapped = get_default_profile().axes_swapped
         if self.device_manager:
             dev = self.device_manager.get_active_device()
             if dev:
@@ -654,12 +658,13 @@ class PlotDockWidget(QDockWidget):
                 bytesize = prof.connection.bytesize
                 parity = prof.connection.parity
                 stopbits = prof.connection.stopbits
-                swap_xy = dev.swap_xy
+                axes_swapped = prof.axes_swapped
         if not port:
             self.lbl_probe_status.setText(self.tr("No port selected"))
             return
 
         self.btn_probe.setEnabled(False)
+        self.btn_start_plot.setEnabled(False)
         self.lbl_probe_status.setText(self.tr("Probing %1 at %2 baud...").replace("%1", port).replace("%2", str(baud)))
         self.lbl_probe_status.setStyleSheet("""
             padding: 6px 8px;
@@ -676,7 +681,7 @@ class PlotDockWidget(QDockWidget):
                 bytesize=bytesize,
                 parity=parity,
                 stopbits=stopbits,
-                swap_xy=swap_xy,
+                axes_swapped=axes_swapped,
             )
             self._bridge.probe_done.emit(res)
 
@@ -686,6 +691,7 @@ class PlotDockWidget(QDockWidget):
     def _on_probe_done(self, result: ProbeResult):
         if not self.is_streaming():
             self.btn_probe.setEnabled(True)
+            self.btn_start_plot.setEnabled(bool(self.job and self.job.steps))
         if result.success:
             if result.units_per_mm and result.units_per_mm > 0 and self.device_manager:
                 dev = self.device_manager.get_active_device()
@@ -766,6 +772,31 @@ class PlotDockWidget(QDockWidget):
             "invert_y": self.chk_invert_y.isChecked(),
         }
 
+    def format_issues(self, job) -> list[str]:
+        """Translate structured pipeline issues into user-facing text."""
+        lines: list[str] = []
+        issues = getattr(job, "issues", None)
+        if issues is None:
+            return list(getattr(job, "warnings", []) or [])
+        for issue in issues:
+            p = issue.params
+            if issue.code == "out_of_bounds":
+                lines.append(
+                    self.tr("Drawing extends %1 mm beyond the printable area.")
+                    .replace("%1", f"{p.get('overhang_mm', 0.0):.1f}")
+                )
+            elif issue.code == "text_replaced":
+                lines.append(
+                    self.tr("%1 SVG text element(s) replaced by single-line font (convert text to paths before import to keep the original font).")
+                    .replace("%1", str(int(p.get("count", 0))))
+                )
+            elif issue.code == "disabled_pen_paths":
+                lines.append(
+                    self.tr("%1 path(s) use disabled pens and will not be plotted.")
+                    .replace("%1", str(int(p.get("count", 0))))
+                )
+        return lines
+
     def _confirm_start_plot(self, port: str, dev_name: str) -> bool:
         """Show a pre-flight confirmation summary before streaming to hardware."""
         page = self.doc.page
@@ -776,7 +807,7 @@ class PlotDockWidget(QDockWidget):
             for pid, layer in self.job.layers.items()
         ) if self.job and self.job.layers else "-"
         duration_str = self.job.formatted_duration if self.job else "00m 00s"
-        warn_lines = list(self.job.warnings) if (self.job and self.job.warnings) else []
+        warn_lines = self.format_issues(self.job) if self.job else []
         if self.job and getattr(self.job, "has_out_of_bounds", False) and not self.chk_clip.isChecked():
             warn_lines.append(
                 self.tr("Paths extend beyond printable margins while 'Clip to printable area' is disabled!")
@@ -815,6 +846,8 @@ class PlotDockWidget(QDockWidget):
         """Start streaming HP-GL commands to the selected plotter port."""
         if self.is_streaming():
             return
+        if self._probe_thread is not None and self._probe_thread.is_alive():
+            self._probe_thread.join(timeout=1.5)
 
         if self._pipeline_dirty:
             self._recompute_timer.stop()
@@ -908,14 +941,17 @@ class PlotDockWidget(QDockWidget):
             self._streamer.pause()
             self.btn_pause_plot.setText(self.tr("▶️ Resume"))
 
-    def abort_plot(self):
+    def abort_plot(self, checked: bool = False, *, wait: bool = False, timeout: float = 1.0):
         """Abort active plot and lift pen immediately."""
         if not self._streamer:
             return
         self.btn_pause_plot.setEnabled(False)
         self.btn_abort_plot.setEnabled(False)
         self.lbl_stream_status.setText(self.tr("Abort initiated (ESC.K & Pen-Up)..."))
-        self._streamer.abort()
+        try:
+            self._streamer.abort(wait=wait, timeout=timeout)
+        except TypeError:
+            self._streamer.abort()
 
     def _on_stream_progress(self, step_idx: int, total_cmds: int, pct: float, pen: int, drawn_m: float):
         self.progress_bar.setValue(int(round(pct)))
@@ -997,7 +1033,7 @@ class PlotDockWidget(QDockWidget):
 
     def closeEvent(self, event):
         if self._streamer and self._streamer.is_active():
-            self._streamer.abort()
+            self._streamer.abort(wait=True, timeout=1.0)
         super().closeEvent(event)
 
     def get_pipeline_config(self) -> PipelineConfig:
@@ -1021,6 +1057,7 @@ class PlotDockWidget(QDockWidget):
         self.btn_recompute.setStyleSheet("")
         max_step = max(0, len(job.steps)) if (job and job.steps) else 0
         self.spin_start_step.setRange(0, max_step)
+        self.spin_start_step.setValue(0)
 
         if not (self._streamer and self._streamer.is_active()):
             self.btn_start_plot.setEnabled(bool(job and job.steps))
@@ -1046,8 +1083,9 @@ class PlotDockWidget(QDockWidget):
         self.lbl_points.setText(f"{job.total_points:,}".replace(",", "."))
 
         # Warnings display
-        if job.warnings:
-            msg = "\n".join(job.warnings)
+        issue_lines = self.format_issues(job)
+        if issue_lines:
+            msg = "\n".join(issue_lines)
             self.lbl_warnings.setText(f"⚠️ {msg}")
             self.lbl_warnings.setStyleSheet("""
                 padding: 6px 8px;
