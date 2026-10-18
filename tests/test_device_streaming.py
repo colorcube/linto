@@ -759,5 +759,78 @@ def test_fake_transport_partial_writes_and_build_emitter():
     assert b"IN;\r\nSP1;PD100,200;\r\nOA;\r" == bytes(fake_t.sent)
 
 
+def test_resume_from_step_and_trace_log_and_emitter_capabilities():
+    """Verify SerialStreamer resume from step N, trace log recording, and HPGLEmitter IW/VS/FS capabilities."""
+    from plotter_studio.device import Transport
+    from plotter_studio.device.emitter import EmittedCommand
+
+    class RecordingTransport(Transport):
+        def __init__(self):
+            self.sent = bytearray()
+
+        def open(self) -> None:
+            pass
+
+        def write(self, data: bytes) -> int:
+            self.sent.extend(data)
+            return len(data)
+
+        def read_available(self) -> bytes:
+            return b""
+
+        def read_some(self, max_bytes: int = 128, timeout_s: float = 0.05) -> bytes:
+            return b"0,0,0\r"
+
+        def close(self) -> None:
+            pass
+
+    rec = RecordingTransport()
+    cmds = [
+        EmittedCommand(hpgl="IN;\r\n", step_index=0, pen=0, is_draw=False, dist_mm=0.0),
+        EmittedCommand(hpgl="SP1;VS15;FS20;\r\n", step_index=0, pen=1, is_draw=False, dist_mm=0.0),
+        EmittedCommand(hpgl="PU100,200;\r\n", step_index=0, pen=1, is_draw=False, dist_mm=0.0),
+        EmittedCommand(hpgl="PD300,400;\r\n", step_index=1, pen=1, is_draw=True, dist_mm=10.0),
+        EmittedCommand(hpgl="PD500,600;\r\n", step_index=2, pen=1, is_draw=True, dist_mm=10.0),
+        EmittedCommand(hpgl="PU;SP0;\r\n", step_index=3, pen=0, is_draw=False, dist_mm=0.0),
+    ]
+    done = [None]
+    streamer = SerialStreamer(
+        on_finished=lambda ok, msg: done.__setitem__(0, ok),
+        end_settle_delay_s=0.0,
+        transport=rec,
+    )
+    # Resume from step 2: should emit IN;, SP1;VS15;FS20;, PU300,400; (end of skipped step 1), then PD500,600; and PU;SP0;
+    assert streamer.start_stream("fake://plotter", cmds, sync_with_oa=False, start_step_index=2) is True
+    start_t = time.time()
+    while done[0] is None and (time.time() - start_t < 1.0):
+        time.sleep(0.01)
+
+    assert done[0] is True
+    sent_str = rec.sent.decode("ascii")
+    assert "IN;\r\n" in sent_str
+    assert "SP1;VS15;FS20;\r\n" in sent_str
+    assert "PD300,400;\r\n" not in sent_str
+    assert "PU300,400;\r\nPD500,600;\r\n" in sent_str
+    assert len(streamer.get_trace_log()) >= 4
+
+    # Verify HPGLEmitter decimal VS, hp_level FS, handshake init, and IW clip
+    import numpy as np
+    from plotter_studio.pipeline.compiler import PlotJob, PlotLayer
+
+    prof = get_default_profile()
+    prof.force_unit = "hp_level"
+    prof.decimal_speed = True
+    doc = Document()
+    doc.pens[0].speed_cm_s = 12.5
+    doc.pens[0].force_g = 100  # 100 / 25 -> FS4
+    job = PlotJob()
+    job.layers[1] = PlotLayer(pen_id=1, pen=doc.pens[0], lines=[np.array([[10.0, 30.0], [20.0, 40.0]])])
+
+    em = HPGLEmitter(prof, include_handshake_init=True, include_iw_clip=True)
+    out = em.emit_string(job, doc)
+    assert out.startswith("\x1b.R\r\x1b.(\rIN;IW")
+    assert "SP1;VS12.5;FS4;" in out
+
+
 
 

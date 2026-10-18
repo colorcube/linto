@@ -56,6 +56,8 @@ class DeviceProfile:
     connection: DeviceConnectionConfig = field(default_factory=DeviceConnectionConfig)
     margins_mm: dict[str, dict[str, float]] = field(default_factory=dict)
     default_margin_profile: str = "exp"
+    force_unit: str = "grams"  # "grams" (10..500) or "hp_level" (1..8)
+    decimal_speed: bool = True
 
     def get_margins(self, profile_name: str = "") -> tuple[float, float, float, float]:
         """Return (top, bottom, left, right) margins in mm."""
@@ -157,6 +159,8 @@ def load_profile(path_or_id: str | Path) -> DeviceProfile:
         connection=conn,
         margins_mm=data.get("margins_mm", {}),
         default_margin_profile=str(data.get("default_margin_profile", "exp")),
+        force_unit=str(data.get("force_unit", "grams")).lower(),
+        decimal_speed=bool(data.get("decimal_speed", True)),
     )
 
 

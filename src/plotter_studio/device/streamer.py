@@ -275,16 +275,20 @@ class SerialStreamer:
         on_progress: Optional[Callable[[int, int, float, int, float], None]] = None,
         on_status: Optional[Callable[[StreamerState, str], None]] = None,
         on_finished: Optional[Callable[[bool, str], None]] = None,
+        on_trace: Optional[Callable[[str, bytes], None]] = None,
         write_timeout: float = 5.0,
         end_settle_delay_s: float = 0.05,
         transport: Optional[Transport] = None,
+        max_trace_entries: int = 2000,
     ):
         self.on_progress = on_progress
         self.on_status = on_status
         self.on_finished = on_finished
+        self.on_trace = on_trace
         self.write_timeout = write_timeout
         self.end_settle_delay_s = end_settle_delay_s
         self._injected_transport = transport
+        self.max_trace_entries = max(100, max_trace_entries)
 
         self._lock = threading.RLock()
         self._state = StreamerState.IDLE
@@ -298,6 +302,33 @@ class SerialStreamer:
         self._transport: Optional[Transport] = None
         self._serial: Optional[serial.Serial] = None
         self._socket: Optional[socket.socket] = None
+        self._trace_log: list[str] = []
+        self.last_completed_step_index: int = 0
+
+    def _record_trace(self, direction: str, data: bytes) -> None:
+        if not data:
+            return
+        text_repr = data.decode("ascii", errors="replace").replace("\r", "\\r").replace("\n", "\\n").replace("\x1b", "<ESC>")
+        ts = time.strftime("%H:%M:%S")
+        entry = f"[{ts}] {direction}: {text_repr}"
+        with self._lock:
+            self._trace_log.append(entry)
+            if len(self._trace_log) > self.max_trace_entries:
+                del self._trace_log[: len(self._trace_log) - self.max_trace_entries]
+            cb = self.on_trace
+        if cb:
+            try:
+                cb(direction, data)
+            except Exception:
+                pass
+
+    def get_trace_log(self) -> list[str]:
+        with self._lock:
+            return list(self._trace_log)
+
+    def clear_trace_log(self) -> None:
+        with self._lock:
+            self._trace_log.clear()
 
     @property
     def state(self) -> StreamerState:
@@ -336,6 +367,7 @@ class SerialStreamer:
         stopbits: float = 1,
         sync_with_oa: bool = True,
         transport: Optional[Transport] = None,
+        start_step_index: int = 0,
     ) -> bool:
         """Start streaming commands in a background thread."""
         with self._lock:
@@ -346,6 +378,7 @@ class SerialStreamer:
             self._abort_requested = False
             self._xoff_paused = False
             self._pause_event.set()
+            self.last_completed_step_index = max(0, int(start_step_index))
 
             eff_write_timeout = self.write_timeout if write_timeout is None else write_timeout
             eff_settle_delay = self.end_settle_delay_s if end_settle_delay_s is None else end_settle_delay_s
@@ -370,6 +403,7 @@ class SerialStreamer:
                     stopbits,
                     sync_with_oa,
                     eff_transport,
+                    max(0, int(start_step_index)),
                 ),
                 daemon=True,
                 name="PlotStreamWorker",
@@ -450,7 +484,10 @@ class SerialStreamer:
                 continue
 
             try:
-                n = self._transport.write(bytes(view[sent:]))
+                chunk_bytes = bytes(view[sent:])
+                n = self._transport.write(chunk_bytes)
+                if n > 0:
+                    self._record_trace("TX", chunk_bytes[:n])
                 sent += n
                 if stall_notified and not self.is_user_paused():
                     stall_notified = False
@@ -483,6 +520,7 @@ class SerialStreamer:
             while time.monotonic() < deadline and not self._abort_requested:
                 chunk = self._transport.read_some(128, timeout_s=0.05)
                 if chunk:
+                    self._record_trace("RX", chunk)
                     buf.extend(chunk)
                     if b"\r" in buf or b"\n" in buf:
                         return True
@@ -499,7 +537,9 @@ class SerialStreamer:
                 self._transport.discard_output()
                 self._transport.disable_hardware_flow_control()
                 try:
-                    self._transport.write(b"\x1b.K\rPU;SP0;\r\n")
+                    abort_bytes = b"\x1b.K\rPU;SP0;\r\n"
+                    self._transport.write(abort_bytes)
+                    self._record_trace("TX", abort_bytes)
                     self._transport.drain()
                 except Exception:
                     pass
@@ -519,6 +559,7 @@ class SerialStreamer:
             try:
                 raw = self._transport.read_available()
                 if raw:
+                    self._record_trace("RX", raw)
                     for b in raw:
                         if b == XOFF:
                             logger.info("Plotter sent XOFF (0x13) - pausing send")
@@ -535,6 +576,20 @@ class SerialStreamer:
             if not self._xoff_paused:
                 break
             time.sleep(0.02)
+
+    @staticmethod
+    def _extract_last_coord_pair(hpgl_cmd: str) -> Optional[str]:
+        """Extract the last 'x,y' coordinate pair from a PU or PD command string."""
+        s = hpgl_cmd.strip()
+        if not (s.startswith("PU") or s.startswith("PD")):
+            return None
+        body = s[2:].rstrip(";").strip()
+        if not body:
+            return None
+        parts = [p.strip() for p in body.split(",") if p.strip()]
+        if len(parts) >= 2 and len(parts) % 2 == 0:
+            return f"{parts[-2]},{parts[-1]}"
+        return None
 
     def _run_stream(
         self,
@@ -554,6 +609,7 @@ class SerialStreamer:
         stopbits: float = 1,
         sync_with_oa: bool = False,
         transport: Optional[Transport] = None,
+        start_step_index: int = 0,
     ) -> None:
         port_clean = port.strip()
         total_commands = len(commands)
@@ -595,11 +651,47 @@ class SerialStreamer:
 
             self._emit_status(StreamerState.STREAMING, "Sende Plotdaten...")
             active_pen: Optional[int] = None
+            resumed_from_skip = False
+            pending_pen_cmd: Optional[EmittedCommand] = None
+            last_skipped_coord: Optional[str] = None
 
             for i, cmd in enumerate(commands):
-                # Automatic pause before pen change (SPn; where n > 0 after first pen)
                 hpgl_stripped = cmd.hpgl.lstrip()
+                is_init_cmd = (i == 0) and (hpgl_stripped.startswith("IN") or hpgl_stripped.startswith("\x1b"))
                 is_pen_select = hpgl_stripped.startswith("SP") and not hpgl_stripped.startswith("SP0") and cmd.pen > 0
+
+                # Handle resume from start_step_index > 0
+                if start_step_index > 0 and not resumed_from_skip:
+                    if is_init_cmd:
+                        # Always send initialization command
+                        if not self._send_raw(cmd.hpgl.encode("ascii", errors="replace")):
+                            self._execute_abort_sequence()
+                            return
+                        continue
+                    if cmd.step_index < start_step_index:
+                        if is_pen_select:
+                            pending_pen_cmd = cmd
+                            active_pen = cmd.pen
+                        else:
+                            coord = self._extract_last_coord_pair(hpgl_stripped)
+                            if coord:
+                                last_skipped_coord = coord
+                            if cmd.is_draw:
+                                drawn_total_mm += cmd.dist_mm
+                        continue
+                    else:
+                        resumed_from_skip = True
+                        if pending_pen_cmd is not None and not is_pen_select:
+                            if not self._send_raw(pending_pen_cmd.hpgl.encode("ascii", errors="replace")):
+                                self._execute_abort_sequence()
+                                return
+                            pending_pen_cmd = None
+                        if hpgl_stripped.startswith("PD") and last_skipped_coord:
+                            if not self._send_raw(f"PU{last_skipped_coord};\r\n".encode("ascii")):
+                                self._execute_abort_sequence()
+                                return
+
+                # Automatic pause before pen change (SPn; where n > 0 after first pen)
                 if is_pen_select:
                     if pause_on_pen_change and active_pen is not None and cmd.pen != active_pen:
                         if sync_with_oa:
@@ -639,6 +731,7 @@ class SerialStreamer:
 
                 if cmd.is_draw:
                     drawn_total_mm += cmd.dist_mm
+                self.last_completed_step_index = cmd.step_index
 
                 pct = ((i + 1) / total_commands) * 100.0 if total_commands > 0 else 100.0
                 if self.on_progress:

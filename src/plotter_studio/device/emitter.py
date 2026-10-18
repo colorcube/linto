@@ -39,6 +39,8 @@ class HPGLEmitter:
         rotation_deg: Optional[int] = None,
         units_per_mm: Optional[float] = None,
         feed_edge: str = "top",
+        include_handshake_init: bool = False,
+        include_iw_clip: bool = False,
     ):
         self.profile = profile
         self.margin_profile = margin_profile
@@ -49,6 +51,8 @@ class HPGLEmitter:
         self.rotation_deg = profile.rotation_deg if rotation_deg is None else rotation_deg
         self.units_per_mm = float(units_per_mm) if (units_per_mm is not None and units_per_mm > 0) else profile.units_per_mm
         self.feed_edge = feed_edge or "top"
+        self.include_handshake_init = include_handshake_init
+        self.include_iw_clip = include_iw_clip
 
     def to_plotter_units(
         self,
@@ -119,8 +123,24 @@ class HPGLEmitter:
         commands: list[EmittedCommand] = []
 
         # 1. Initialization
+        init_prefix = "\x1b.R\r\x1b.(\r" if self.include_handshake_init else ""
+        init_cmd = f"{init_prefix}IN;"
+        if self.include_iw_clip and document and hasattr(document, "page") and hasattr(document.page, "plottable_box"):
+            pb = document.page.plottable_box
+            corners = [
+                self.to_plotter_units(pb.min_x, pb.min_y, sheet_w, sheet_h, center_mm=center_mm),
+                self.to_plotter_units(pb.max_x, pb.min_y, sheet_w, sheet_h, center_mm=center_mm),
+                self.to_plotter_units(pb.max_x, pb.max_y, sheet_w, sheet_h, center_mm=center_mm),
+                self.to_plotter_units(pb.min_x, pb.max_y, sheet_w, sheet_h, center_mm=center_mm),
+            ]
+            iw_x1 = min(c[0] for c in corners)
+            iw_y1 = min(c[1] for c in corners)
+            iw_x2 = max(c[0] for c in corners)
+            iw_y2 = max(c[1] for c in corners)
+            init_cmd += f"IW{iw_x1},{iw_y1},{iw_x2},{iw_y2};"
+
         commands.append(
-            EmittedCommand(hpgl="IN;\r\n", step_index=0, pen=0, is_draw=False, dist_mm=0.0)
+            EmittedCommand(hpgl=f"{init_cmd}\r\n", step_index=0, pen=0, is_draw=False, dist_mm=0.0)
         )
 
         global_step_idx = 0
@@ -154,9 +174,16 @@ class HPGLEmitter:
                 # Pen speed and force
                 speed, force = pen_settings.get(pen_nr, (None, None))
                 if speed is not None and speed > 0:
-                    cmd_str += f"VS{int(round(speed))};"
+                    if getattr(self.profile, "decimal_speed", True) and abs(speed - round(speed)) > 1e-4:
+                        cmd_str += f"VS{speed:g};"
+                    else:
+                        cmd_str += f"VS{int(round(speed))};"
                 if force is not None and force > 0:
-                    cmd_str += f"FS{int(round(force))};"
+                    if getattr(self.profile, "force_unit", "grams") == "hp_level" and force > 8:
+                        fs_val = max(1, min(8, int(round(force / 25.0))))
+                    else:
+                        fs_val = int(round(force))
+                    cmd_str += f"FS{fs_val};"
 
                 commands.append(
                     EmittedCommand(
