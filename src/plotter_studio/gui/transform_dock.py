@@ -290,6 +290,7 @@ class TransformDockWidget(QDockWidget):
 
         r_layout.addWidget(self.btn_rotate_ccw)
         r_layout.addWidget(self.btn_rotate_cw)
+        r_layout.addStretch()
         self.grp_rotation.addLayout(r_layout)
 
         flip_layout = QHBoxLayout()
