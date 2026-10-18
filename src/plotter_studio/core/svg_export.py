@@ -2,15 +2,16 @@
 
 from __future__ import annotations
 import copy
+import io
+import logging
 import os
 from pathlib import Path
-from typing import Optional, List, Tuple
+from typing import List
 import uuid
 import xml.etree.ElementTree as ET
-import numpy as np
 import svgelements
 
-from .document import Document, LogicalPen, ImportItem, VectorPath, Page, DEFAULT_PENS
+from .document import Document, LogicalPen, ImportItem, VectorPath, Page, DEFAULT_PENS, PAPER_PRESETS
 from .geometry import (
     AffineTransform,
     LineSegment,
@@ -19,12 +20,13 @@ from .geometry import (
     ArcSegment,
 )
 from .svg_import import (
-    segment_to_points,
     extract_subpath_segments,
     _clean_duplicate_attributes,
     load_svg,
 )
 from .hpgl_import import load_hpgl, is_hpgl_file
+
+logger = logging.getLogger("plotter_studio.core.svg_export")
 
 
 NS_PS = "https://plotter-studio.org/schema/v1"
@@ -57,6 +59,7 @@ def export_document_to_svg(doc: Document, output_path: str):
         "orientation": doc.page.orientation,
         "device_profile": doc.page.device_profile,
         "feed_edge": doc.page.feed_edge,
+        "margin_profile": getattr(doc.page, "margin_profile", "exp"),
         "margin_left": f"{doc.page.margin_left_mm:.2f}",
         "margin_right": f"{doc.page.margin_right_mm:.2f}",
         "margin_top": f"{doc.page.margin_top_mm:.2f}",
@@ -70,7 +73,7 @@ def export_document_to_svg(doc: Document, output_path: str):
             "id": str(pen.pen_id),
             "name": pen.name,
             "color": pen.color_hex,
-            "width_mm": f"{pen.width_mm:.2f}",
+            "width_mm": f"{pen.width_mm:g}",
             "speed": f"{pen.speed_cm_s:.1f}",
             "force": f"{pen.force_g:.1f}",
             "enabled": str(pen.enabled).lower(),
@@ -83,10 +86,13 @@ def export_document_to_svg(doc: Document, output_path: str):
     pens_dict = {p.pen_id: p for p in doc.pens}
 
     for item in doc.items:
+        t = item.transform
         g_item = ET.SubElement(root, "g", {
-            "id": f"item_{item.item_id[:8]}",
+            "id": f"item_{item.item_id}",
+            "transform": f"matrix({t.a},{t.b},{t.c},{t.d},{t.tx},{t.ty})",
             f"{{{NS_PS}}}name": item.name,
-            f"{{{NS_PS}}}transform": f"{item.transform.a},{item.transform.b},{item.transform.c},{item.transform.d},{item.transform.tx},{item.transform.ty}",
+            f"{{{NS_PS}}}transform": f"{t.a},{t.b},{t.c},{t.d},{t.tx},{t.ty}",
+            f"{{{NS_PS}}}local": "true",
             f"{{{NS_PS}}}visible": str(item.visible).lower(),
             f"{{{NS_PS}}}locked": str(item.locked).lower(),
         })
@@ -100,10 +106,9 @@ def export_document_to_svg(doc: Document, output_path: str):
 
             d_parts: List[str] = []
             if path.segments:
-                t_segs = [s.transformed(item.transform) for s in path.segments]
-                first = t_segs[0].start
+                first = path.segments[0].start
                 d_parts.append(f"M {first[0]:.4f},{first[1]:.4f}")
-                for seg in t_segs:
+                for seg in path.segments:
                     if isinstance(seg, LineSegment):
                         d_parts.append(f"L {seg.end[0]:.4f},{seg.end[1]:.4f}")
                     elif isinstance(seg, QuadraticBezierSegment):
@@ -131,10 +136,10 @@ def export_document_to_svg(doc: Document, output_path: str):
             else:
                 if len(path.points) < 2:
                     continue
-                pts_transformed = item.transform.transform_coords(path.points)
-                d_parts = [f"M {pts_transformed[0, 0]:.3f},{pts_transformed[0, 1]:.3f}"]
-                for i in range(1, len(pts_transformed)):
-                    d_parts.append(f"L {pts_transformed[i, 0]:.3f},{pts_transformed[i, 1]:.3f}")
+                pts_local = path.points
+                d_parts = [f"M {pts_local[0, 0]:.3f},{pts_local[0, 1]:.3f}"]
+                for i in range(1, len(pts_local)):
+                    d_parts.append(f"L {pts_local[i, 0]:.3f},{pts_local[i, 1]:.3f}")
                 if path.closed:
                     d_parts.append("Z")
 
@@ -142,7 +147,7 @@ def export_document_to_svg(doc: Document, output_path: str):
                 "d": " ".join(d_parts),
                 "fill": "none",
                 "stroke": color,
-                "stroke-width": f"{stroke_width:.2f}",
+                "stroke-width": f"{stroke_width:g}",
                 "stroke-linecap": "round",
                 "stroke-linejoin": "round",
                 f"{{{NS_PS}}}pen": str(path.pen_id),
@@ -161,7 +166,7 @@ def is_project_file(filepath_or_data: str) -> bool:
                 header = f.read(4096)
             return NS_PS in header or "<ps:project" in header
         return NS_PS in filepath_or_data or "<ps:project" in filepath_or_data
-    except Exception:
+    except OSError:
         return False
 
 
@@ -186,10 +191,13 @@ def load_document_from_svg(filepath_or_data: str) -> Document:
         page = Page()
         try:
             if os.path.exists(filepath_or_data):
-                svg_obj = svgelements.SVG.parse(filepath_or_data)
+                try:
+                    svg_obj = svgelements.SVG.parse(filepath_or_data)
+                except ET.ParseError:
+                    raw_svg = Path(filepath_or_data).read_text(encoding="utf-8", errors="replace")
+                    svg_obj = svgelements.SVG.parse(io.StringIO(_clean_duplicate_attributes(raw_svg)))
             else:
-                import io
-                svg_obj = svgelements.SVG.parse(io.StringIO(filepath_or_data))
+                svg_obj = svgelements.SVG.parse(io.StringIO(_clean_duplicate_attributes(filepath_or_data)))
             w_mm = None
             h_mm = None
             if svg_obj.width and svg_obj.height:
@@ -202,16 +210,9 @@ def load_document_from_svg(filepath_or_data: str) -> Document:
                     h_mm = float(vb.height) * (25.4 / 96.0)
 
             if w_mm and h_mm:
-                formats = {
-                    "A4": (210, 297),
-                    "A3": (297, 420),
-                    "A2": (420, 594),
-                    "A1": (594, 841),
-                    "A0": (841, 1189),
-                }
                 detected_preset = None
                 detected_orient = "portrait"
-                for name, (dim1, dim2) in formats.items():
+                for name, (dim1, dim2) in PAPER_PRESETS.items():
                     if abs(w_mm - dim1) < 5 and abs(h_mm - dim2) < 5:
                         detected_preset = name
                         detected_orient = "portrait"
@@ -229,8 +230,8 @@ def load_document_from_svg(filepath_or_data: str) -> Document:
                 w = round(max(50.0, b.max_x + 10.0), 2)
                 h = round(max(50.0, b.max_y + 10.0), 2)
                 page.set_custom_size(w, h)
-        except Exception:
-            pass
+        except (ET.ParseError, ValueError, TypeError, OSError) as exc:
+            logger.warning("Could not determine SVG page dimensions (%s); using default page.", exc)
 
         return Document(page=page, pens=copy.deepcopy(DEFAULT_PENS), items=[item] if item.paths else [])
 
@@ -250,11 +251,13 @@ def load_document_from_svg(filepath_or_data: str) -> Document:
         if ps_page is not None:
             preset = ps_page.get("preset", "A3")
             orientation = ps_page.get("orientation", "landscape")
-            page.apply_preset(preset, orientation)
             if "device_profile" in ps_page.attrib:
                 page.device_profile = ps_page.attrib["device_profile"]
             if "feed_edge" in ps_page.attrib:
                 page.feed_edge = ps_page.attrib["feed_edge"]
+            if "margin_profile" in ps_page.attrib:
+                page.margin_profile = ps_page.attrib["margin_profile"]
+            page.apply_preset(preset, orientation)
             if "width_mm" in ps_page.attrib:
                 page.width_mm = float(ps_page.attrib["width_mm"])
             if "height_mm" in ps_page.attrib:
@@ -316,17 +319,19 @@ def load_document_from_svg(filepath_or_data: str) -> Document:
         source = g.attrib.get(f"{{{NS_PS}}}source")
         visible = g.attrib.get(f"{{{NS_PS}}}visible", "true").lower() == "true"
         locked = g.attrib.get(f"{{{NS_PS}}}locked", "false").lower() == "true"
+        is_local = g.attrib.get(f"{{{NS_PS}}}local", "false").lower() == "true"
         t_str = g.attrib.get(f"{{{NS_PS}}}transform")
         if t_str:
             try:
                 vals = [float(x) for x in t_str.split(",")]
                 transform = AffineTransform(*vals)
-            except Exception:
+            except (ValueError, TypeError) as exc:
+                logger.warning("Invalid ps:transform '%s' (%s); using identity.", t_str, exc)
                 transform = AffineTransform.identity()
         else:
             transform = AffineTransform.identity()
 
-        inv_t = transform.inverse()
+        inv_t = AffineTransform.identity() if is_local else transform.inverse()
 
         item_paths: List[VectorPath] = []
         path_elements = g.findall(f"{{{NS_SVG}}}path") + g.findall("path")
@@ -350,7 +355,7 @@ def load_document_from_svg(filepath_or_data: str) -> Document:
 
             p = svgelements.Path(d)
             for segs, is_closed in extract_subpath_segments(p, scale_mm=1.0):
-                local_segs = [s.transformed(inv_t) for s in segs]
+                local_segs = segs if is_local else [s.transformed(inv_t) for s in segs]
                 item_paths.append(VectorPath(pen_id=pen_id, closed=is_closed, segments=local_segs))
 
         if item_paths:

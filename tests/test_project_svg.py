@@ -1,5 +1,6 @@
 """Tests for Plotter Studio project SVG export and loading."""
 
+import math
 import os
 import tempfile
 import numpy as np
@@ -237,7 +238,8 @@ def test_project_metadata_persistence_and_plot_job_svg_export(tmp_path):
     from plotter_studio.pipeline.compiler import compile_document_to_plot_job
 
     doc = Document()
-    doc.page.apply_device_profile("mutoh_xp500", "bottom")
+    doc.page.apply_device_profile("mutoh_xp500", "bottom", "norm")
+    doc.pens[0].width_mm = 0.125
     it1 = ImportItem(
         name="VisibleLocked",
         paths=[VectorPath(points=np.array([[10.0, 10.0], [50.0, 50.0]]), pen_id=1)],
@@ -247,6 +249,7 @@ def test_project_metadata_persistence_and_plot_job_svg_export(tmp_path):
     it2 = ImportItem(
         name="HiddenUnlocked",
         paths=[VectorPath(points=np.array([[20.0, 20.0], [60.0, 60.0]]), pen_id=2)],
+        transform=AffineTransform.scale(0.0, 1.0),  # Singular transform
         visible=False,
         locked=False,
     )
@@ -258,11 +261,17 @@ def test_project_metadata_persistence_and_plot_job_svg_export(tmp_path):
 
     assert reloaded.page.device_profile == "mutoh_xp500"
     assert reloaded.page.feed_edge == "bottom"
+    assert reloaded.page.margin_profile == "norm"
+    assert math.isclose(reloaded.pens[0].width_mm, 0.125, abs_tol=1e-6)
     assert len(reloaded.items) == 2
+    assert reloaded.items[0].item_id == it1.item_id
     assert reloaded.items[0].visible is True
     assert reloaded.items[0].locked is True
+    assert reloaded.items[1].item_id == it2.item_id
     assert reloaded.items[1].visible is False
     assert reloaded.items[1].locked is False
+    # Local geometry of it2 must survive even though its transform was singular (scale_x=0)
+    assert np.allclose(reloaded.items[1].paths[0].points, [[20.0, 20.0], [60.0, 60.0]], atol=1e-3)
 
     # Test export_plot_job_to_svg
     job = compile_document_to_plot_job(doc)

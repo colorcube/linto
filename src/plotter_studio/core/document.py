@@ -2,21 +2,23 @@
 
 from __future__ import annotations
 import copy
+import logging
 import uuid
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional, Tuple, Sequence, Any
+from typing import List, Dict, Optional, Tuple, Any
 import numpy as np
 from .geometry import (
     Point,
     BoundingBox,
     AffineTransform,
     PathSegment,
-    LineSegment,
     QuadraticBezierSegment,
     CubicBezierSegment,
     ArcSegment,
     compute_segments_bounds,
 )
+
+logger = logging.getLogger("plotter_studio.core.document")
 
 
 PAPER_PRESETS: Dict[str, Tuple[float, float]] = {
@@ -75,6 +77,7 @@ class Page:
     orientation: str = "landscape"  # "landscape" or "portrait"
     device_profile: str = "mutoh_xp500"
     feed_edge: str = "top"  # "top", "bottom", "left", "right"
+    margin_profile: str = "exp"
     margin_left_mm: float = 5.0
     margin_right_mm: float = 5.0
     margin_top_mm: float = 25.0
@@ -93,6 +96,8 @@ class Page:
         self.device_profile = profile_key
         if feed_edge is not None:
             self.feed_edge = feed_edge
+        if margin_profile:
+            self.margin_profile = margin_profile
 
         if profile_key == "flatbed_sym":
             self.margin_left_mm = 5.0
@@ -113,10 +118,12 @@ class Page:
         from ..device.profile import load_profile, get_default_profile
         try:
             dev_prof = load_profile(profile_key)
-        except Exception:
+        except (FileNotFoundError, KeyError, ValueError, OSError) as exc:
+            logger.warning("Device profile '%s' could not be loaded (%s); falling back to default.", profile_key, exc)
             dev_prof = get_default_profile()
 
-        lead_m, trail_m, side_l, side_r = dev_prof.get_margins(margin_profile)
+        eff_margin_profile = margin_profile or self.margin_profile
+        lead_m, trail_m, side_l, side_r = dev_prof.get_margins(eff_margin_profile)
         if self.feed_edge == "bottom":
             self.margin_bottom_mm = lead_m
             self.margin_top_mm = trail_m
@@ -151,7 +158,7 @@ class Page:
                 self.width_mm = min(w, h)
                 self.height_mm = max(w, h)
         if self.device_profile != "custom":
-            self.apply_device_profile(self.device_profile, self.feed_edge)
+            self.apply_device_profile(self.device_profile, self.feed_edge, self.margin_profile)
 
     def set_custom_size(self, width_mm: float, height_mm: float):
         self.preset = "Custom"
@@ -315,17 +322,54 @@ class ImportItem:
 
     @property
     def current_bounds(self) -> Optional[BoundingBox]:
-        """Transformed bounding box."""
+        """Transformed tight bounding box."""
         if self.original_bounds is None:
             return None
-        pts = [
-            Point(self.original_bounds.min_x, self.original_bounds.min_y),
-            Point(self.original_bounds.max_x, self.original_bounds.min_y),
-            Point(self.original_bounds.max_x, self.original_bounds.max_y),
-            Point(self.original_bounds.min_x, self.original_bounds.max_y),
-        ]
-        t_pts = self.transform.transform_points(pts)
-        return BoundingBox.from_points(t_pts)
+        t = self.transform
+        # Fast path for axis-aligned transforms (no rotation/shear) or empty paths
+        if (abs(t.b) <= 1e-12 and abs(t.c) <= 1e-12) or not self.paths:
+            pts = [
+                Point(self.original_bounds.min_x, self.original_bounds.min_y),
+                Point(self.original_bounds.max_x, self.original_bounds.min_y),
+                Point(self.original_bounds.max_x, self.original_bounds.max_y),
+                Point(self.original_bounds.min_x, self.original_bounds.max_y),
+            ]
+            t_pts = t.transform_points(pts)
+            return BoundingBox.from_points(t_pts)
+
+        cache_key = (
+            t.a, t.b, t.c, t.d, t.tx, t.ty,
+            len(self.paths),
+            self.original_bounds.min_x,
+            self.original_bounds.min_y,
+            self.original_bounds.max_x,
+            self.original_bounds.max_y,
+        )
+        if getattr(self, "_cached_bounds_key", None) == cache_key:
+            return getattr(self, "_cached_bounds", None)
+
+        box: Optional[BoundingBox] = None
+        for p in self.paths:
+            if p.segments:
+                pb = compute_segments_bounds([s.transformed(t) for s in p.segments])
+            else:
+                pts_arr = p.points
+                if len(pts_arr) == 0:
+                    pb = None
+                else:
+                    t_arr = t.transform_coords(pts_arr)
+                    pb = BoundingBox(
+                        float(np.min(t_arr[:, 0])),
+                        float(np.min(t_arr[:, 1])),
+                        float(np.max(t_arr[:, 0])),
+                        float(np.max(t_arr[:, 1])),
+                    )
+            if pb is not None:
+                box = pb if box is None else box.expanded_to(pb)
+
+        self._cached_bounds_key = cache_key
+        self._cached_bounds = box
+        return box
 
     def set_pen_for_all(self, pen_id: int):
         """Set all paths in this item to a specific pen."""

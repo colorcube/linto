@@ -86,24 +86,21 @@ def cluster_colors_to_pens(
         for pen_id, hex_col in pen_palette[:max_pens]
     ]
 
+    if not palette_labs:
+        return {col: 1 for col in distinct_colors}
+
     mapping: Dict[str, int] = {}
 
-    # If colors <= available pens, assign sequentially or match to closest
-    if len(distinct_colors) <= len(palette_labs):
-        # 1:1 mapping: each distinct color gets a unique pen
-        for idx, col in enumerate(distinct_colors):
-            mapping[col] = palette_labs[idx][0]
-    else:
-        # More colors than pens: find closest palette pen via Delta E in Lab space
-        for col in distinct_colors:
-            col_lab = rgb_to_lab(hex_to_rgb(col))
-            best_pen = palette_labs[0][0]
-            min_dist = float("inf")
-            for pen_id, p_lab in palette_labs:
-                dist = delta_e(col_lab, p_lab)
-                if dist < min_dist:
-                    min_dist = dist
-                    best_pen = pen_id
-            mapping[col] = best_pen
+    # Match each distinct color to the closest palette pen via Delta E in Lab space
+    for col in distinct_colors:
+        col_lab = rgb_to_lab(hex_to_rgb(col))
+        best_pen = palette_labs[0][0]
+        min_dist = float("inf")
+        for pen_id, p_lab in palette_labs:
+            dist = delta_e(col_lab, p_lab)
+            if dist < min_dist:
+                min_dist = dist
+                best_pen = pen_id
+        mapping[col] = best_pen
 
     return mapping

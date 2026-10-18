@@ -5,7 +5,7 @@ from plotter_studio.core.color_cluster import cluster_colors_to_pens, hex_to_rgb
 
 def test_color_cluster():
     palette = [(1, "#000000"), (2, "#ff0000"), (3, "#0000ff")]
-    # Test matching similar red
+    # Test matching similar red when more colors than pens
     colors = ["#ff0000", "#fe0505", "#0000ff", "#111111"]
     mapping = cluster_colors_to_pens(colors, palette, max_pens=3)
     # The two reds should map to pen 2
@@ -15,6 +15,10 @@ def test_color_cluster():
     assert mapping["#0000ff"] == 3
     # Dark gray to pen 1
     assert mapping["#111111"] == 1
+
+    # Single pure red color must also match Pen 2 (red) via Delta-E, NOT Pen 1 (black)
+    single_red = cluster_colors_to_pens(["#ff0000"], palette, max_pens=3)
+    assert single_red["#ff0000"] == 2
 
 
 def test_svg_load_shapes():

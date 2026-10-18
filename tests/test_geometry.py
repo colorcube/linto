@@ -142,3 +142,33 @@ def test_segment_transformations_including_non_uniform_arc():
     assert math.isclose(float(np.min(pts_non_uni[:, 1])), float(np.min(pts_expected[:, 1])), abs_tol=0.1)
     assert math.isclose(float(np.max(pts_non_uni[:, 1])), float(np.max(pts_expected[:, 1])), abs_tol=0.1)
 
+
+def test_tight_rotated_current_bounds_and_margin_profile_preservation():
+    """Verify tight current_bounds on rotated diamond and margin_profile preservation on Page.apply_preset."""
+    from plotter_studio.core.document import ImportItem, VectorPath, Page
+
+    # Diamond with vertices at (10,0), (20,10), (10,20), (0,10) -> original_bounds is 20x20
+    # When rotated by 45 degrees around center (10,10), it becomes an axis-aligned square of side 10*sqrt(2) (~14.142)
+    # Transforming the 4 corners of original_bounds would falsely give 20*sqrt(2) (~28.284)!
+    diamond_pts = np.array([[10.0, 0.0], [20.0, 10.0], [10.0, 20.0], [0.0, 10.0], [10.0, 0.0]])
+    item = ImportItem(name="Diamond", paths=[VectorPath(points=diamond_pts, pen_id=1, closed=True)])
+    assert item.original_bounds is not None
+    assert math.isclose(item.original_bounds.width, 20.0, abs_tol=1e-6)
+
+    item.transform = AffineTransform.rotation(45.0, 10.0, 10.0)
+    cb = item.current_bounds
+    assert cb is not None
+    expected_side = 10.0 * math.sqrt(2.0)
+    assert math.isclose(cb.width, expected_side, abs_tol=1e-4)
+    assert math.isclose(cb.height, expected_side, abs_tol=1e-4)
+
+    # Verify Page.apply_preset preserves margin_profile ("norm" vs "exp")
+    page = Page()
+    page.apply_device_profile("mutoh_xp500", "top", "norm")
+    assert page.margin_profile == "norm"
+    norm_left = page.margin_left_mm
+    page.apply_preset("A4", "portrait")
+    assert page.margin_profile == "norm"
+    assert math.isclose(page.margin_left_mm, norm_left, abs_tol=1e-6)
+
+
