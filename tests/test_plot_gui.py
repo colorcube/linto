@@ -58,7 +58,14 @@ def test_plot_mode_switching_and_simulation(qapp, tmp_path):
     assert preview_item.job is not None
     assert len(preview_item.job.steps) > 0
 
-    # 2. Check pre-flight statistics in plot dock
+    # 2. Check info badges and pre-flight statistics in plot dock
+    assert not win.plot_dock.btn_info_flatten.pixmap().isNull()
+    assert "Kurvenglättung" in win.plot_dock.btn_info_flatten.toolTip()
+    assert not win.plot_dock.btn_info_merge.pixmap().isNull()
+    assert "Endpunkte verbinden" in win.plot_dock.btn_info_merge.toolTip()
+    assert not win.plot_dock.btn_info_simplify.pixmap().isNull()
+    assert "Pfade vereinfachen" in win.plot_dock.btn_info_simplify.toolTip()
+
     draw_text = win.plot_dock.lbl_draw.text()
     assert "m" in draw_text
     assert float(draw_text.replace(" m", "")) > 0.0

@@ -143,40 +143,88 @@ class PlotDockWidget(QDockWidget):
         grid_pipe.setVerticalSpacing(4)
         grid_pipe.setColumnStretch(0, 0)
         grid_pipe.setColumnStretch(1, 0)
-        grid_pipe.setColumnStretch(2, 1)
+        grid_pipe.setColumnStretch(2, 0)
+        grid_pipe.setColumnStretch(3, 1)
+
+        def _make_info_badge(tip: str) -> QLabel:
+            lbl = QLabel()
+            lbl.setPixmap(get_icon("info", color="#6b7280", size=14).pixmap(14, 14))
+            lbl.setCursor(Qt.PointingHandCursor)
+            lbl.setToolTip(tip)
+            lbl.setFixedSize(16, 16)
+            lbl.setAlignment(Qt.AlignCenter)
+            return lbl
+
+        tip_flatten = self.tr(
+            "<b>Curve Flattening (Bézier & Arcs)</b><br>"
+            "Subdivides curved paths into straight line segments for the plotter.<br><br>"
+            "• <b>Tolerance (mm):</b> Maximum chordal distance between true curve and segment.<br>"
+            "• <b>Smaller (e.g. 0.02 mm):</b> Smoother curves, more vertices & commands.<br>"
+            "• <b>Larger (e.g. 0.10 mm):</b> Faster plotting, but curves may appear faceted.<br>"
+            "• <i>Default: 0.05 mm (seamless curve rendering below pen width).</i>"
+        )
+        tip_merge = self.tr(
+            "<b>Connect Endpoints (Line Merge)</b><br>"
+            "Merges adjacent line segments automatically into continuous paths.<br><br>"
+            "• <b>Tolerance (mm):</b> Maximum distance between endpoints to join.<br>"
+            "• <b>Benefit:</b> Greatly reduces pen-up/down actuations (PU/PD), saves time and pen tips.<br>"
+            "• <b>Too large (e.g. > 0.5 mm):</b> Nearby lines or hatchings may merge accidentally.<br>"
+            "• <i>Default: 0.10 mm (bridges microscopic SVG/CAD export gaps).</i>"
+        )
+        tip_simplify = self.tr(
+            "<b>Simplify Paths (Ramer-Douglas-Peucker)</b><br>"
+            "Removes redundant vertices from nearly straight lines.<br><br>"
+            "• <b>Tolerance (mm):</b> Maximum allowed geometric deviation (epsilon).<br>"
+            "• <b>Benefit:</b> Drastically reduces file size and prevents plotter jitter on dense paths.<br>"
+            "• <b>Too large (e.g. > 0.08 mm):</b> Sharp corners and fine details may round off.<br>"
+            "• <b>0.00 mm:</b> Disables simplification (removes only collinear points).<br>"
+            "• <i>Default: 0.02 mm (lossless point reduction).</i>"
+        )
 
         lbl_flat = QLabel(self.tr("Curve flattening:"))
         lbl_flat.setStyleSheet("font-weight: 500; color: #374151;")
+        lbl_flat.setToolTip(tip_flatten)
         self.spin_flatten = QDoubleSpinBox()
         self.spin_flatten.setAlignment(Qt.AlignLeft)
         self.spin_flatten.setRange(0.01, 2.0)
         self.spin_flatten.setValue(0.05)
         self.spin_flatten.setSingleStep(0.01)
         self.spin_flatten.setSuffix(" mm")
+        self.spin_flatten.setToolTip(tip_flatten)
+        self.btn_info_flatten = _make_info_badge(tip_flatten)
         grid_pipe.addWidget(lbl_flat, 0, 0)
         grid_pipe.addWidget(self.spin_flatten, 0, 1)
+        grid_pipe.addWidget(self.btn_info_flatten, 0, 2)
 
         lbl_merge = QLabel(self.tr("Connect endpoints:"))
         lbl_merge.setStyleSheet("font-weight: 500; color: #374151;")
+        lbl_merge.setToolTip(tip_merge)
         self.spin_merge = QDoubleSpinBox()
         self.spin_merge.setAlignment(Qt.AlignLeft)
         self.spin_merge.setRange(0.0, 5.0)
         self.spin_merge.setValue(0.10)
         self.spin_merge.setSingleStep(0.05)
         self.spin_merge.setSuffix(" mm")
+        self.spin_merge.setToolTip(tip_merge)
+        self.btn_info_merge = _make_info_badge(tip_merge)
         grid_pipe.addWidget(lbl_merge, 1, 0)
         grid_pipe.addWidget(self.spin_merge, 1, 1)
+        grid_pipe.addWidget(self.btn_info_merge, 1, 2)
 
         lbl_simp = QLabel(self.tr("Simplify:"))
         lbl_simp.setStyleSheet("font-weight: 500; color: #374151;")
+        lbl_simp.setToolTip(tip_simplify)
         self.spin_simplify = QDoubleSpinBox()
         self.spin_simplify.setAlignment(Qt.AlignLeft)
         self.spin_simplify.setRange(0.0, 2.0)
         self.spin_simplify.setValue(0.02)
         self.spin_simplify.setSingleStep(0.01)
         self.spin_simplify.setSuffix(" mm")
+        self.spin_simplify.setToolTip(tip_simplify)
+        self.btn_info_simplify = _make_info_badge(tip_simplify)
         grid_pipe.addWidget(lbl_simp, 2, 0)
         grid_pipe.addWidget(self.spin_simplify, 2, 1)
+        grid_pipe.addWidget(self.btn_info_simplify, 2, 2)
 
         self.grp_pipeline.addLayout(grid_pipe)
 

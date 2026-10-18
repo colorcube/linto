@@ -185,6 +185,13 @@ SVG_TEMPLATES: Dict[str, str] = {
         '<rect x="6" y="14" width="12" height="8" fill="none" stroke="{color}" stroke-width="2"/>'
         '</svg>'
     ),
+    "info": (
+        '<svg viewBox="0 0 24 24" width="24" height="24">'
+        '<circle cx="12" cy="12" r="10" fill="none" stroke="{color}" stroke-width="2"/>'
+        '<line x1="12" y1="16" x2="12" y2="12" stroke="{color}" stroke-width="2" stroke-linecap="round"/>'
+        '<circle cx="12" cy="8" r="1.25" fill="{color}"/>'
+        '</svg>'
+    ),
     "settings": (
         '<svg viewBox="0 0 24 24" width="24" height="24">'
         '<circle cx="12" cy="12" r="3" fill="none" stroke="{color}" stroke-width="2"/>'
