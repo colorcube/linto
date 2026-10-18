@@ -28,7 +28,7 @@ If you draw with a **physical pen plotter** (from vintage workhorses like the Mu
 * **Safe Live Streaming:** Streams commands over RS-232 serial or TCP with strict **RTS/CTS hardware flow control** to prevent plotter buffer overflows. Supports pause, resume, and immediate abort (`ESC.K`, `PU;`, `SP0;`) that parks the pen safely in the carousel.
 
 ### What Plotter Studio is Not
-* **Not an inkjet printer driver:** Großformat photo printers (e.g. HP DesignJet, Epson SureColor) are raster printers. Plotter Studio exclusively drives mechanical vector machines moving physical pens.
+* **Not an inkjet printer driver:** Large-format photo printers (e.g. HP DesignJet, Epson SureColor) are raster printers. Plotter Studio exclusively drives mechanical vector machines moving physical pens.
 * **Not a vinyl cutting suite:** Focused strictly on pen plotting. Drag-knife offset compensation is on the roadmap.
 * **Not an illustration tool:** You continue designing in your favorite software (Inkscape, Blender, code). Plotter Studio handles the preparation, slicing, and machine execution.
 
@@ -54,7 +54,7 @@ You don't need hardware connected to try Plotter Studio—the built-in emulator 
 ```
 
 1. **Connect plotter or launch emulator:**
-   * *With hardware:* Connect your plotter via RS-232 null-modem cable (see [Chapter 4: Hardware Setup](docs/anleitung/4-hardware-setup-und-test.md)).
+   * *With hardware:* Connect your plotter via RS-232 null-modem cable (see [Chapter 4: Hardware Setup](docs/guide/4-hardware-setup-and-diagnostics.md)).
    * *Without hardware:* Launch the emulator in a terminal with `python3 -m plotter_studio.emulator --tcp 9999` and select `Mutoh XP-500 Simulator (TCP)` in the top toolbar.
 2. **Configure sheet and margin profile:**
    * Click **[ Page Setup... ]**, choose your format (e.g. `DIN A3 Landscape`) and margin profile (e.g. `EXP`). Click **[ Query Plotter ]** to read sensor boundaries automatically.
@@ -95,7 +95,7 @@ pip install -e ".[dev]"
 # Launch Plotter Studio
 plotter-studio
 
-# Run test suite (107 tests)
+# Run test suite
 pytest
 ```
 

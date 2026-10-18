@@ -3,9 +3,9 @@
 from __future__ import annotations
 import os
 import json
-from dataclasses import dataclass, field
-from typing import List, Optional, Tuple, Dict, Any
-from .document import Document, LogicalPen, ImportItem, VectorPath
+from dataclasses import dataclass
+from typing import List, Tuple, Dict, Any
+from .document import Document, LogicalPen, VectorPath
 from .color_cluster import rgb_hex_to_lab, color_delta_e
 
 

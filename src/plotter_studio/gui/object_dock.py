@@ -1,11 +1,10 @@
 """Object and Layer management dock widget."""
 
 from __future__ import annotations
-import copy
 import re
 from typing import Optional, TYPE_CHECKING
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QIcon, QKeySequence, QShortcut, QUndoStack
+from PySide6.QtGui import QUndoStack
 from PySide6.QtWidgets import (
     QDockWidget, QWidget, QVBoxLayout, QHBoxLayout,
     QTreeWidget, QTreeWidgetItem, QToolButton, QHeaderView,

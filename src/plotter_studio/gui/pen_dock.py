@@ -3,7 +3,7 @@
 from __future__ import annotations
 import os
 import copy
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Any
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor, QUndoStack
 from PySide6.QtWidgets import (
@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
 )
 from ..core.document import Document, LogicalPen
 from ..core.pen_presets import (
-    PenPreset, BUILTIN_PRESETS, get_builtin_presets,
+    PenPreset, get_builtin_presets,
     save_preset_json, load_preset_json, remap_document_to_preset
 )
 from .commands import ApplyPresetCommand, PenRemapCommand, ModifyPenPropertyCommand

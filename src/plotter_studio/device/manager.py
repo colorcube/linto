@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-import os
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, asdict
 from pathlib import Path
-from typing import List, Optional, Dict, Any, Callable
+from typing import List, Optional, Any, Callable
 import yaml
 
 from .profile import DeviceProfile, load_profile, get_default_profile

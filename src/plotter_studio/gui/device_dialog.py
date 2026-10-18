@@ -9,8 +9,8 @@ from typing import Optional
 
 from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtWidgets import (
-    QDialog, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
-    QFormLayout, QLabel, QLineEdit, QComboBox, QSpinBox, QCheckBox,
+    QDialog, QWidget, QVBoxLayout, QHBoxLayout,
+    QFormLayout, QLabel, QLineEdit, QComboBox, QCheckBox,
     QPushButton, QListWidget, QListWidgetItem, QGroupBox, QMessageBox,
     QDialogButtonBox
 )

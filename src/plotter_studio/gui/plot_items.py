@@ -3,11 +3,10 @@
 from __future__ import annotations
 from typing import Optional, Set
 from PySide6.QtCore import Qt, QRectF, QPointF
-from PySide6.QtGui import QPainter, QColor, QPen, QBrush, QPainterPath, QPolygonF
+from PySide6.QtGui import QPainter, QColor, QPen, QBrush
 from PySide6.QtWidgets import QGraphicsItem
-import numpy as np
 
-from ..pipeline.compiler import PlotJob, PlotStep
+from ..pipeline.compiler import PlotJob
 
 
 class GraphicsPlotPreviewItem(QGraphicsItem):

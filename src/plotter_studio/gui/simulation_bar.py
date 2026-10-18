@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Optional
 from PySide6.QtCore import Qt, Signal, QTimer
 from PySide6.QtWidgets import (
-    QWidget, QHBoxLayout, QPushButton, QSlider, QLabel, QComboBox, QFrame
+    QWidget, QHBoxLayout, QPushButton, QSlider, QLabel, QComboBox
 )
 from ..pipeline.compiler import PlotJob
 from .icons import get_icon

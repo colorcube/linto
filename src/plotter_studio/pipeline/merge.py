@@ -1,7 +1,6 @@
 """Polyline merging (linemerge) with endpoint distance threshold."""
 
 from __future__ import annotations
-import math
 from typing import List
 import numpy as np
 

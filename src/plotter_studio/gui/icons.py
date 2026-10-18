@@ -1,9 +1,9 @@
 """Monochrome vector icon provider in Breeze/Inkscape minimalist style."""
 
 from __future__ import annotations
-from typing import Dict, Optional
-from PySide6.QtCore import QByteArray, QSize, Qt
-from PySide6.QtGui import QIcon, QPixmap, QPainter, QColor
+from typing import Dict
+from PySide6.QtCore import QByteArray, Qt
+from PySide6.QtGui import QIcon, QPixmap, QPainter
 from PySide6.QtSvg import QSvgRenderer
 
 DEFAULT_ICON_COLOR = "#374151"

@@ -3,12 +3,12 @@
 from __future__ import annotations
 import copy
 from typing import Optional, List, Dict, Set
-from PySide6.QtCore import Qt, QRectF, QPointF, Signal
+from PySide6.QtCore import Qt, QRectF, Signal
 from PySide6.QtGui import (
     QPainter, QPen, QColor, QBrush, QWheelEvent,
     QMouseEvent, QDragEnterEvent, QDropEvent, QDragMoveEvent, QTransform
 )
-from PySide6.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsItem
+from PySide6.QtWidgets import QGraphicsView, QGraphicsScene
 from ..core.document import Document, ImportItem
 from ..pipeline.compiler import PlotJob
 from .items import GraphicsImportItem

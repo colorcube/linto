@@ -6,13 +6,9 @@ import math
 import os
 import re
 from pathlib import Path
-from typing import List, Tuple, Dict, Optional
-import numpy as np
+from typing import List, Tuple, Optional
 import svgelements
 from .geometry import (
-    Point,
-    BoundingBox,
-    AffineTransform,
     PathSegment,
     LineSegment,
     QuadraticBezierSegment,

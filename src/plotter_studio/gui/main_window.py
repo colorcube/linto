@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 import os
-import copy
 import math
 from typing import Optional, Any
-from PySide6.QtCore import Qt, QPointF, QTimer
-from PySide6.QtGui import QAction, QKeySequence, QIcon, QUndoStack, QActionGroup
+from PySide6.QtCore import Qt, QSettings, QTimer
+from PySide6.QtGui import QAction, QKeySequence, QUndoStack, QActionGroup
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QGridLayout, QToolBar,
     QStatusBar, QLabel, QFileDialog, QMessageBox, QTabWidget,
@@ -22,9 +21,7 @@ from ..core.svg_export import (
     load_document_from_svg,
     is_project_file,
 )
-from ..pipeline.compiler import (
-    PipelineConfig, PlotJob, compile_document_to_plot_job
-)
+from ..pipeline.compiler import compile_document_to_plot_job
 from .canvas import PlotterCanvas, CanvasMode, extract_droppable_files
 from .rulers import RulerWidget, RULER_BREADTH
 from .pen_dock import PenDockWidget
@@ -33,15 +30,13 @@ from .plot_dock import PlotDockWidget
 from .object_dock import ObjectDockWidget
 from .simulation_bar import PlotSimulationBar
 from .icons import get_icon
-from ..device import get_default_profile, HPGLEmitter, DeviceManager, ConfiguredDevice
+from ..device import get_default_profile, HPGLEmitter, DeviceManager
 from .device_dialog import DeviceSettingsDialog
 from .page_dialog import PageSetupDialog
 from .commands import (
     TransformItemCommand, AssignPenCommand,
     AddItemCommand, DeleteItemsCommand, PageConfigCommand
 )
-
-_ORIG_QMESSAGEBOX_QUESTION = QMessageBox.question
 
 
 class MainWindow(QMainWindow):
@@ -53,6 +48,7 @@ class MainWindow(QMainWindow):
         self.doc = doc or Document()
         self.undo_stack = QUndoStack(self)
         self.device_manager = DeviceManager()
+        self._settings = QSettings("PlotterStudio", "PlotterStudio")
         self.current_project_path: Optional[str] = None
         self.undo_stack.cleanChanged.connect(self._update_window_title)
 
@@ -73,6 +69,9 @@ class MainWindow(QMainWindow):
 
         # Connect signals
         self._connect_signals()
+
+        # Restore persisted window geometry if available
+        self._restore_window_settings()
 
         # Initial view
         self.canvas.zoom_to_fit()
@@ -769,16 +768,41 @@ class MainWindow(QMainWindow):
         except RuntimeError:
             pass
 
+    def _get_last_dir(self) -> str:
+        if hasattr(self, "_settings") and self._settings is not None:
+            val = self._settings.value("paths/last_dir", "")
+            if isinstance(val, str) and val and os.path.isdir(val):
+                return val
+        return ""
+
+    def _set_last_dir(self, filepath: str):
+        if not filepath or not hasattr(self, "_settings") or self._settings is None:
+            return
+        parent = os.path.dirname(os.path.abspath(filepath))
+        if os.path.isdir(parent):
+            self._settings.setValue("paths/last_dir", parent)
+
+    def _restore_window_settings(self):
+        if not hasattr(self, "_settings") or self._settings is None:
+            return
+        geom = self._settings.value("window/geometry")
+        if geom:
+            try:
+                self.restoreGeometry(geom)
+            except Exception:
+                pass
+
+    def _save_window_settings(self):
+        if not hasattr(self, "_settings") or self._settings is None:
+            return
+        try:
+            self._settings.setValue("window/geometry", self.saveGeometry())
+        except Exception:
+            pass
+
     def _confirm_abort_active_plot(self) -> bool:
         """Ask user before aborting an active plot when closing the window."""
         if not self.is_plot_active():
-            return True
-        if (
-            "PYTEST_CURRENT_TEST" in os.environ
-            and QMessageBox.question is _ORIG_QMESSAGEBOX_QUESTION
-            and not getattr(self, "_force_abort_prompt", False)
-        ):
-            self.plot_dock.abort_plot()
             return True
 
         resp = QMessageBox.question(
@@ -799,12 +823,6 @@ class MainWindow(QMainWindow):
     def _confirm_discard_unsaved_changes(self) -> bool:
         """Ask user whether to save or discard unsaved changes. Returns True to proceed."""
         if self.undo_stack.isClean():
-            return True
-        if (
-            "PYTEST_CURRENT_TEST" in os.environ
-            and QMessageBox.question is _ORIG_QMESSAGEBOX_QUESTION
-            and not getattr(self, "_force_unsaved_prompt", False)
-        ):
             return True
 
         resp = QMessageBox.question(
@@ -860,7 +878,7 @@ class MainWindow(QMainWindow):
         fpath, _ = QFileDialog.getOpenFileName(
             self,
             self.tr("Open Project or Vector File"),
-            "",
+            self._get_last_dir(),
             self.tr("Vector Files (*.svg *.hpgl *.plt);;SVG Files (*.svg);;HP-GL Plot Files (*.hpgl *.plt);;All Files (*)"),
         )
         if fpath:
@@ -872,6 +890,7 @@ class MainWindow(QMainWindow):
         if not self._confirm_discard_unsaved_changes():
             return
         try:
+            self._set_last_dir(fpath)
             is_proj = is_project_file(fpath)
             loaded_doc = load_document_from_svg(fpath)
             self.doc.page = loaded_doc.page
@@ -921,7 +940,7 @@ class MainWindow(QMainWindow):
         fpath, _ = QFileDialog.getOpenFileName(
             self,
             self.tr("Import Vector Artwork"),
-            "",
+            self._get_last_dir(),
             self.tr("Vector Files (*.svg *.hpgl *.plt);;SVG Files (*.svg);;HP-GL Plot Files (*.hpgl *.plt);;All Files (*)"),
         )
         if fpath:
@@ -931,6 +950,7 @@ class MainWindow(QMainWindow):
         if self.is_plot_active():
             return
         try:
+            self._set_last_dir(fpath)
             if not is_hpgl_file(fpath) and is_project_file(fpath):
                 resp = QMessageBox.question(
                     self,
@@ -982,6 +1002,7 @@ class MainWindow(QMainWindow):
         try:
             export_document_to_svg(self.doc, fpath)
             self.current_project_path = fpath
+            self._set_last_dir(fpath)
             self.undo_stack.setClean()
             self._update_window_title()
             self.lbl_info.setText(self.tr("Saved to: %1").replace("%1", os.path.basename(fpath)))
@@ -1001,7 +1022,8 @@ class MainWindow(QMainWindow):
         return self.save_project_dialog()
 
     def save_project_dialog(self) -> bool:
-        default_path = self.current_project_path or "projekt.svg"
+        last_dir = self._get_last_dir()
+        default_path = self.current_project_path or (os.path.join(last_dir, "projekt.svg") if last_dir else "projekt.svg")
         fpath, _ = QFileDialog.getSaveFileName(
             self,
             self.tr("Save Project As"),
@@ -1065,12 +1087,10 @@ class MainWindow(QMainWindow):
         self._schedule_dock_title_update()
         if not getattr(self, "_initial_zoom_done", False):
             self._initial_zoom_done = True
-            from PySide6.QtCore import QTimer
             self.canvas.zoom_to_fit()
             QTimer.singleShot(50, self.canvas.zoom_to_fit)
 
     def _schedule_dock_title_update(self):
-        from PySide6.QtCore import QTimer
         QTimer.singleShot(0, self._update_dock_title_bars)
 
     def _update_dock_title_bars(self):
@@ -1205,14 +1225,17 @@ class MainWindow(QMainWindow):
             )
             return
 
+        last_dir = self._get_last_dir()
+        default_hpgl = os.path.join(last_dir, "job.hpgl") if last_dir else "job.hpgl"
         fpath, _ = QFileDialog.getSaveFileName(
             self,
             self.tr("Export Plot File"),
-            "job.hpgl",
+            default_hpgl,
             self.tr("HP-GL Plot File (*.hpgl *.plt);;All Files (*)"),
         )
         if not fpath:
             return
+        self._set_last_dir(fpath)
 
         profile = get_default_profile()
         margin_key = "exp"
@@ -1276,14 +1299,17 @@ class MainWindow(QMainWindow):
             )
             return
 
+        last_dir = self._get_last_dir()
+        default_svg = os.path.join(last_dir, "plot_output.svg") if last_dir else "plot_output.svg"
         fpath, _ = QFileDialog.getSaveFileName(
             self,
             self.tr("Export Plot Vectors"),
-            "plot_output.svg",
+            default_svg,
             self.tr("SVG Vector File (*.svg);;All Files (*)"),
         )
         if not fpath:
             return
+        self._set_last_dir(fpath)
 
         try:
             export_plot_job_to_svg(self._current_job, self.doc.page, fpath)
@@ -1312,5 +1338,6 @@ class MainWindow(QMainWindow):
         if not self._confirm_discard_unsaved_changes():
             event.ignore()
             return
+        self._save_window_settings()
         self.cleanup()
         super().closeEvent(event)

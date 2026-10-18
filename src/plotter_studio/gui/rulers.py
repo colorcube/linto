@@ -3,7 +3,7 @@
 from __future__ import annotations
 import math
 from typing import Optional
-from PySide6.QtCore import Qt, QPointF, QRectF
+from PySide6.QtCore import QPointF
 from PySide6.QtGui import QPainter, QPen, QColor, QFont
 from PySide6.QtWidgets import QWidget, QGraphicsView
 

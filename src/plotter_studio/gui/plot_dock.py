@@ -11,19 +11,18 @@ from typing import Optional, Set, Any
 from PySide6.QtCore import Qt, Signal, QObject, QEvent, QSize, QTimer
 from PySide6.QtWidgets import (
     QDockWidget, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
-    QGroupBox, QLabel, QDoubleSpinBox, QCheckBox, QPushButton,
-    QScrollArea, QFileDialog, QMessageBox, QFrame, QComboBox, QProgressBar,
+    QLabel, QDoubleSpinBox, QCheckBox, QPushButton,
+    QScrollArea, QMessageBox, QFrame, QComboBox, QProgressBar,
     QStyle
 )
 from ..core.document import Document
-from ..pipeline.compiler import PipelineConfig, PlotJob, compile_document_to_plot_job
+from ..pipeline.compiler import PipelineConfig, PlotJob
 from ..device import (
     get_default_profile,
     HPGLEmitter,
     list_serial_ports,
     probe_plotter,
     SerialStreamer,
-    StreamerState,
     ProbeResult,
     DeviceManager,
     ConfiguredDevice,

@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (
     QGroupBox, QScrollArea
 )
 from ..core.document import Document, ImportItem
-from ..core.geometry import AffineTransform, Point, BoundingBox
+from ..core.geometry import AffineTransform, BoundingBox
 from .commands import (
     TransformItemCommand,
     CMD_ID_POS,

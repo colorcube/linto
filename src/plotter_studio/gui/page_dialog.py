@@ -3,14 +3,14 @@
 from __future__ import annotations
 import threading
 from typing import Optional, Dict, Any
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Signal
 from PySide6.QtGui import QUndoStack
 from PySide6.QtWidgets import (
-    QDialog, QWidget, QVBoxLayout, QHBoxLayout,
+    QDialog, QVBoxLayout, QHBoxLayout,
     QFormLayout, QComboBox, QDoubleSpinBox, QPushButton,
     QGroupBox, QLabel, QMessageBox, QDialogButtonBox
 )
-from ..core.document import Document, PAPER_PRESETS, DEVICE_PROFILES
+from ..core.document import Document, PAPER_PRESETS
 from ..device import probe_plotter, DeviceManager, ConfiguredDevice
 from .commands import PageConfigCommand
 from .icons import get_icon

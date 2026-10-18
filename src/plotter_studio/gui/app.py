@@ -3,7 +3,6 @@
 from __future__ import annotations
 import sys
 from PySide6.QtWidgets import QApplication
-from PySide6.QtGui import QIcon
 from .i18n import setup_i18n
 from .main_window import MainWindow
 
