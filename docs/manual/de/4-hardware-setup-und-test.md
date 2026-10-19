@@ -80,33 +80,151 @@ python3 tools/xp500_probe.py tcp://127.0.0.1:9999
 ```
 
 ### Typische Ausgabe bei fehlerfreier Verbindung:
+```text
+=================================================================
+  PLOTTER STUDIO – Mutoh XP-500 Hardware-Diagnose (AP0)
+=================================================================
+Ziel:      /dev/ttyS5
+Baudrate:  19200
+Timeout:   0.6 s
+-----------------------------------------------------------------
+Verbindung: Serieller Port geöffnet. Signals: CTS=True, DSR=True
+
+Abfrage-Ergebnisse (siehe docs/devices/mutoh-xp500/testplan.md):
+-----------------------------------------------------------------
+OI;      | Modell-Identifikation (Standard) | 7585B
+OF;      | Zeicheneinheit (Units/mm)      | 40,40
+OH;      | Plottbereich / Hard-Clip       | -3678,-5692,3679,5692
+OS;      | Statusbyte                     | 26
+OE;      | Fehlerstatus (HP-GL)           | 0
+OA;      | Aktuelle Position & Stift      | -3077,-5092,0
+OT;      | Stiftkarussell-Status          | 1,0
+OO;      | Optionen                       | 0,1,0,0,1,1,0,1
+ESC.A    | ESC.A (Erweiterte ID)          | 7585B
+ESC.L    | ESC.L (Puffergröße)            | 1024
+ESC.B    | ESC.B (Freier Puffer)          | 1024
+ESC.O    | ESC.O (Erweiterter Status)     | 392
+ESC.E    | ESC.E (Erweiterter Fehler)     | 0
+-----------------------------------------------------------------
+
+Auswertung:
+• Modell:        7585B
+• Auflösung:     40.0 Units/mm (Schrittweite: 0.0250 mm)
+• Hard-Clip:     X: [-3678, 3679], Y: [-5692, 5692] Units
+• Abmessungen:   183.9 × 284.6 mm (Plottbarer Bereich)
+• Erkanntes Blatt: DIN A4
+• Puffer:        Gesamt: 1024 Bytes, Frei: 1024 Bytes
+=================================================================
 ```
-============================================================
-Plotter Studio - Hardware Diagnostic Probe
-Target: /dev/ttyUSB0 (19200 baud, 8N1, RTS/CTS)
-============================================================
-[1/4] Checking Hardware Control Lines (RS-232)...
-  CTS line : True  (Plotter is ready to accept data)
-  DSR line : True  (Plotter hardware present)
 
-[2/4] Querying Plotter Identification...
-  Command 'OI;' -> Response: '7585B' (HP-7585B emulation active)
-
-[3/4] Querying Resolution & Scaling Factors...
-  Command 'OF;' -> Response: '40,40' (40 Plotter-Units per mm = 0.025 mm/step)
-
-[4/4] Querying Plottable Window (Hard-Clip)...
-  Command 'OH;' -> Response: '-8200,-5340,8200,5340'
-  Calculated printable area: 410.0 mm x 267.0 mm (Matches DIN A3)
-
-Result: Plotter is ONLINE, RESPONSIVE and READY FOR PLOTTING!
-```
-
-Erscheint hier ein Timeout, überprüfe die Leitungen CTS/RTS und die Baudrate am Plotterbedienfeld.
+Erscheint hier ein Timeout oder `CTS=False`, überprüfe das Nullmodem-Kabel, die Einstellungen am Plotterbedienfeld (Protokoll/Handshake) sowie die nachfolgenden Hinweise zur Betriebssystem-Einrichtung.
 
 ---
 
-## 5. Der Kalibrierplot (Genauigkeit, Ränder, Stifte & Backlash)
+## 5. Betriebssystem-Einrichtung & Fehlerbehebung (RS-232)
+
+### Linux
+
+Unter Linux werden serielle Schnittstellen als Gerätedateien unter `/dev/` abgebildet. Je nach verwendeter Hardware gibt es einige typische Hürden bei Berechtigungen, Hintergrunddiensten oder Interrupts.
+
+#### 1. Den richtigen Portnamen finden (`/dev/ttyUSB*` vs. `/dev/ttyS*`)
+* **USB-zu-Seriell-Adapter** (FTDI, Silicon Labs CP210x, Prolific PL2303, CH340) erscheinen als `/dev/ttyUSB0`, `/dev/ttyUSB1` usw. (seltener als `/dev/ttyACM0`).
+* **Onboard-RS-232 & gesteckte PCIe-Schnittstellenkarten** (16550A-kompatible UARTs) werden als `/dev/ttyS0`, `/dev/ttyS1` usw. angelegt. Da die Kernel-Treiber oft `/dev/ttyS0` bis `/dev/ttyS3` für Mainboard-Anschlüsse reservieren, erhalten gesteckte PCIe-Karten häufig höhere Nummern wie `/dev/ttyS4` und `/dev/ttyS5`.
+
+Mit `dmesg` lässt sich direkt prüfen, welche Schnittstellen der Kernel beim Starten oder Einstecken erkannt hat:
+```bash
+sudo dmesg | grep -E "ttyS|ttyUSB|ttyACM"
+```
+Beispielausgabe bei einem Mainboard-Port (`ttyS0`) und einer 2-Port PCIe-Karte (`ttyS4`, `ttyS5`):
+```text
+[    0.702046] serial8250: ttyS0 at I/O 0x3f8 (irq = 4, base_baud = 115200) is a 16550A
+[    0.704314] 0000:04:00.0: ttyS4 at I/O 0xe010 (irq = 41, base_baud = 115200) is a 16550A
+[    0.704696] 0000:04:00.1: ttyS5 at I/O 0xe000 (irq = 42, base_baud = 115200) is a 16550A
+```
+
+#### 2. Fehlende Berechtigung (`Errno 13: Keine Berechtigung`)
+Standardmäßig darf ein normaler Benutzer unter Linux nicht direkt auf `/dev/ttyS*` oder `/dev/ttyUSB*` zugreifen. Die Gerätedateien gehören der Systemgruppe `dialout` (Debian, Ubuntu, Linux Mint, Fedora, openSUSE) bzw. `uucp` (Arch Linux, Manjaro).
+
+1. **Prüfen, welcher Gruppe der Port gehört:**
+   ```bash
+   ls -l /dev/ttyS5
+   # Beispiel: crw-rw----. 1 root dialout 4, 69 19. Okt 15:40 /dev/ttyS5
+   ```
+2. **Eigenen Benutzer dauerhaft zur Gruppe `dialout` hinzufügen:**
+   ```bash
+   sudo usermod -aG dialout $USER
+   ```
+   > [!IMPORTANT]
+   > Gruppenänderungen unter Linux werden erst wirksam, wenn du dich **einmal komplett von der grafischen Desktop-Sitzung abmeldest und wieder anmeldest** (oder den Rechner neu startest).
+
+3. **Sofort-Workaround ohne Abmelden (für die laufende Sitzung):**
+   Wenn du dich gerade nicht abmelden möchtest, kannst du die Berechtigung für den Port temporär bis zum nächsten Neustart direkt freischalten:
+   ```bash
+   sudo setfacl -m u:$USER:rw /dev/ttyS5
+   ```
+
+#### 3. PCIe-Schnittstellenkarten & Interrupt-Probleme (`No irq handler` / Timeout)
+Beim Einsatz nachgerüsteter PCIe-RS-232-Karten (z. B. mit dem verbreiteten **ASIX AX99100** Chip `[125b:9100]`, MosChip MCS99xx oder WCH CH382) kann es unter Linux vorkommen, dass der generische Kernel-Treiber (`8250_pci`) zwar die Ports `/dev/ttyS4` / `/dev/ttyS5` anlegt und die Statusleitungen (`CTS=True`, `DSR=True`) korrekt liest, aber jegliche Datenübertragung in einen **Timeout** läuft.
+
+* **Typisches Symptom:** Im Systemlog (`journalctl -kf` oder `dmesg`) erscheint beim Zugriffversuch eine Kernel-Meldung wie:
+  ```text
+  kernel: No irq handler for 13.32
+  ```
+* **Ursache:** Das Hardware-Interrupt-Routing (MSI/APIC) zwischen der PCIe-Karte und dem `8250_pci`-Treiber schlägt fehl. Der UART-Chip empfängt zwar die Antwort vom Plotter im Hardware-Puffer, kann die CPU aber nicht per Interrupt benachrichtigen.
+* **Workaround (`setserial` Polling-Modus):**
+  Setzt man den IRQ des seriellen Ports mit dem Werkzeug `setserial` auf `0`, verzichtet der Linux-Kernel auf Hardware-Interrupts und fragt den Port stattdessen zuverlässig per **Timer-Polling** ab:
+  ```bash
+  # setserial installieren (falls noch nicht vorhanden):
+  sudo dnf install setserial   # Fedora / RHEL
+  sudo apt install setserial   # Debian / Ubuntu
+
+  # Port auf Polling-Modus (IRQ 0) umschalten:
+  sudo setserial /dev/ttyS5 irq 0
+
+  # Einstellung überprüfen:
+  setserial -a /dev/ttyS5
+  ```
+* **Dauerhaft über Neustarts hinweg speichern (udev-Regel):**
+  Da die `setserial`-Einstellung beim Neustart verloren geht, lässt sie sich über eine udev-Regel in `/etc/udev/rules.d/99-serial-polling.rules` automatisieren:
+  ```udev
+  ACTION=="add", SUBSYSTEM=="tty", KERNEL=="ttyS4", RUN+="/bin/setserial /dev/%k irq 0"
+  ACTION=="add", SUBSYSTEM=="tty", KERNEL=="ttyS5", RUN+="/bin/setserial /dev/%k irq 0"
+  ```
+
+#### 4. Typische Störquellen bei USB-Seriell-Adaptern (`brltty` & `ModemManager`)
+* **`brltty` kapert den USB-Adapter:** Auf vielen Distributionen (Ubuntu, Debian, Fedora) ist standardmäßig der Dienst `brltty` für Sehbehinderten-Braillezeilen aktiv. Dessen udev-Regeln halten manche USB-Seriell-Adapter (insbesondere FTDI und CH340) fälschlicherweise für eine Braillezeile und entziehen dem System Sekunden nach dem Einstecken sofort wieder das Gerät `/dev/ttyUSB0` (`dmesg` meldet `interface 0 claimed by ftdi_sio while 'brltty' sets config #1` / `ttyUSB0: now disconnected`).
+  * *Abhilfe (wenn keine Braillezeile genutzt wird):* Dienst deaktivieren oder Paket `brltty` deinstallieren:
+    ```bash
+    sudo systemctl stop brltty.path brltty.service
+    sudo systemctl mask brltty.path brltty.service
+    ```
+* **`ModemManager` sendet beim Einstecken `AT`-Befehle:** Direkt nach dem Einstecken eines USB-Seriell-Adapters prüft `ModemManager` den Port für einige Sekunden auf ein vermeintliches Mobilfunkmodem. Warte nach dem Einstecken ca. 5–10 Sekunden, oder schalte den Plotter erst ein, nachdem der USB-Adapter verbunden wurde, damit die `AT`-Zeichen keinen HP-GL-Syntaxfehler am Plotter auslösen.
+
+#### 5. Manueller Schnelltest über die Linux-Konsole (`stty` & `cat`)
+Um völlig unabhängig von Python oder Plotter Studio zu testen, ob Schnittstelle, Kabel und Plotter auf Betriebssystemebene kommunizieren, kann der Port auch direkt mit Bordmitteln konfiguriert und beschrieben werden (`19200` Baud, `8N1`, Hardware-Handshake `crtscts`):
+
+```bash
+stty -F /dev/ttyS5 19200 -parenb cs8 -cstopb crtscts
+cat Hello-World.hpgl > /dev/ttyS5
+```
+
+---
+
+### macOS
+
+* **Gerätenamen:** USB-Seriell-Adapter erscheinen unter macOS im Verzeichnis `/dev/` jeweils doppelt – als `/dev/tty.usbserial-*` und als `/dev/cu.usbserial-*`. Verwende in Plotter Studio vorzugsweise das **`/dev/cu.*`**-Gerät (*Call-Up / Call-Out*), da `/dev/tty.*` auf ein Hardware-Carrier-Detect-Signal (DCD) wartet und sonst beim Öffnen blockieren kann.
+* *(Weitere macOS-spezifische Hinweise folgen in einer späteren Version.)*
+
+---
+
+### Windows
+
+* **Gerätenamen:** Unter Windows werden serielle Schnittstellen als `COM1`, `COM2`, `COM3` usw. angesprochen. Welche Nummer einem USB-Seriell-Adapter oder einer PCIe-Karte zugewiesen wurde, lässt sich im **Geräte-Manager** unter *Anschlüsse (COM & LPT)* ablesen.
+* *(Weitere Windows-spezifische Hinweise folgen in einer späteren Version.)*
+
+---
+
+## 6. Der Kalibrierplot (Genauigkeit, Ränder, Stifte & Backlash)
 
 Im Verzeichnis `resources/` liegen vorbereitete Kalibriermuster für DIN A4 und DIN A3 bereit:
 * `resources/calibration_plot_a3.svg` / `.hpgl`
