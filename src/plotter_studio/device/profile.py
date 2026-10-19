@@ -49,6 +49,10 @@ class DeviceProfile:
     origin: str = "center"  # "center" or "bottom_left"
     units_per_mm: float = 40.0  # 0.025 mm / unit
     max_pens: int = 8
+    max_speed_mm_s: float = 900.0
+    travel_speed_mm_s: float = 900.0
+    pen_change_time_s: float = 2.5
+    pen_actuation_time_s: float = 0.04
     # Intrinsic axis mapping of the hardware (sheet frame -> plotter axes).
     # Always applied by the emitter; user corrections come on top.
     swap_xy: bool = False
@@ -160,6 +164,10 @@ def load_profile(path_or_id: str | Path) -> DeviceProfile:
         origin=str(data.get("origin", "center")),
         units_per_mm=float(data.get("units_per_mm", 40.0)),
         max_pens=int(data.get("max_pens", 8)),
+        max_speed_mm_s=float(data.get("max_speed_mm_s", 900.0)),
+        travel_speed_mm_s=float(data.get("travel_speed_mm_s", 900.0)),
+        pen_change_time_s=float(data.get("pen_change_time_s", 2.5)),
+        pen_actuation_time_s=float(data.get("pen_actuation_time_s", 0.04)),
         swap_xy=bool(data.get("swap_xy", False)),
         invert_x=bool(data.get("invert_x", False)),
         invert_y=bool(data.get("invert_y", False)),

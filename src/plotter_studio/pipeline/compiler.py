@@ -31,9 +31,12 @@ class PipelineConfig:
     sort_paths: bool = True
     use_2opt: bool = True
     clip_to_plottable: bool = False
-    travel_speed_mm_s: float = 500.0       # Pen-up travel speed
-    pen_change_time_s: float = 4.0        # Overhead per pen carousel change
-    pen_actuation_time_s: float = 0.03    # Overhead per pen-down / pen-up
+    max_speed_mm_s: float = 900.0          # Device max drawing speed (Mutoh XP-500: 900 mm/s)
+    travel_speed_mm_s: float = 900.0       # Pen-up travel speed (Mutoh XP-500: 900 mm/s)
+    pen_change_time_s: float = 2.5         # Overhead per pen pickup / carousel change
+    pen_actuation_time_s: float = 0.04     # Overhead per pen-down / pen-up
+    baudrate: Optional[int] = 19200        # Effective serial baudrate (None = unthrottled)
+    bits_per_byte: int = 10                # Serial frame size (start + data + parity + stop)
 
 
 @dataclass
@@ -270,13 +273,24 @@ def compile_document_to_plot_job(
         # Calculate draw length
         draw_mm = sum(compute_polyline_length(l) for l in opt_lines)
 
-        # Estimate duration
-        # draw_speed = pen_obj.speed_cm_s * 10.0 (in mm/s)
-        speed_mm_s = max(10.0, pen_obj.speed_cm_s * 10.0)
+        # Estimate duration: mechanical time vs. serial transmission time
+        # draw_speed = pen_obj.speed_cm_s * 10.0 (in mm/s), capped by device max_speed_mm_s
+        max_dev_speed = max(10.0, cfg.max_speed_mm_s)
+        speed_mm_s = min(max_dev_speed, max(10.0, pen_obj.speed_cm_s * 10.0))
         draw_time_s = draw_mm / speed_mm_s
         travel_time_s = travel_mm / max(50.0, cfg.travel_speed_mm_s)
         actuation_time_s = len(opt_lines) * 2 * cfg.pen_actuation_time_s
-        layer_duration_s = draw_time_s + travel_time_s + actuation_time_s
+        mech_time_s = draw_time_s + travel_time_s + actuation_time_s
+
+        serial_time_s = 0.0
+        if cfg.baudrate and cfg.baudrate > 0 and opt_lines:
+            num_draw_segments = sum(max(0, len(l) - 1) for l in opt_lines)
+            # Approx HP-GL byte count: SP/VS/FS header (~16 B) + PUx,y;\r\n + PD; overhead (~20 B/line) + ~12 B/coord pair
+            estimated_bytes = 16 + len(opt_lines) * 20 + num_draw_segments * 12
+            bits_per_byte = max(8, int(cfg.bits_per_byte or 10))
+            serial_time_s = (estimated_bytes * bits_per_byte) / float(cfg.baudrate)
+
+        layer_duration_s = max(mech_time_s, serial_time_s)
 
         layer = PlotLayer(
             pen_id=pen_id,
@@ -314,10 +328,10 @@ def compile_document_to_plot_job(
         if opt_lines:
             cur_sim_pos = (float(opt_lines[-1][-1, 0]), float(opt_lines[-1][-1, 1]))
 
-    # Pen change overhead
+    # Pen pickup / carousel change overhead (initial SPn pickup + mid-job changes + final SP0 park)
     num_layers = len(job.layers)
-    if num_layers > 1:
-        job.pen_changes = num_layers - 1
-        job.estimated_duration_s += job.pen_changes * cfg.pen_change_time_s
+    if num_layers >= 1:
+        job.pen_changes = max(0, num_layers - 1)
+        job.estimated_duration_s += num_layers * cfg.pen_change_time_s
 
     return job

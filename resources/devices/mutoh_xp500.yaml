@@ -6,6 +6,10 @@ protocol: "hpgl"
 origin: "center"
 units_per_mm: 40.0
 max_pens: 8
+max_speed_mm_s: 900.0
+travel_speed_mm_s: 900.0
+pen_change_time_s: 2.5
+pen_actuation_time_s: 0.04
 swap_xy: true
 invert_x: false
 invert_y: true

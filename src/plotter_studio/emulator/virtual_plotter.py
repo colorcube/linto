@@ -355,17 +355,21 @@ class VirtualPlotter:
                 self.buffer_used = max(0, self.buffer_used - consumed)
                 self._check_flow_control()
 
-            # Execute command OUTSIDE lock so receiving new bytes and XOFF is never blocked
-            if self.baudrate:
-                baud_sec = (consumed * 10.0) / (self.baudrate * self.speedup)
-                time.sleep(baud_sec)
-
+            # Execute command OUTSIDE lock so receiving new bytes and XOFF is never blocked.
+            # On hardware, serial byte reception overlaps with mechanical movement; the step
+            # takes max(baud_sec, mech_sec) rather than their sum.
+            t0 = time.monotonic()
             if cmd_type == "esc":
                 char, params = payload
                 self._execute_escape_cmd(char, params)
             elif cmd_type == "hpgl":
                 if payload:
                     self._execute_hpgl_cmd(payload)
+            if self.baudrate:
+                baud_sec = (consumed * 10.0) / (self.baudrate * self.speedup)
+                rem_sec = baud_sec - (time.monotonic() - t0)
+                if rem_sec > 0.0:
+                    time.sleep(rem_sec)
 
     def _execute_escape_cmd(self, cmd: str, params: str) -> None:
         self.stats.commands_executed += 1
@@ -453,7 +457,7 @@ class VirtualPlotter:
                             "travel_m": self.stats.travel_distance_mm / 1000.0,
                         })
                 if self.realtime:
-                    time.sleep(1.2 / self.speedup)
+                    time.sleep(2.5 / self.speedup)
         elif opcode == "VS":
             # VS v[,pen]
             parts = [s.strip() for s in args_str.split(",") if s.strip()]
@@ -556,7 +560,10 @@ class VirtualPlotter:
                 self.stats.travel_distance_mm += dist_mm
 
             if self.realtime and dist_mm > 0:
-                speed = self.pen_speed.get(self.active_pen, self.default_speed_cm_s) * 10.0  # mm/s
+                if self.pen_down and self.active_pen > 0:
+                    speed = min(900.0, self.pen_speed.get(self.active_pen, self.default_speed_cm_s) * 10.0)
+                else:
+                    speed = 900.0  # Rapid pen-up travel speed (900 mm/s on Mutoh XP-500)
                 move_sec = dist_mm / max(10.0, speed)
                 time.sleep(move_sec / self.speedup)
 

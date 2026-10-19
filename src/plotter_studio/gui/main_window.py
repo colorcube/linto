@@ -622,6 +622,8 @@ class MainWindow(QMainWindow):
             else:
                 self._on_page_changed()
         self.plot_dock.apply_configured_device(dev)
+        if self.canvas._mode == CanvasMode.PLOT:
+            self.recompile_plot_job()
 
     def _on_active_device_changed(self):
         dev_id = self.combo_active_device.currentData()

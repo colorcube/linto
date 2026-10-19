@@ -1038,6 +1038,19 @@ class PlotDockWidget(QDockWidget):
         super().closeEvent(event)
 
     def get_pipeline_config(self) -> PipelineConfig:
+        prof = get_default_profile()
+        baud: Optional[int] = prof.connection.baudrate
+        bytesize = int(prof.connection.bytesize)
+        parity = str(prof.connection.parity).upper()
+        stopbits = int(prof.connection.stopbits)
+        dev = self.device_manager.get_active_device() if self.device_manager else None
+        if dev:
+            prof = dev.get_profile()
+            baud = int(dev.baudrate) if dev.baudrate and dev.baudrate > 0 else prof.connection.baudrate
+            bytesize = int(getattr(dev, "bytesize", None) or prof.connection.bytesize)
+            parity = str(getattr(dev, "parity", None) or prof.connection.parity).upper()
+            stopbits = int(getattr(dev, "stopbits", None) or prof.connection.stopbits)
+        bits_per_byte = 1 + bytesize + (0 if parity == "N" else 1) + stopbits
         return PipelineConfig(
             flatten_tolerance_mm=self.spin_flatten.value(),
             merge_tolerance_mm=self.spin_merge.value(),
@@ -1046,6 +1059,12 @@ class PlotDockWidget(QDockWidget):
             pen_order=str(self.combo_pen_order.currentData() or "id"),
             sort_paths=self.chk_sort.isChecked(),
             clip_to_plottable=self.chk_clip.isChecked(),
+            max_speed_mm_s=prof.max_speed_mm_s,
+            travel_speed_mm_s=prof.travel_speed_mm_s,
+            pen_change_time_s=prof.pen_change_time_s,
+            pen_actuation_time_s=prof.pen_actuation_time_s,
+            baudrate=baud,
+            bits_per_byte=bits_per_byte,
         )
 
     def set_job(self, job: Optional[PlotJob]):

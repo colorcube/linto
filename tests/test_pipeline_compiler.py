@@ -120,3 +120,27 @@ def test_compile_dynamic_flatten_tolerance_and_scaling():
     )
     assert job_scaled.total_points > job_unscaled.total_points
 
+
+def test_duration_estimation_baudrate_and_pen_changes():
+    import numpy as np
+
+    doc = Document()
+    # Create a dense polyline with 200 short segments so serial time dominates at 300 baud
+    pts = np.column_stack([np.linspace(20.0, 40.0, 201), np.linspace(30.0, 50.0, 201)])
+    vp1 = VectorPath(points=pts, pen_id=1)
+    vp2 = VectorPath(points=pts + 5.0, pen_id=2)
+    doc.items.append(ImportItem(name="Dense", paths=[vp1, vp2]))
+
+    job_19200 = compile_document_to_plot_job(
+        doc, PipelineConfig(simplify_tolerance_mm=0.0, baudrate=19200, pen_change_time_s=2.5)
+    )
+    job_300 = compile_document_to_plot_job(
+        doc, PipelineConfig(simplify_tolerance_mm=0.0, baudrate=300, pen_change_time_s=2.5)
+    )
+
+    assert job_19200.pen_changes == 1
+    # At 19200 baud, mechanical time (~0.3s) + 2 pen pickups (5.0s) is ~5.3s; at 300 baud, ~4800 bytes take ~160s!
+    assert job_19200.estimated_duration_s >= 5.0
+    assert job_300.estimated_duration_s > job_19200.estimated_duration_s * 10.0
+
+
