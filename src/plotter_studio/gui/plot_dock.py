@@ -460,6 +460,11 @@ class PlotDockWidget(QDockWidget):
         """)
         self.grp_device.addWidget(self.lbl_probe_status)
 
+        self.chk_send_pen_force = QCheckBox(self.tr("Send manual pen force (FS)"))
+        self.chk_send_pen_force.toggled.connect(self._on_emitter_option_changed)
+        self._update_pen_force_checkbox(get_default_profile(), None)
+        self.grp_device.addWidget(self.chk_send_pen_force)
+
         self.chk_pause_pen_change = QCheckBox(self.tr("Auto-pause on pen change"))
         self.chk_pause_pen_change.setToolTip(
             self.tr("Pauses the plot automatically before each pen change (SPn;),\ne.g. for manual pen swaps or specialty pens")
@@ -596,6 +601,30 @@ class PlotDockWidget(QDockWidget):
         if dev:
             self.apply_configured_device(dev)
 
+    def _update_pen_force_checkbox(self, profile: Any, explicit_send: Optional[bool]) -> None:
+        """Update checkbox label, tooltip, and checked state based on profile.auto_pen_force."""
+        has_auto = bool(getattr(profile, "auto_pen_force", False))
+        checked = (not has_auto) if explicit_send is None else bool(explicit_send)
+        self.chk_send_pen_force.blockSignals(True)
+        self.chk_send_pen_force.setChecked(checked)
+        self.chk_send_pen_force.blockSignals(False)
+        if has_auto:
+            self.chk_send_pen_force.setText(self.tr("Send manual pen force (FS) — device has auto pen force"))
+            self.chk_send_pen_force.setToolTip(
+                self.tr(
+                    "This plotter detects pen types automatically and sets pen force on hardware.\n"
+                    "Enable only if you want to override the automatic hardware force with the manual values from the Pens tab."
+                )
+            )
+        else:
+            self.chk_send_pen_force.setText(self.tr("Send manual pen force (FS)"))
+            self.chk_send_pen_force.setToolTip(
+                self.tr(
+                    "Send the pen force (FS command) configured in the Pens tab to the plotter.\n"
+                    "Disable if the plotter sets force on the device panel or does not support FS."
+                )
+            )
+
     def apply_configured_device(self, dev: ConfiguredDevice):
         self._updating_device = True
         try:
@@ -616,6 +645,8 @@ class PlotDockWidget(QDockWidget):
             self.chk_swap_xy.setChecked(dev.swap_xy)
             self.chk_invert_x.setChecked(dev.invert_x)
             self.chk_invert_y.setChecked(dev.invert_y)
+            prof = dev.get_profile() if hasattr(dev, "get_profile") else get_default_profile()
+            self._update_pen_force_checkbox(prof, getattr(dev, "send_pen_force", None))
         finally:
             self._updating_device = False
 
@@ -632,7 +663,7 @@ class PlotDockWidget(QDockWidget):
         self.lbl_active_device_info.setText(dev_info_html)
 
     def _on_emitter_option_changed(self, *args):
-        """Sync rotation and axis inversion/swap controls back to the active ConfiguredDevice."""
+        """Sync rotation, axis inversion/swap, and pen force controls back to the active ConfiguredDevice."""
         if self._updating_device or not self.device_manager:
             return
         dev = self.device_manager.get_active_device()
@@ -641,6 +672,7 @@ class PlotDockWidget(QDockWidget):
             dev.swap_xy = self.chk_swap_xy.isChecked()
             dev.invert_x = self.chk_invert_x.isChecked()
             dev.invert_y = self.chk_invert_y.isChecked()
+            dev.send_pen_force = self.chk_send_pen_force.isChecked()
 
     def start_probe(self):
         """Inquire connected plotter (OI/OF/OH) in background thread."""
@@ -768,12 +800,13 @@ class PlotDockWidget(QDockWidget):
         return self._pipeline_dirty
 
     def get_emitter_options(self) -> dict[str, Any]:
-        """Return user-configured axis transformation parameters."""
+        """Return user-configured axis transformation and pen force parameters."""
         return {
             "rotation_deg": int(self.combo_rotation.currentData() or 0),
             "swap_xy": self.chk_swap_xy.isChecked(),
             "invert_x": self.chk_invert_x.isChecked(),
             "invert_y": self.chk_invert_y.isChecked(),
+            "send_pen_force": self.chk_send_pen_force.isChecked(),
         }
 
     def format_issues(self, job) -> list[str]:
@@ -907,6 +940,7 @@ class PlotDockWidget(QDockWidget):
         self.btn_pause_plot.setText(self.tr("⏸ Pause"))
         self.btn_abort_plot.setEnabled(True)
         self.btn_probe.setEnabled(False)
+        self.chk_send_pen_force.setEnabled(False)
         self.chk_pause_pen_change.setEnabled(False)
         self.spin_start_step.setEnabled(False)
         self.grp_pipeline.setEnabled(False)
@@ -991,6 +1025,7 @@ class PlotDockWidget(QDockWidget):
         self.btn_pause_plot.setText(self.tr("⏸ Pause"))
         self.btn_abort_plot.setEnabled(False)
         self.btn_probe.setEnabled(True)
+        self.chk_send_pen_force.setEnabled(True)
         self.chk_pause_pen_change.setEnabled(True)
         self.spin_start_step.setEnabled(True)
         self.grp_pipeline.setEnabled(True)

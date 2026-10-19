@@ -354,8 +354,11 @@ class DeviceSettingsDialog(QDialog):
         if not self._current_device:
             return
 
+        new_model_id = self.combo_model.currentData()
+        if new_model_id and new_model_id != self._current_device.model_id:
+            self._current_device.send_pen_force = None
         self._current_device.name = self.txt_name.text().strip() or "Plotter"
-        self._current_device.model_id = self.combo_model.currentData()
+        self._current_device.model_id = new_model_id
         self._current_device.port = self.combo_port.currentText().strip()
         try:
             self._current_device.baudrate = int(self.combo_baud.currentText().strip())

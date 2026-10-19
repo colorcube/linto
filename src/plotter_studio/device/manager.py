@@ -57,6 +57,7 @@ class ConfiguredDevice:
     swap_xy: bool = False
     invert_x: bool = False
     invert_y: bool = False
+    send_pen_force: Optional[bool] = None
     probed_units_per_mm: Optional[float] = None
     axis_schema: int = AXIS_SCHEMA_VERSION
 
@@ -71,6 +72,13 @@ class ConfiguredDevice:
             return load_profile(self.model_id)
         except Exception:
             return get_default_profile()
+
+    def effective_send_pen_force(self, profile: Optional[DeviceProfile] = None) -> bool:
+        """Return whether manual pen force (FS) commands should be sent to the plotter."""
+        if self.send_pen_force is not None:
+            return bool(self.send_pen_force)
+        prof = profile or self.get_profile()
+        return not bool(getattr(prof, "auto_pen_force", False))
 
 
 DEFAULT_DEVICES = [

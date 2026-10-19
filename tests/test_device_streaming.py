@@ -817,22 +817,34 @@ def test_resume_from_step_and_trace_log_and_emitter_capabilities():
     assert "PU300,400;\r\nPD500,600;\r\n" in sent_str
     assert len(streamer.get_trace_log()) >= 4
 
-    # Verify HPGLEmitter decimal VS, hp_level FS, handshake init, and IW clip
+    # Verify HPGLEmitter decimal VS, hp_level FS, auto_pen_force, handshake init, and IW clip
     import numpy as np
     from plotter_studio.pipeline.compiler import PlotJob, PlotLayer
 
     import dataclasses
-    prof = dataclasses.replace(get_default_profile(), force_unit="hp_level", decimal_speed=True)
+    # Mutoh XP-500 default has auto_pen_force=True -> omits FS unless send_pen_force=True
+    default_prof = get_default_profile()
+    assert default_prof.auto_pen_force is True
     doc = Document()
     doc.pens[0].speed_cm_s = 12.5
-    doc.pens[0].force_g = 100  # 100 / 25 -> FS4
+    doc.pens[0].force_g = 100
     job = PlotJob()
     job.layers[1] = PlotLayer(pen_id=1, pen=doc.pens[0], lines=[np.array([[10.0, 30.0], [20.0, 40.0]])])
 
+    em_auto = HPGLEmitter(default_prof)
+    out_auto = em_auto.emit_string(job, doc)
+    assert "SP1;VS12.5;\r\n" in out_auto
+    assert "FS" not in out_auto
+
+    em_manual_override = HPGLEmitter(default_prof, send_pen_force=True)
+    assert "SP1;VS12.5;FS100;\r\n" in em_manual_override.emit_string(job, doc)
+
+    prof = dataclasses.replace(default_prof, force_unit="hp_level", decimal_speed=True, auto_pen_force=False)
     em = HPGLEmitter(prof, include_handshake_init=True, include_iw_clip=True)
     out = em.emit_string(job, doc)
     assert out.startswith("\x1b.R\r\x1b.(\rIN;IW")
     assert "SP1;VS12.5;FS4;" in out
+
 
 
 

@@ -6,6 +6,7 @@ protocol: "hpgl"
 origin: "bottom_left"
 units_per_mm: 40.0
 max_pens: 8
+auto_pen_force: false
 swap_xy: false
 invert_x: false
 invert_y: false

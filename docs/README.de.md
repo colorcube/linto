@@ -20,6 +20,7 @@ Praktische Dokumentation und Benutzerhandbuch für Anwender:
 
 ## 2. [Gerätedokumentation](devices/mutoh-xp500/README.md) (`docs/devices/`)
 Hardware-Dokumentation, Spezifikationen und Schnittstellenbeschreibungen:
+* **[Gerätedefinitionen (`resources/devices/*.yaml`)](devices/geraetendefinition.md):** Vollständige Referenz aller YAML-Felder für Plotterprofile (Koordinaten, Achsen-Mapping, automatische Stifterkennung `auto_pen_force`, Geschwindigkeiten, Schnittstelle und Ränder).
 * **[Mutoh XP-500](devices/mutoh-xp500/README.md):**
   * [Einrichtung & Schnellstart](devices/mutoh-xp500/einrichtung.md) (Bedienfeld, RS-232, Papier & Rollen)
   * [Bedienfeld-Konfiguration](devices/mutoh-xp500/konfiguration.md) (Handbuch Kapitel 7 transkribiert)

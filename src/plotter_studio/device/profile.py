@@ -64,6 +64,7 @@ class DeviceProfile:
     default_margin_profile: str = "exp"
     force_unit: str = "grams"  # "grams" (10..500) or "hp_level" (1..8)
     decimal_speed: bool = True
+    auto_pen_force: bool = False  # True if hardware detects pen type and sets pen force automatically
 
     @property
     def axes_swapped(self) -> bool:
@@ -177,6 +178,7 @@ def load_profile(path_or_id: str | Path) -> DeviceProfile:
         default_margin_profile=str(data.get("default_margin_profile", "exp")),
         force_unit=str(data.get("force_unit", "grams")).lower(),
         decimal_speed=bool(data.get("decimal_speed", True)),
+        auto_pen_force=bool(data.get("auto_pen_force", False)),
     )
 
 
@@ -193,6 +195,7 @@ def get_default_profile() -> DeviceProfile:
             swap_xy=True,
             invert_x=False,
             invert_y=True,
+            auto_pen_force=True,
             margins_mm={
                 "exp": {"top": 25.0, "bottom": 5.0, "left": 5.0, "right": 5.0},
                 "norm": {"top": 35.0, "bottom": 15.0, "left": 15.0, "right": 15.0},

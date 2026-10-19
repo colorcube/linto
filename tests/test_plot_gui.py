@@ -204,6 +204,10 @@ def test_plot_dock_device_controls(qapp, tmp_path):
     assert dock.isVisible()
     assert dock.combo_port.count() > 0
 
+    # Mutoh XP-500 has auto_pen_force=True -> chk_send_pen_force unchecked by default
+    assert dock.chk_send_pen_force.isChecked() is False
+    assert dock.get_emitter_options()["send_pen_force"] is False
+
     # Test margins combobox
     assert dock.combo_margins.count() >= 4
     dock.combo_margins.setCurrentIndex(1)  # norm

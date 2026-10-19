@@ -51,6 +51,7 @@ class HPGLEmitter:
         feed_edge: str = "top",
         include_handshake_init: bool = False,
         include_iw_clip: bool = False,
+        send_pen_force: Optional[bool] = None,
     ):
         self.profile = profile
         self.margin_profile = margin_profile
@@ -64,6 +65,10 @@ class HPGLEmitter:
         self.feed_edge = feed_edge or "top"
         self.include_handshake_init = include_handshake_init
         self.include_iw_clip = include_iw_clip
+        if send_pen_force is None:
+            self.send_pen_force = not bool(getattr(profile, "auto_pen_force", False))
+        else:
+            self.send_pen_force = bool(send_pen_force)
 
     @staticmethod
     def _apply_axis_ops(
@@ -197,7 +202,7 @@ class HPGLEmitter:
                         cmd_str += f"VS{speed:g};"
                     else:
                         cmd_str += f"VS{int(round(speed))};"
-                if force is not None and force > 0:
+                if self.send_pen_force and force is not None and force > 0:
                     if getattr(self.profile, "force_unit", "grams") == "hp_level" and force > 8:
                         fs_val = max(1, min(8, int(round(force / 25.0))))
                     else:
@@ -303,9 +308,9 @@ def build_emitter(
     1. Profile defaults and document.page (margin_profile, feed_edge).
        The profile's intrinsic axis mapping is always applied by the emitter.
     2. Active ConfiguredDevice settings (profile, margin_profile, probed_units_per_mm,
-       axis *corrections*).
+       axis *corrections*, send_pen_force).
     3. Explicit margin_profile and GUI overrides (axis corrections rotation_deg,
-       swap_xy, invert_x, invert_y). These replace the device corrections.
+       swap_xy, invert_x, invert_y, send_pen_force). These replace the device corrections.
     """
     from .profile import get_default_profile
 
@@ -326,11 +331,18 @@ def build_emitter(
         if dev_margin:
             margin_key = dev_margin
         units_override = getattr(device, "probed_units_per_mm", None)
+        if hasattr(device, "effective_send_pen_force"):
+            send_force = device.effective_send_pen_force(profile)
+        elif getattr(device, "send_pen_force", None) is not None:
+            send_force = bool(getattr(device, "send_pen_force"))
+        else:
+            send_force = not bool(getattr(profile, "auto_pen_force", False))
         emitter_opts = {
             "rotation_deg": getattr(device, "rotation", 0),
             "swap_xy": getattr(device, "swap_xy", False),
             "invert_x": getattr(device, "invert_x", False),
             "invert_y": getattr(device, "invert_y", False),
+            "send_pen_force": send_force,
         }
 
     if margin_profile:

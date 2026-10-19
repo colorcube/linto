@@ -172,7 +172,7 @@ margins_mm:
 default_margin_profile: "default"
 ```
 
-Sobald die Datei im Verzeichnis `resources/devices/` abgelegt ist, steht das neue Modell sofort im Dialog und in der Werkzeugleiste von Plotter Studio zur Verfügung.
+Sobald die Datei im Verzeichnis `resources/devices/` abgelegt ist, steht das neue Modell sofort im Dialog und in der Werkzeugleiste von Plotter Studio zur Verfügung. Eine vollständige Beschreibung aller unterstützten YAML-Felder (inkl. `auto_pen_force`, `max_speed_mm_s`, `force_unit` usw.) findest du unter **[Gerätedefinitionen (`docs/devices/geraetendefinition.md`)](../devices/geraetendefinition.md)**.
 
 ### Geräte-Import aus InkCut
 
