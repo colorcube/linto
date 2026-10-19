@@ -21,6 +21,10 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0.0",
+    "zensical>=0.0.70",
+]
+docs = [
+    "zensical>=0.0.70",
 ]
 
 [project.scripts]

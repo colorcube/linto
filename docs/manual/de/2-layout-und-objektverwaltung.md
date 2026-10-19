@@ -2,7 +2,7 @@
 
 Der **Layout-Modus** ist die kreative Schaltzentrale von Plotter Studio. Hier arrangierst, skalierst und drehst du deine Vektorgrafiken auf dem gewählten Papierformat, weist Stifte und Farben zu und prüfst die Abstände zu den Randbereichen des Plotters.
 
-![Übersicht des Layout-Modus](../images/ui_overview_layout.png)
+![Übersicht des Layout-Modus](images/ui_overview_layout.png)
 
 ---
 
@@ -40,7 +40,7 @@ Die Arbeitsumgebung ist übersichtlich in funktionale Bereiche unterteilt:
 Vor dem Platzieren von Grafiken solltest du das gewünschte Blattformat und Randprofil festlegen. Klicke in der Werkzeugleiste auf **[ Seiteneinrichtung... ]**.
 
 
-![Dialog Seiteneinrichtung](../images/dialog_page_setup.png)
+![Dialog Seiteneinrichtung](images/dialog_page_setup.png)
 
 ### Einstellungsoptionen im Dialog:
 * **Standard-Formate:** Schnellauswahl aus DIN A4, A3, A2, A1 und A0.
@@ -77,7 +77,7 @@ Plotter Studio unterstützt zwei direkt importierbare Vektorformate:
 
 Das Dock **Objekte & Ebenen** listet alle geladenen Zeichnungselemente hierarchisch auf.
 
-![Dock Objekte und Ebenen](../images/dock_objects_layers.png)
+![Dock Objekte und Ebenen](images/dock_objects_layers.png)
 
 ### Funktionen und Bedienelemente:
 * **Sichtbarkeit (Auge-Symbol):** Schaltet ein Objekt oder eine Ebene unsichtbar. Unsichtbare Objekte werden weder im Canvas gerendert noch an den Plotter gesendet.
@@ -97,7 +97,7 @@ Das Dock **Objekte & Ebenen** listet alle geladenen Zeichnungselemente hierarchi
 
 Das Dock **Transformation** erlaubt die millimetergenaue Positionierung, Drehung, Ausrichtung und Skalierung eines oder mehrerer ausgewählter Objekte. Wenn Docks als Reiter (Tabs) gruppiert sind, wird die interne Titelleiste automatisch ausgeblendet und der Tab-Reiter dient als platzsparende Beschriftung.
 
-![Dock Transformation](../images/dock_transformation.png)
+![Dock Transformation](images/dock_transformation.png)
 
 ### 1. Gruppe "Position":
 * **Bezug:** Auswahl zwischen **Blatt** (gesamtes Papierformat) und **Plottbereich** (physisches Hard-Clip-Fenster des Plotters). Alle Koordinaten und Ausrichtungen orientieren sich an diesem gewählten Rahmen.
@@ -145,9 +145,9 @@ Durch Rechtsklick auf ein Objekt im Canvas oder Auswahl im Stifte-Dock kannst du
 ---
 
 > [!TIP]
-> Ausführliche Anleitungen zur optimalen Vorbereitung eigener SVG-Skripte (Maßeinheiten, Farbcodes für Stifte), dem Einsatz von Inkscape und Blender als Vektorgeneratoren sowie Tipps zu HP-GL und DXF findest du im eigenständigen **[Kapitel 5: Leitfaden: Vektorformate, Quellen & Workflows](5-vektorformate-und-workflows.md)**.
+> Ausführliche Anleitungen zur optimalen Vorbereitung eigener SVG-Skripte (Maßeinheiten, Farbcodes für Stifte), dem Einsatz von Inkscape und Blender als Vektorgeneratoren sowie Tipps zu HP-GL und DXF findest du im eigenständigen **[Kapitel 6: Leitfaden: Vektorformate, Quellen & Workflows](6-vektorformate-und-workflows.md)**.
 > 
-> Eine kuratierte Sammlung empfohlener Community-Tools (Awesome Plotters, Drawingbots, vpype, vsketch, Single-Line-Schriften) bietet **[Kapitel 7: Empfohlene Ressourcen, Tools & Community-Sammlungen](7-ressourcen-tools-und-community.md)**.
+> Eine kuratierte Sammlung empfohlener Community-Tools (Awesome Plotters, Drawingbots, Inkcut, vpype, vsketch) bietet **[Kapitel 8: Empfohlene Ressourcen, Tools & Community-Sammlungen](8-ressourcen-tools-und-community.md)**.
 
 
 

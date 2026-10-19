@@ -5,3 +5,6 @@ __pycache__/
 *.pyc
 /virtual_plotter
 /emulator_output.svg
+/.cache/
+/site/
+

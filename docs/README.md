@@ -6,15 +6,32 @@ Welcome to the Plotter Studio documentation. The documentation is organized into
 
 ---
 
-## 1. [User Guide & Manual](guide/README.md) (`docs/guide/`)
+## 1. [User Guide & Manual](manual/en/README.md) (`docs/manual/en/`)
 Practical user documentation and workflow guides:
-* **[1. Quickstart & Typical Workflow](guide/1-quickstart-and-workflow.md):** Getting started with physical hardware or the built-in software emulator; the 5-step workflow from SVG to finished plot.
-* **[2. Layout Mode & Object Management](guide/2-layout-and-objects.md):** Importing SVG & HP-GL, page setup with hard-clip query (`OH;`), transformations (50%, 100%, 200%, aspect ratio lock, fit to sheet, center), Z-order management, and pen assignment.
-* **[3. Output Mode, Simulation & Export](guide/3-output-simulation-export.md):** Pipeline tuning (Merge, Reverse, RDP, 2-Opt), pre-flight statistics, interactive timeline simulation with air-travel visualization, pen filtering, serial streaming, and HP-GL/SVG export.
-* **[4. Hardware Setup, Calibration & Diagnostics](guide/4-hardware-setup-and-diagnostics.md):** RS-232 cabling with hardware handshaking (RTS/CTS), control panel configuration, hardware diagnostic tool `xp500_probe.py`, the official calibration plot (`resources/calibration_plot_a3.svg`), and integrating custom plotter models.
-* **[5. Vector Formats, Sources & Workflows](guide/5-vector-formats-and-workflows.md):** Best practices for custom SVG scripts, Inkscape as universal converter, Blender (3D scenes to 2D SVG), HP-GL, and DXF.
-* **[6. Concepts, Algorithms & Architecture (Deep Dive)](guide/6-concepts-and-architecture.md):** Slicer architecture, mathematical foundations of 2-Opt TSP path optimization, coordinate systems (Center-Origin vs. Bottom-Left), asymmetric roll margins, and multi-plotter driver design.
-* **[7. Recommended Resources, Tools & Community](guide/7-resources-tools-and-community.md):** Curated collection of specialized software (vpype, vsketch, ln, Turtletoy), Hershey single-line fonts, and community hubs (Awesome Plotters, Drawingbots, Reddit).
+* **[1. Quickstart & Typical Workflow](manual/en/1-quickstart-and-workflow.md):** Getting started with physical hardware or the built-in software emulator; the 5-step workflow from SVG to finished plot.
+* **[2. Layout Mode & Object Management](manual/en/2-layout-and-objects.md):** Importing SVG & HP-GL, page setup with hard-clip query (`OH;`), transformations (50%, 100%, 200%, aspect ratio lock, fit to sheet, center), Z-order management, and pen assignment.
+* **[3. Output Mode, Simulation & Export](manual/en/3-output-simulation-export.md):** Pipeline tuning (Merge, Reverse, RDP, 2-Opt), pre-flight statistics, interactive timeline simulation with air-travel visualization, pen filtering, serial streaming, and HP-GL/SVG export.
+* **[4. Hardware Setup, Calibration & Diagnostics](manual/en/4-hardware-setup-and-diagnostics.md):** RS-232 cabling with hardware handshaking (RTS/CTS), control panel configuration, *Device Settings* dialog, hardware diagnostic tool `xp500_probe.py`, and the official calibration plot (`resources/calibration_plot_a3.svg`).
+* **[5. Adding Plotter Models & Device Profiles](manual/en/5-custom-plotter-models.md):** Complete YAML profile reference (`resources/devices/*.yaml`), axis mapping, automatic pen sensing (`auto_pen_force`), and importing drivers from Inkcut (`tools/import_inkcut_devices.py`).
+* **[6. Vector Formats, Sources & Workflows](manual/en/6-vector-formats-and-workflows.md):** Best practices for custom SVG scripts, Inkscape as universal converter, Blender (3D scenes to 2D SVG), HP-GL, and DXF.
+* **[7. Concepts, Algorithms & Architecture (Deep Dive)](manual/en/7-concepts-and-architecture.md):** Slicer architecture, mathematical foundations of 2-Opt TSP path optimization, coordinate systems (Center-Origin vs. Bottom-Left), asymmetric roll margins, and multi-plotter driver design.
+* **[8. Recommended Resources, Tools & Community](manual/en/8-resources-tools-and-community.md):** Curated collection of specialized software (Inkcut, vpype, vsketch, ln, Turtletoy) and community hubs (Awesome Plotters, Drawingbots, Reddit).
+
+### Building HTML Manuals with Zensical
+
+Two separate Zensical configurations are provided for English ([`zensical.toml`](../zensical.toml)) and German ([`zensical.de.toml`](../zensical.de.toml)):
+
+```bash
+# Build offline HTML manuals into site/manual/ and site/handbuch/:
+zensical build --clean
+zensical build --clean -f zensical.de.toml
+
+# Live preview server for English (http://localhost:8000/):
+zensical serve
+
+# Live preview server for German (http://localhost:8000/):
+zensical serve -f zensical.de.toml
+```
 
 ---
 

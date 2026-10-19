@@ -1,4 +1,4 @@
-# 6. Concepts, Algorithms & Architecture (Deep Dive)
+# 7. Concepts, Algorithms & Architecture (Deep Dive)
 
 This chapter provides a detailed technical insight into the mathematical and machine-level mechanics of Plotter Studio: how the slicer operates, how algorithms like 2-Opt TSP and Ramer-Douglas-Peucker work, how coordinates are transformed, and how the multi-plotter architecture is structured.
 

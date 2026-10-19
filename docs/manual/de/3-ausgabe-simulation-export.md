@@ -2,7 +2,7 @@
 
 Im **Ausgabe-Modus** (Plot-Modus) wird die Zeichnung für die physikalische Hardware aufbereitet. Du siehst die optimierten Werkzeugwege inklusive aller Stift-Leerfahrten, kannst den Plot mit einer Zeitleiste simulieren, Statistiken zur Zeitersparnis prüfen und den Plot direkt an das Gerät senden oder als Datei exportieren.
 
-![Übersicht des Ausgabe-Modus mit Simulation](../images/ui_overview_plot.png)
+![Übersicht des Ausgabe-Modus mit Simulation](images/ui_overview_plot.png)
 
 ---
 
@@ -10,7 +10,7 @@ Im **Ausgabe-Modus** (Plot-Modus) wird die Zeichnung für die physikalische Hard
 
 Im oberen Bereich des Docks **Ausgabe** konfigurierst du die Algorithmen, die aus Rohvektoren effiziente Maschinenbewegungen machen (per Klick auf den Pfeil bzw. die Überschrift ein- und ausklappbar, standardmäßig für eine kompakte Ansicht eingeklappt):
 
-![Dock Ausgabe](../images/dock_ausgabe.png)
+![Dock Ausgabe](images/dock_ausgabe.png)
 
 * **Linien zusammenfassen (Merge):**
   Sucht nach offenen Pfadenden, die nahe beieinander liegen, und verbindet sie zu durchgehenden Polylinien.

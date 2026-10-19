@@ -1,4 +1,4 @@
-# 5. Vector Formats, Sources & Workflows
+# 6. Vector Formats, Sources & Workflows
 
 A pen plotter does not render pixel grids—it drives mathematical vector paths using physical pens. Whether you create artwork with code (Python, Processing), 3D applications like Blender, vector editors like Inkscape, or CAD systems, here are the best practices for generating clean data for Plotter Studio.
 
@@ -103,4 +103,4 @@ Blender is well-suited for 3D generative art, architectural wireframes, and pers
 ---
 
 > [!TIP]
-> For advanced toolchains (e.g. `vpype`, `vsketch`, `ln`), single-line fonts, and community hubs (**Awesome Plotters**, Drawingbots.net, Reddit), see **[Chapter 7: Recommended Resources, Tools & Community](7-resources-tools-and-community.md)**.
+> For advanced toolchains (e.g. `Inkcut`, `vpype`, `vsketch`, `ln`) and community hubs (**Awesome Plotters**, Drawingbots.net, Reddit), see **[Chapter 8: Recommended Resources, Tools & Community](8-resources-tools-and-community.md)**.

@@ -1,4 +1,4 @@
-# 5. Leitfaden: Vektorformate, Quellen & Workflows
+# 6. Leitfaden: Vektorformate, Quellen & Workflows
 
 Ein Stiftplotter zeichnet keine Pixelbilder, sondern fährt mathematische Vektorpfade mit physischen Stiften ab. Je nachdem, womit du deine Grafiken entwirfst – ob per eigenem Code (Python, Processing), in 3D-Programmen wie Blender, in Grafik-Editoren wie Inkscape oder in CAD-Systemen –, gibt es bewährte Wege, um optimale Daten für Plotter Studio zu erzeugen.
 
@@ -103,5 +103,5 @@ Blender eignet sich hervorragend für algorithmische 3D-Geometrie, Architektur-D
 ---
 
 > [!TIP]
-> Weiterführende Werkzeuge (z. B. `vpype`, `vsketch`, `ln`), Single-Line-Schriften sowie die zentralen Community-Hubs (**Awesome Plotters**, Drawingbots.net, Reddit) findest du in **[Kapitel 7: Empfohlene Ressourcen, Tools & Community-Sammlungen](7-ressourcen-tools-und-community.md)**.
+> Weiterführende Werkzeuge (z. B. `Inkcut`, `vpype`, `vsketch`, `ln`) sowie die zentralen Community-Hubs (**Awesome Plotters**, Drawingbots.net, Reddit) findest du in **[Kapitel 8: Empfohlene Ressourcen, Tools & Community-Sammlungen](8-ressourcen-tools-und-community.md)**.
 

@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 import os
+import sys
 import math
+from pathlib import Path
 from typing import Optional, Any
-from PySide6.QtCore import Qt, QSettings, QTimer
-from PySide6.QtGui import QAction, QKeySequence, QUndoStack, QActionGroup
+from PySide6.QtCore import Qt, QSettings, QTimer, QUrl, QLocale
+from PySide6.QtGui import QAction, QKeySequence, QUndoStack, QActionGroup, QDesktopServices
 from PySide6.QtWidgets import (
-    QMainWindow, QWidget, QGridLayout, QToolBar,
+    QApplication, QMainWindow, QWidget, QGridLayout, QToolBar,
     QStatusBar, QLabel, QFileDialog, QMessageBox, QTabWidget,
     QSizePolicy, QComboBox, QToolButton, QMenu
 )
@@ -378,6 +380,11 @@ class MainWindow(QMainWindow):
 
         # --- Help Menu ---
         menu_help = menu_bar.addMenu(self.tr("&Help"))
+        self.act_user_guide = QAction(self.tr("User &Guide"), self)
+        self.act_user_guide.setShortcut(QKeySequence.HelpContents)
+        self.act_user_guide.triggered.connect(self.open_user_guide)
+        menu_help.addAction(self.act_user_guide)
+        menu_help.addSeparator()
         act_about = QAction(self.tr("&About Plotter Studio"), self)
         act_about.triggered.connect(self.show_about)
         menu_help.addAction(act_about)
@@ -1147,6 +1154,40 @@ class MainWindow(QMainWindow):
         )
         self.undo_stack.push(cmd)
         self.lbl_info.setText(self.tr("Object(s) assigned to Pen %1").replace("%1", str(pen_id)))
+
+    def open_user_guide(self):
+        """Open the offline Zensical HTML user guide matching the active UI language."""
+        app = QApplication.instance()
+        lang = "en"
+        if app and hasattr(app, "_translators") and app._translators:
+            lang = getattr(app._translators[0], "active_language", "en")
+        else:
+            sys_locale = QLocale.system().name()
+            if sys_locale and sys_locale.lower().startswith("de"):
+                lang = "de"
+
+        base_dir = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent.parent.parent.parent))
+        if lang == "de":
+            candidates = [
+                base_dir / "site" / "handbuch" / "index.html",
+                base_dir / "docs" / "manual" / "de" / "README.md",
+            ]
+        else:
+            candidates = [
+                base_dir / "site" / "manual" / "index.html",
+                base_dir / "docs" / "manual" / "en" / "README.md",
+            ]
+
+        for target in candidates:
+            if target.is_file():
+                QDesktopServices.openUrl(QUrl.fromLocalFile(str(target)))
+                return
+
+        QMessageBox.information(
+            self,
+            self.tr("User Guide"),
+            self.tr("Documentation not found. Run 'zensical build' to generate offline HTML help."),
+        )
 
     def show_about(self):
         QMessageBox.about(

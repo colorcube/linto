@@ -1,4 +1,4 @@
-# 7. Empfohlene Ressourcen, Tools & Community-Sammlungen
+# 8. Empfohlene Ressourcen, Tools & Community-Sammlungen
 
 Für kreatives Arbeiten, generative Kunst, algorithmisches Design und den praktischen Erfahrungsaustausch mit Stiftplottern gibt es eine lebendige, weltweite Open-Source- und Maker-Community. Hier findest du die wichtigsten Anlaufstellen, kuratierte Sammlungen, Software-Werkzeuge und Foren.
 
@@ -17,6 +17,8 @@ Für kreatives Arbeiten, generative Kunst, algorithmisches Design und den prakti
 
 ## 2. Spezialisierte Vektor-Werkzeuge für Plotter
 
+* **[Inkcut](https://github.com/inkcut/inkcut):**
+  Eine etablierte Open-Source-Alternative zu Plotter Studio zur Ansteuerung von 2D-Plottern und Schneideplottern (Vinyl-Cuttern). Unterstützt insbesondere das Folienschneiden inklusive Schleppmesser-Offset-Kompensation (*Blade Offset* / *Overcut*), Entgitterungslinien (*Weeding*) sowie eine direkte Inkscape-Integration. Viele der Geräteprofile in Plotter Studio stammen ursprünglich aus Inkcut.
 * **[vpype](https://github.com/abey79/vpype):**
   Das Standard-Kommandozeilenwerkzeug für Vektorkunst auf Stiftplottern. Unterstützt automatisches Erzeugen von Schraffuren (*Hatching*) zur Füllung von Flächen mit Linienmustern, Skalieren, Filtern, Kurvenglättung und Transformationen von SVG-Dateien.
 * **[vsketch](https://github.com/abey79/vsketch):**
@@ -25,13 +27,3 @@ Für kreatives Arbeiten, generative Kunst, algorithmisches Design und den prakti
   Eine faszinierende Online-Plattform für generative Vektorkunst direkt im Browser. Skripte werden mit einer an Python-Turtle angelehnten API geschrieben und können direkt als saubere, optimierte SVG-Dateien für Plotter Studio heruntergeladen werden.
 * **[ln (3D Line Art Engine)](https://github.com/fogleman/ln):**
   Eine blitzschnelle 3D-zu-Vektor-Engine in Go (auch als Python-Bindings verfügbar), die 3D-Modelle (`.obj`, `.stl`) und mathematische Funktionen in 2D-Vektorzeichnungen umrechnet und verdeckte Linien (*Hidden Line Removal*) verlässlich handhabt.
-
----
-
-## 3. Einlinien-Schriften (Single-Stroke / Hershey Fonts)
-
-Klassische Computerschriften (TrueType / OpenType) bestehen aus geschlossenen Umrisskonturen. Für saubere Beschriftungen mit dem Stiftplotter werden stattdessen **Single-Stroke-Fonts** (Einlinienschriften) benötigt:
-
-* **[Hershey Fonts in Inkscape](https://inkscape.org/):** Integriert unter `Erweiterungen → Text → Hershey Text` (verschiedene serifenlose und kalligrafische Stile).
-* **[CamBam Stick Fonts](http://www.cambam.info/):** Weit verbreitete Single-Line-Schriften für Gravur- und Plotteranwendungen.
-* **[Single-line Fonts Repository (GitHub)](https://github.com/evil-mad/EggBot):** Schriftensammlung aus dem EggBot- und AxiDraw-Projekt von Evil Mad Scientist.

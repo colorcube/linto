@@ -1,4 +1,4 @@
-# 6. Hintergrund: Konzepte, Algorithmen & Architektur (Deep-Dive)
+# 7. Hintergrund: Konzepte, Algorithmen & Architektur (Deep-Dive)
 
 Dieses Kapitel bietet einen detaillierten technischen Einblick in die mathematischen und maschinennahen Hintergründe von Plotter Studio: Wie der Slicer intern arbeitet, wie Algorithmen wie 2-Opt TSP und RDP funktionieren, wie Koordinaten mathematisch transformiert werden und wie die Multi-Plotter-Architektur aufgebaut ist.
 

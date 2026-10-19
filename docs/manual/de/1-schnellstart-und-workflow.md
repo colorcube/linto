@@ -43,7 +43,7 @@ Klicke in der oberen Leiste auf **[ Seiteneinrichtung... ]**:
 3. **Live-Abfrage (optional):** Ist ein physischer Plotter verbunden, klicke auf **[ Plotter abfragen ]**. Plotter Studio fragt über den Befehl `OH;` die exakten Abmessungen des eingespannten Papiers direkt von den optischen Sensoren der Hardware ab.
 4. Bestätige mit **OK**. Das Canvas zeigt nun das Papierblatt mit dem rot gestrichelten *Hard-Clip-Rahmen* an.
 
-*(Ausführliche Details: [Kapitel 2: Layout & Seiteneinrichtung](2-layout-und-objektverwaltung.md#2-blatt--seiteneinrichtung))*
+*(Ausführliche Details: [Kapitel 2: Layout & Seiteneinrichtung](2-layout-und-objektverwaltung.md#2-blatt-seiteneinrichtung))*
 
 ---
 
@@ -68,7 +68,7 @@ Klicke in der oberen Leiste auf **[ Seiteneinrichtung... ]**:
    * Wähle das Objekt im Canvas oder im Dock **Objekte & Ebenen** aus.
    * Weise ihm per Rechtsklick oder über das Stift-Dock die gewünschte Stiftnummer zu.
 
-*(Ausführliche Details: [Kapitel 2: Stiftpalette](2-layout-und-objektverwaltung.md#6-stiftpalette--farbzuweisung))*
+*(Ausführliche Details: [Kapitel 2: Stiftpalette](2-layout-und-objektverwaltung.md#6-stiftpalette-farbzuweisung))*
 
 ---
 
@@ -110,21 +110,5 @@ Klicke oben auf den Reiter **Ausgabe / Plotten**:
 
 *(Ausführliche Details: [Kapitel 3: Live-Plotten & Export](3-ausgabe-simulation-export.md#5-live-plotten-auf-der-hardware))*
 
----
-
-## Nächste Schritte
-
-* Ausführliche Erklärungen zu allen Layout- und Zeichenwerkzeugen:  
-  -> **[Kapitel 2: Layout-Modus & Objektverwaltung](2-layout-und-objektverwaltung.md)**
-* Alle Einstellungen zur Pfadoptimierung und Scrubber-Simulation:  
-  -> **[Kapitel 3: Ausgabe-Modus, Simulation & Export](3-ausgabe-simulation-export.md)**
-* RS-232 Verkabelung, Hardware-Diagnosetool und der Kalibrierplot:  
-  -> **[Kapitel 4: Hardware-Setup, Kalibrierung & Diagnose](4-hardware-setup-und-test.md)**
-* Vektorformate, eigene Skripte, Inkscape, Blender und CAD:  
-  -> **[Kapitel 5: Leitfaden: Vektorformate, Quellen & Workflows](5-vektorformate-und-workflows.md)**
-* Mathematische Hintergründe, Slicer-Algorithmen und Multi-Plotter-Treiber:  
-  -> **[Kapitel 6: Hintergrund: Konzepte, Algorithmen & Architektur (Deep-Dive)](6-konzepte-und-architektur.md)**
-* Software-Werkzeuge, Single-Line-Schriften und Community-Hubs:  
-  -> **[Kapitel 7: Empfohlene Ressourcen, Tools & Community-Sammlungen](7-ressourcen-tools-und-community.md)**
 
 

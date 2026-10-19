@@ -1,0 +1,111 @@
+[project]
+site_name = "Plotter Studio – User Guide"
+site_description = "Modular Slicer and Layout Studio for Vector Pen Plotters"
+site_author = "Plotter Studio Contributors"
+copyright = "Copyright &copy; 2026 Plotter Studio Contributors – GPL-3.0-or-later"
+docs_dir = "docs/manual/en"
+site_dir = "site/manual"
+
+nav = [
+  { "Overview" = "README.md" },
+  { "1. Quickstart & Workflow" = "1-quickstart-and-workflow.md" },
+  { "2. Layout & Object Management" = "2-layout-and-objects.md" },
+  { "3. Output, Simulation & Export" = "3-output-simulation-export.md" },
+  { "4. Hardware Setup & Diagnostics" = "4-hardware-setup-and-diagnostics.md" },
+  { "5. Plotter Models & Device Profiles" = "5-custom-plotter-models.md" },
+  { "6. Vector Formats & Workflows" = "6-vector-formats-and-workflows.md" },
+  { "7. Concepts & Architecture" = "7-concepts-and-architecture.md" },
+  { "8. Resources & Community" = "8-resources-tools-and-community.md" },
+]
+
+extra_css = ["stylesheets/extra.css"]
+
+[project.theme]
+language = "en"
+font = false
+features = [
+  "announce.dismiss",
+  "content.code.annotate",
+  "content.code.copy",
+  "content.code.select",
+  "content.footnote.tooltips",
+  "content.tabs.link",
+  "content.tooltips",
+  "navigation.footer",
+  "navigation.path",
+  "navigation.top",
+  "navigation.tracking",
+  "search.highlight",
+  "toc.follow",
+]
+
+[project.theme.icon]
+logo = "lucide/pen-tool"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme)"
+primary = "blue-grey"
+accent = "teal"
+toggle.icon = "lucide/sun-moon"
+toggle.name = "Switch to light mode"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: light)"
+scheme = "default"
+primary = "blue-grey"
+accent = "teal"
+toggle.icon = "lucide/sun"
+toggle.name = "Switch to dark mode"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: dark)"
+scheme = "slate"
+primary = "blue-grey"
+accent = "teal"
+toggle.icon = "lucide/moon"
+toggle.name = "Switch to system preference"
+
+[project.plugins.offline]
+enabled = true
+
+[project.plugins.glightbox]
+enabled = true
+
+[project.plugins.gh-admonitions]
+enabled = true
+
+[project.extra]
+homepage = "index.html"
+polyfills = [
+  { path = "js/iframe-worker-shim.js", type = "text/javascript", async = false, defer = false },
+]
+
+[project.markdown_extensions]
+abbr = {}
+admonition = {}
+attr_list = {}
+def_list = {}
+footnotes = {}
+md_in_html = {}
+toc.permalink = true
+pymdownx.arithmatex.generic = true
+pymdownx.betterem = {}
+pymdownx.caret = {}
+pymdownx.details = {}
+pymdownx.emoji.emoji_generator = "zensical.extensions.emoji.to_svg"
+pymdownx.emoji.emoji_index = "zensical.extensions.emoji.twemoji"
+pymdownx.highlight.anchor_linenums = true
+pymdownx.highlight.line_spans = "__span"
+pymdownx.highlight.pygments_lang_class = true
+pymdownx.inlinehilite = {}
+pymdownx.keys = {}
+pymdownx.magiclink = {}
+pymdownx.mark = {}
+pymdownx.smartsymbols = {}
+pymdownx.superfences.custom_fences = [
+  { name = "mermaid", class = "mermaid", format = "pymdownx.superfences.fence_code_format" },
+]
+pymdownx.tabbed.alternate_style = true
+pymdownx.tabbed.combine_header_slug = true
+pymdownx.tasklist.custom_checkbox = true
+pymdownx.tilde = {}

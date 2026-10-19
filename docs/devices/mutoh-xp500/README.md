@@ -20,11 +20,11 @@ Gesammelte, geprüfte Informationen zum Mutoh XP-500 (DIN-A0-Stiftplotter, MH-GL
 
 | Kürzel | Quelle | Verlässlichkeit |
 |---|---|---|
-| 📘 **HB** | *MUTOH XP-500 Series User Guide* (XP-510/XP-511), PDF-Scan, auch unter `https://www.synthmind.com/xp-510-511_ug_en.pdf`. Extrahierte Seiten: [`tmp/mutoh-xp500-manual/`](../../../tmp/mutoh-xp500-manual/) | hoch (Herstellerangabe) |
+| 📘 **HB** | *MUTOH XP-500 Series User Guide* (XP-510/XP-511), PDF-Scan, auch unter `https://www.synthmind.com/xp-510-511_ug_en.pdf`. Extrahierte Seiten: `tmp/mutoh-xp500-manual/` | hoch (Herstellerangabe) |
 | 📏 **M** | Eigene Messungen am Gerät (siehe [einheiten-und-koordinaten.md](einheiten-und-koordinaten.md)) | hoch (am Referenzgerät) |
 | 🔧 **MP** | MutohPlot (Oliver F., MIT), an einem XP-500 hardwaregetestet: [analyse-mutohplot.md](../../project/analyse-mutohplot.md) | mittel–hoch (anderes Gerät, andere Einstellungen) |
 | 🇯🇵 **FAQ** | Japanische Mutoh-FAQ (Hinweis per Chat) | mittel |
-| ❓ **KI** | KI-Zusammenfassung [`tmp/mhgl-interpolated-information.md`](../../../tmp/mhgl-interpolated-information.md) | **ignoriert** (überholt/unzuverlässig) |
+| ❓ **KI** | KI-Zusammenfassung `tmp/mhgl-interpolated-information.md` | **ignoriert** (überholt/unzuverlässig) |
 
 Extrahierte Handbuchseiten:
 

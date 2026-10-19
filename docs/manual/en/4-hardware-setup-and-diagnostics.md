@@ -1,6 +1,6 @@
 # 4. Hardware Setup, Calibration & Diagnostics
 
-Here you will learn how to physically connect your pen plotter to your computer, configure serial interface parameters and control panel settings, test communication using the built-in diagnostic probe tool, run the calibration plot, and add custom plotter models.
+Here you will learn how to physically connect your pen plotter to your computer, configure serial interface parameters on the control panel and in the *Device Settings* dialog, test communication using the built-in diagnostic probe tool, and run the official calibration plot.
 
 ---
 
@@ -45,7 +45,26 @@ Configure the following settings on your plotter's front control panel or DIP sw
 
 ---
 
-## 3. Hardware Diagnostics with `tools/xp500_probe.py`
+## 3. Device Settings Dialog
+
+Open **Device → Settings...** from the menu or top toolbar to configure your plotter in Plotter Studio:
+
+![Device Settings Dialog](images/dialog_device_settings.png)
+
+* **Plotter List:** Displays all configured devices.
+* **[ New Device ]:** Adds a new device configuration.
+* **Per-Device Settings:**
+  * **Display Name:** Custom label (e.g. `Mutoh XP-500 Studio` or `Roland DXY-1150 Flatbed`).
+  * **Device Profile:** Base hardware model selected from the 25+ bundled profiles (e.g. `mutoh_xp500`, `roland_dxy`, `hpgl_generic`).
+  * **Port & Baud Rate:** Serial port (e.g. `/dev/ttyUSB0`) or network address (`tcp://127.0.0.1:9999`), baud rate, parity, and flow control.
+  * **Margin Profile:** Default margin configuration for the device.
+
+> [!NOTE]
+> To learn how to integrate additional plotter models, write custom YAML device profiles, or import drivers from Inkcut, see **[Chapter 5: Adding Custom Plotter Models & Device Profiles](5-custom-plotter-models.md)**.
+
+---
+
+## 4. Hardware Diagnostics with `tools/xp500_probe.py`
 
 Plotter Studio includes a standalone terminal diagnostic tool to verify the serial lines and inspect raw responses at the byte level:
 
@@ -87,13 +106,13 @@ If a timeout occurs, check your CTS/RTS wiring and baud rate on the plotter cont
 
 ---
 
-## 4. The Calibration Plot (Accuracy, Margins, Pens & Backlash)
+## 5. The Calibration Plot (Accuracy, Margins, Pens & Backlash)
 
 Pre-compiled calibration patterns for DIN A4 and DIN A3 are located in `resources/`:
 * `resources/calibration_plot_a3.svg` / `.hpgl`
 * `resources/calibration_plot_a4.svg` / `.hpgl`
 
-![Calibration Plot](../images/ui_overview_plot.png)
+![Calibration Plot](images/ui_overview_plot.png)
 
 ### Calibration Features & Verification Criteria:
 
@@ -116,76 +135,3 @@ Pre-compiled calibration patterns for DIN A4 and DIN A3 are located in `resource
      * Do circle start and endpoints align perfectly?
      * Are circles round or egg-shaped/elliptical?
      * Quadrant shifts indicate mechanical backlash in drive belts or pinch wheels.
-
----
-
-## 5. Adding Custom Plotter Models
-
-Plotter Studio is not restricted to the Mutoh XP-500. You can add any HP-GL compatible plotter to the configuration.
-
-### Device Settings Dialog
-
-Open **Device -> Settings...** from the menu or top toolbar:
-
-![Device Settings Dialog](../images/dialog_device_settings.png)
-
-* **Plotter List:** Displays all configured devices.
-* **[ New Device ]:** Adds a new profile.
-* **Per-Device Settings:**
-  * **Display Name:** e.g. `Roland DXY-1150 Flatbed`.
-  * **Device Profile:** Base hardware model (e.g. `mutoh_xp500` or `hpgl_generic`).
-  * **Port & Baud Rate:** Serial port or network address.
-  * **Margin Profile:** Default margin configuration.
-
-### Creating Custom YAML Device Profiles
-Device profiles are stored under `resources/devices/<name>.yaml`. You can create new profiles directly:
-
-```yaml
-model_id: "roland_dxy"
-name: "Roland DXY-1300 Flatbed"
-manufacturer: "Roland DG"
-emulation: "HP-GL / RD-GL"
-protocol: "hpgl"
-origin: "bottom_left"          # Flatbed: origin bottom-left
-units_per_mm: 40.0             # Resolution: 0.025 mm per step
-max_pens: 8                    # 8-pen carousel
-swap_xy: false
-invert_x: false
-invert_y: false
-rotation_deg: 0
-
-connection:
-  baudrate: 9600
-  bytesize: 8
-  parity: "N"
-  stopbits: 1
-  rtscts: true
-  xonxoff: false
-
-margins_mm:
-  default:
-    top: 8.0
-    bottom: 8.0
-    left: 8.0
-    right: 8.0
-
-default_margin_profile: "default"
-```
-
-Once saved to `resources/devices/`, the new profile immediately becomes available in Plotter Studio's UI.
-
-### Importing Device Drivers from InkCut
-
-Plotter Studio includes a converter script to import HP-GL device drivers directly from an InkCut installation (`manifest.enaml`):
-
-```bash
-# List devices detected from InkCut:
-python3 tools/import_inkcut_devices.py --list-only
-
-# Convert and export profiles to resources/devices/:
-python3 tools/import_inkcut_devices.py
-```
-
-Plotter Studio includes over 25 pre-installed profiles for Roland (Stika SV-8/12/15, CAMM-1), Graphtec (CE5000), US Cutter (Refine MH-721/1351), Secabo, Summa, Sekonic, and others.
-
-> **Note on Vinyl Cutters:** Many imported models are vinyl cutters. They work well in Plotter Studio when fitted with a pen holder. Blade cutting of adhesive vinyl is not yet supported due to missing drag-knife offset compensation.

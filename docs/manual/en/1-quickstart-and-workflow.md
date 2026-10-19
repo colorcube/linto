@@ -43,7 +43,7 @@ Click **[ Page Setup... ]** in the top toolbar:
 3. **Live Query (optional):** If a physical plotter is connected, click **[ Query Plotter ]**. Plotter Studio uses the `OH;` command to query the exact sheet dimensions directly from the machine's optical sensors.
 4. Click **OK**. The canvas now displays the sheet with the red dashed *hard-clip boundary*.
 
-*(Details: [Chapter 2: Layout & Object Management](2-layout-and-objects.md#2-sheet--page-setup))*
+*(Details: [Chapter 2: Layout & Object Management](2-layout-and-objects.md#2-sheet-page-setup))*
 
 ---
 
@@ -68,7 +68,7 @@ Click **[ Page Setup... ]** in the top toolbar:
    * Select the object on the canvas or in the **Objects & Layers** dock.
    * Assign the desired pen number via right-click context menu or through the pen dock.
 
-*(Details: [Chapter 2: Pen Palette](2-layout-and-objects.md#6-pen-palette--color-assignment))*
+*(Details: [Chapter 2: Pen Palette](2-layout-and-objects.md#6-pen-palette-color-assignment))*
 
 ---
 
@@ -110,19 +110,3 @@ Click the **Output / Plot** tab at the top:
 
 *(Details: [Chapter 3: Live Plotting & Export](3-output-simulation-export.md#5-live-plotting-on-hardware))*
 
----
-
-## Next Steps
-
-* Layout and drawing tools in detail:  
-  -> **[Chapter 2: Layout Mode & Object Management](2-layout-and-objects.md)**
-* Optimization settings and simulation:  
-  -> **[Chapter 3: Output Mode, Simulation & Export](3-output-simulation-export.md)**
-* RS-232 cabling, hardware diagnostics, and calibration:  
-  -> **[Chapter 4: Hardware Setup, Calibration & Diagnostics](4-hardware-setup-and-diagnostics.md)**
-* Vector formats, custom scripts, Inkscape, Blender, and CAD:  
-  -> **[Chapter 5: Vector Formats, Sources & Workflows](5-vector-formats-and-workflows.md)**
-* Mathematical background, slicer algorithms, and multi-plotter drivers:  
-  -> **[Chapter 6: Concepts, Algorithms & Architecture (Deep Dive)](6-concepts-and-architecture.md)**
-* Curated tools, single-line fonts, and community collections:  
-  -> **[Chapter 7: Recommended Resources, Tools & Community](7-resources-tools-and-community.md)**

@@ -1,6 +1,6 @@
 # 4. Hardware-Setup, Kalibrierung & Diagnose
 
-Hier erfährst du, wie du deinen Stiftplotter physikalisch mit dem Computer verbindest, die Schnittstellenparameter und Panel-Einstellungen konfigurierst, die Verbindung mit dem integrierten Diagnosetool testest, den offiziellen Kalibrierplot durchführst und beliebige weitere Plottermodelle einbindest.
+Hier erfährst du, wie du deinen Stiftplotter physikalisch mit dem Computer verbindest, die Schnittstellenparameter am Gerät und im Dialog *Geräte-Einstellungen* konfigurierst, die Verbindung mit dem integrierten Diagnosetool testest und den offiziellen Kalibrierplot durchführst.
 
 ---
 
@@ -45,7 +45,26 @@ Stelle am Bedienfeld oder den DIP-Schaltern des Plotters folgende Parameter ein:
 
 ---
 
-## 3. Hardware-Diagnose mit `tools/xp500_probe.py`
+## 3. Dialog „Geräte-Einstellungen“
+
+Öffne über die obere Werkzeugleiste oder das Menü **Geräte → Einstellungen...** den Konfigurationsdialog, um deinen Plotter in Plotter Studio einzurichten:
+
+![Dialog Geräte-Einstellungen](images/dialog_device_settings.png)
+
+* **Plotter-Liste:** Zeigt alle angelegten Gerätekonfigurationen an.
+* **[ Neues Gerät ]:** Legt eine neue Gerätekonfiguration an.
+* **Einstellungen pro Gerät:**
+  * **Anzeigename:** Frei wählbarer Name (z.B. `Mutoh XP-500 Studio` oder `Roland DXY-1150 Flachbett`).
+  * **Geräteprofil:** Auswahl des Hardware-Grundmodells aus den über 25 mitgelieferten Profilen (z.B. `mutoh_xp500`, `roland_dxy`, `hpgl_generic`).
+  * **Schnittstelle & Baudrate:** Serieller Port (z.B. `/dev/ttyUSB0`) oder Netzwerkadresse (`tcp://127.0.0.1:9999`) sowie Baudrate, Parität und Flusssteuerung.
+  * **Randprofil:** Gewünschtes Standard-Margin-Profil des Geräts.
+
+> [!NOTE]
+> Wie du weitere Plottermodelle einbindest, eigene YAML-Geräteprofile erstellst oder Profile aus Inkcut importierst, erfährst du in **[Kapitel 5: Anbindung weiterer Plottermodelle & Geräteprofile](5-plottermodelle-und-geraeteprofile.md)**.
+
+---
+
+## 4. Hardware-Diagnose mit `tools/xp500_probe.py`
 
 Plotter Studio liefert ein eigenständiges Terminal-Diagnosewerkzeug mit, mit dem du die Schnittstelle und alle Rückmeldungen auf Bit- und Byte-Ebene prüfen kannst:
 
@@ -87,13 +106,13 @@ Erscheint hier ein Timeout, überprüfe die Leitungen CTS/RTS und die Baudrate a
 
 ---
 
-## 4. Der Kalibrierplot (Genauigkeit, Ränder, Stifte & Backlash)
+## 5. Der Kalibrierplot (Genauigkeit, Ränder, Stifte & Backlash)
 
 Im Verzeichnis `resources/` liegen vorbereitete Kalibriermuster für DIN A4 und DIN A3 bereit:
 * `resources/calibration_plot_a3.svg` / `.hpgl`
 * `resources/calibration_plot_a4.svg` / `.hpgl`
 
-![Kalibrierplot Struktur](../images/ui_overview_plot.png)
+![Kalibrierplot Struktur](images/ui_overview_plot.png)
 
 ### Aufbau und Prüfkriterien des Testmusters:
 
@@ -116,76 +135,3 @@ Im Verzeichnis `resources/` liegen vorbereitete Kalibriermuster für DIN A4 und 
      * Treffen die Anfangs- und Endpunkte der Kreislinien exakt aufeinander?
      * Sind Kreise kreisrund oder leicht eiförmig/elliptisch?
      * Ein Versatz an den Quadranten deutet auf mechanisches Spiel (Backlash) im Riemenantrieb oder den Andruckrollen hin.
-
----
-
-## 5. Anbindung weiterer Plottermodelle
-
-Plotter Studio beschränkt sich nicht auf den Mutoh XP-500. Du kannst beliebige Plotter in der Konfiguration hinzufügen.
-
-### Dialog "Geräte-Einstellungen"
-
-Öffne über die obere Leiste oder das Menü **Geräte -> Einstellungen...** den Konfigurationsdialog:
-
-![Dialog Geräte-Einstellungen](../images/dialog_device_settings.png)
-
-* **Plotter-Liste:** Zeigt alle hinterlegten Geräte an.
-* **[ Neues Gerät ]:** Legt ein neues Profil an.
-* **Einstellungen pro Gerät:**
-  * **Anzeigename:** z.B. `Roland DXY-1150 Flachbett`.
-  * **Geräteprofil:** Auswahl des Hardware-Grundtyps (z.B. `mutoh_xp500` oder `hpgl_generic`).
-  * **Schnittstelle & Baudrate:** Serieller Port oder Netzwerkadresse.
-  * **Randprofil:** Gewünschtes Standard-Margin-Profil.
-
-### Eigene Geräteprofile als YAML anlegen
-Geräteprofile werden unter `resources/devices/<name>.yaml` gespeichert. Du kannst einfach eine neue Profildatei anlegen:
-
-```yaml
-model_id: "roland_dxy"
-name: "Roland DXY-1300 Flachbett"
-manufacturer: "Roland DG"
-emulation: "HP-GL / RD-GL"
-protocol: "hpgl"
-origin: "bottom_left"          # Flachbettplotter: Ursprung unten links
-units_per_mm: 40.0             # Auflösung: 0,025 mm pro Schritt
-max_pens: 8                    # 8-Stift-Wechsler
-swap_xy: false
-invert_x: false
-invert_y: false
-rotation_deg: 0
-
-connection:
-  baudrate: 9600
-  bytesize: 8
-  parity: "N"
-  stopbits: 1
-  rtscts: true
-  xonxoff: false
-
-margins_mm:
-  default:
-    top: 8.0
-    bottom: 8.0
-    left: 8.0
-    right: 8.0
-
-default_margin_profile: "default"
-```
-
-Sobald die Datei im Verzeichnis `resources/devices/` abgelegt ist, steht das neue Modell sofort im Dialog und in der Werkzeugleiste von Plotter Studio zur Verfügung. Eine vollständige Beschreibung aller unterstützten YAML-Felder (inkl. `auto_pen_force`, `max_speed_mm_s`, `force_unit` usw.) findest du unter **[Gerätedefinitionen (`docs/devices/geraetendefinition.md`)](../devices/geraetendefinition.md)**.
-
-### Geräte-Import aus InkCut
-
-Plotter Studio liefert ein Import-Werkzeug mit, mit dem du alle HP-GL-Gerätetreiber aus einer InkCut-Installation (`manifest.enaml`) direkt in gebrauchsfertige Plotter-Studio-Profile konvertieren kannst:
-
-```bash
-# Geräte aus InkCut einlesen und auflisten:
-python3 tools/import_inkcut_devices.py --list-only
-
-# Profile nach resources/devices/ konvertieren:
-python3 tools/import_inkcut_devices.py
-```
-
-Plotter Studio bringt bereits über 25 vorinstallierte Profile für Modelle von Roland (Stika SV-8/12/15, CAMM-1), Graphtec (CE5000), US Cutter (Refine MH-721/1351), Secabo, Summa, Sekonic und weitere mit.
-
-> **Hinweis zu Schneideplottern (Cutter):** Viele dieser aus InkCut übernommenen Modelle sind Schneideplotter. Sie funktionieren in Plotter Studio hervorragend mit einem Stifteinsatz als Zeichenplotter. Das Schneiden von Folien mit Messerklingen wird noch nicht unterstützt, da die dafür notwendige Schleppmesser-Offset-Kompensation noch in Entwicklung ist.

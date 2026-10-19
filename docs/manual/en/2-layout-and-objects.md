@@ -2,7 +2,7 @@
 
 **Layout Mode** is Plotter Studio's visual workspace. Here you arrange, scale, and rotate vector graphics on your selected sheet, assign pens and colors, and verify margins against your plotter's physical limits.
 
-![Layout Mode Overview](../images/ui_overview_layout.png)
+![Layout Mode Overview](images/ui_overview_layout.png)
 
 ---
 
@@ -39,7 +39,7 @@ The interface is structured into clear functional zones:
 
 Before placing artwork, configure your paper size and margin profile. Click **[ Page Setup... ]** in the top toolbar.
 
-![Page Setup Dialog](../images/dialog_page_setup.png)
+![Page Setup Dialog](images/dialog_page_setup.png)
 
 ### Settings in the Dialog:
 * **Standard Sizes:** Quick presets for DIN A4, A3, A2, A1, and A0.
@@ -76,7 +76,7 @@ Plotter Studio supports two vector formats directly:
 
 The **Objects & Layers** dock lists all loaded drawing elements in a tree structure.
 
-![Objects & Layers Dock](../images/dock_objects_layers.png)
+![Objects & Layers Dock](images/dock_objects_layers.png)
 
 ### Controls and Features:
 * **Visibility (Eye Icon):** Toggles an object or layer on/off. Hidden objects are neither rendered on the canvas nor sent to the plotter.
@@ -96,7 +96,7 @@ The **Objects & Layers** dock lists all loaded drawing elements in a tree struct
 
 The **Transform** dock enables precise millimeter-accurate placement, rotation, alignment, and scaling across one or multiple selected objects.
 
-![Transform Dock](../images/dock_transformation.png)
+![Transform Dock](images/dock_transformation.png)
 
 ### 1. Position:
 * **Reference Frame:** Choose between **Sheet** (full paper dimension) and **Printable Area** (hard-clip window). All coordinates and alignment actions respect this frame.
@@ -144,6 +144,6 @@ Right-click any object on the canvas or pick a pen in the dock to reassign an ob
 ---
 
 > [!TIP]
-> For instructions on creating optimal SVG scripts, using Inkscape or Blender as vector generators, and working with HP-GL or DXF files, see **[Chapter 5: Vector Formats, Sources & Workflows](5-vector-formats-and-workflows.md)**.
+> For instructions on creating optimal SVG scripts, using Inkscape or Blender as vector generators, and working with HP-GL or DXF files, see **[Chapter 6: Vector Formats, Sources & Workflows](6-vector-formats-and-workflows.md)**.
 > 
-> A curated directory of community tools and single-line fonts is available in **[Chapter 7: Recommended Resources, Tools & Community](7-resources-tools-and-community.md)**.
+> A curated directory of community tools (Awesome Plotters, Drawingbots, Inkcut, vpype, vsketch) is available in **[Chapter 8: Recommended Resources, Tools & Community](8-resources-tools-and-community.md)**.

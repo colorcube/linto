@@ -2,7 +2,7 @@
 
 In **Output Mode** (Plot Mode), your artwork is compiled for physical hardware. You can inspect optimized toolpaths including pen-up air moves, simulate the plot along an interactive timeline, check travel savings, and stream the job directly to the plotter or export it to disk.
 
-![Output Mode Overview with Simulation](../images/ui_overview_plot.png)
+![Output Mode Overview with Simulation](images/ui_overview_plot.png)
 
 ---
 
@@ -10,7 +10,7 @@ In **Output Mode** (Plot Mode), your artwork is compiled for physical hardware. 
 
 At the top of the **Output** dock, you can configure the algorithms that turn raw vector geometries into efficient machine moves (collapsible by clicking the section header):
 
-![Output Dock](../images/dock_ausgabe.png)
+![Output Dock](images/dock_ausgabe.png)
 
 * **Merge Collinear / Adjacent Paths:**
   Finds open endpoints within close proximity and joins them into continuous polylines.
