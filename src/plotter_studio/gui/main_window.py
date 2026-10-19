@@ -665,7 +665,7 @@ class MainWindow(QMainWindow):
         p = self.doc.page
         if p.preset != "Custom":
             fmt_str = f"DIN {p.preset}" if p.preset.startswith("A") else p.preset
-            orient_str = self.tr("Landscape (short)") if p.orientation == "landscape" else self.tr("Portrait (short)")
+            orient_str = self.tr("Landscape") if p.orientation == "landscape" else self.tr("Portrait")
             summary = f"{fmt_str} {orient_str} ({p.width_mm:.0f} × {p.height_mm:.0f} mm)"
         else:
             summary = f"Custom ({p.width_mm:.0f} × {p.height_mm:.0f} mm)"

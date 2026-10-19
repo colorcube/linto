@@ -110,8 +110,11 @@ def test_docks_and_page_setup_dialog(qapp):
     # Verify group titles in TransformDock
     assert win.transform_dock.grp_transform.title() == "Position"
     assert win.transform_dock.grp_rotation.title() == "Rotation"
-    assert win.transform_dock.grp_placement.title() == "Platzieren"
     assert win.transform_dock.grp_scaling.title() == "Skalierung"
+    assert win.transform_dock.grp_placement is win.transform_dock.grp_transform
+    assert win.transform_dock.grp_transform.isAncestorOf(win.transform_dock.btn_center_h)
+    assert win.transform_dock.grp_transform.isAncestorOf(win.transform_dock.btn_center_v)
+    assert win.transform_dock.grp_transform.isAncestorOf(win.transform_dock.btn_center_both)
     assert win.transform_dock.btn_fit_plottable.text() == "Auf plottbaren Bereich einpassen"
     assert not win.transform_dock.btn_fit_plottable.icon().isNull()
     assert win.transform_dock.btn_fit_sheet.text() == "Auf Blatt einpassen"

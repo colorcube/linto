@@ -256,6 +256,31 @@ class TransformDockWidget(QDockWidget):
 
         grid_pos_dim.setColumnStretch(5, 1)
         self.grp_transform.addLayout(grid_pos_dim)
+
+        p_layout = QHBoxLayout()
+        p_layout.setSpacing(6)
+
+        self.btn_center_h = QPushButton(self.tr("Center Horiz."))
+        self.btn_center_h.setIcon(get_icon("align-h-center", size=16))
+        self.btn_center_h.setToolTip(self.tr("Center horizontally relative to reference frame"))
+        self.btn_center_h.clicked.connect(self.align_center_h)
+
+        self.btn_center_v = QPushButton(self.tr("Center Vert."))
+        self.btn_center_v.setIcon(get_icon("align-v-center", size=16))
+        self.btn_center_v.setToolTip(self.tr("Center vertically relative to reference frame"))
+        self.btn_center_v.clicked.connect(self.align_center_v)
+
+        self.btn_center_both = QPushButton(self.tr("Center"))
+        self.btn_center_both.setIcon(get_icon("align-center", size=16))
+        self.btn_center_both.setToolTip(self.tr("Center on sheet or printable area (both axes)"))
+        self.btn_center_both.clicked.connect(self.align_center_both)
+
+        p_layout.addWidget(self.btn_center_h)
+        p_layout.addWidget(self.btn_center_v)
+        p_layout.addWidget(self.btn_center_both)
+        self.grp_transform.addLayout(p_layout)
+        self.grp_placement = self.grp_transform
+
         self.main_layout.addWidget(self.grp_transform)
 
         # 3. Group "Rotation"
@@ -308,33 +333,7 @@ class TransformDockWidget(QDockWidget):
 
         self.main_layout.addWidget(self.grp_rotation)
 
-        # 4. Group "Placement"
-        self.grp_placement = SectionGroup(self.tr("Placement"))
-        p_layout = QHBoxLayout()
-        p_layout.setSpacing(6)
-
-        self.btn_center_h = QPushButton(self.tr("Center Horiz."))
-        self.btn_center_h.setIcon(get_icon("align-h-center", size=16))
-        self.btn_center_h.setToolTip(self.tr("Center horizontally relative to reference frame"))
-        self.btn_center_h.clicked.connect(self.align_center_h)
-
-        self.btn_center_v = QPushButton(self.tr("Center Vert."))
-        self.btn_center_v.setIcon(get_icon("align-v-center", size=16))
-        self.btn_center_v.setToolTip(self.tr("Center vertically relative to reference frame"))
-        self.btn_center_v.clicked.connect(self.align_center_v)
-
-        self.btn_center_both = QPushButton(self.tr("Center"))
-        self.btn_center_both.setIcon(get_icon("align-center", size=16))
-        self.btn_center_both.setToolTip(self.tr("Center on sheet or printable area (both axes)"))
-        self.btn_center_both.clicked.connect(self.align_center_both)
-
-        p_layout.addWidget(self.btn_center_h)
-        p_layout.addWidget(self.btn_center_v)
-        p_layout.addWidget(self.btn_center_both)
-        self.grp_placement.addLayout(p_layout)
-        self.main_layout.addWidget(self.grp_placement)
-
-        # 5. Group "Scale"
+        # 4. Group "Scale"
         self.grp_scaling = SectionGroup(self.tr("Scale"))
 
         # Row 1: Fit to Printable Area

@@ -343,6 +343,10 @@
   "Apply device profile '%1'": "Geräteprofil '%1' anwenden",
   "Landscape (short)": "Quer",
   "Portrait (short)": "Hoch",
+  "MainWindow": {
+    "Landscape": "Quer",
+    "Portrait": "Hoch"
+  },
   "Page setup: %1 (Click to edit)": "Seiteneinrichtung: %1 (Klicken zum Bearbeiten)",
   "Sheet: %1": "Blatt: %1",
   "Scale %1": "%1 skalieren",
