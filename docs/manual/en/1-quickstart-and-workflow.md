@@ -52,8 +52,8 @@ Click **[ Page Setup... ]** in the top toolbar:
 1. Drag and drop any `.svg` or `.hpgl` file directly from your file manager onto the canvas (or press `Ctrl+O` / `Ctrl+I`).
 2. The artwork is loaded. During import, Plotter Studio analyzes all stroke colors and assigns them automatically to pens 1 through 8.
 3. Open the **Transform** dock on the right:
-   * In the *Placement* group, click **[ Center ]** (crosshair icon) to center the artwork on the sheet.
-   * In the *Scale* group, click **[ Fit to Sheet ]** to enlarge the artwork to fit the printable area (you can set the desired margin in millimeters right next to it).
+   * In the *Position* group, click **[ Center ]** (crosshair icon) to center the artwork on the sheet.
+   * In the *Scale* group, click **[ Fit to Sheet ]** or **[ Fit to Printable Area ]** to enlarge the artwork to fit the area (you can set the desired margin in millimeters right next to it).
    * Use the **[ + ]** and **[ - ]** buttons (10% increments), the **Zoom** input field, or **[ Original ]** (1:1) to quickly adjust the size.
    * The lock icon ensures the aspect ratio stays proportional during scaling.
 

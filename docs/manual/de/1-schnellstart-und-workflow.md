@@ -52,8 +52,8 @@ Klicke in der oberen Leiste auf **[ Seiteneinrichtung... ]**:
 1. Ziehe eine beliebige `.svg`- oder `.hpgl`-Datei per **Drag & Drop** aus deinem Dateimanager direkt in das Canvas (oder drücke `Strg+O` bzw. `Strg+I`).
 2. Das Dokument wird geladen. Beim Import analysiert Plotter Studio alle Strichfarben und teilt sie automatisch den Stiften 1 bis 8 zu.
 3. Wechsle in das rechte Dock **Transformation**:
-   * Klicke in der Gruppe *Platzieren* auf **[ Zentrieren ]** (Fadenkreuz), um das Motiv exakt in der Blattmitte auszurichten.
-   * Klicke in der Gruppe *Skalierung* auf **[ Einpassen ]**, um die Grafik maximal vergrößert auf der Fläche zu platzieren (den gewünschten Randabstand kannst du direkt daneben in mm wählen).
+   * Klicke in der Gruppe *Position* auf **[ Zentriert ]** (Fadenkreuz), um das Motiv exakt in der Blattmitte auszurichten.
+   * Klicke in der Gruppe *Skalierung* auf **[ Auf Blatt einpassen ]** oder **[ Auf plottbaren Bereich einpassen ]**, um die Grafik maximal vergrößert auf der Fläche zu platzieren (den gewünschten Randabstand kannst du direkt daneben in mm wählen).
    * Mit den Tasten **[ + ]** und **[ - ]** (10 %-Schritte), dem **Zoom**-Eingabefeld oder **[ Original ]** passt du die Größe schnell und präzise an.
    * Das aktivierte Schloss-Symbol sorgt dafür, dass das Seitenverhältnis beim Skalieren stets proportional erhalten bleibt.
 

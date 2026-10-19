@@ -105,22 +105,21 @@ The **Transform** dock enables precise millimeter-accurate placement, rotation, 
 * **Aspect Ratio Lock (Lock Icon):**
   * *Locked:* Changing width or height scales the opposite axis proportionally.
   * *Unlocked:* Allows non-proportional stretching.
-
-### 2. Rotation:
-* **[ -90° ] / [ +90° ]:** Quick rotation by 90 degrees CCW or CW.
-* **Free Angle (`°`) & [ Rotate ]:** Rotates all selected objects by any angle (`-360.0°` to `+360.0°`).
-
-### 3. Placement & Alignment:
 * **[ Center Horiz. ]:** Centers selection horizontally relative to the reference frame.
 * **[ Center Vert. ]:** Centers selection vertically relative to the reference frame.
 * **[ Center ] (Crosshair):** Centers selection in the exact middle of the reference frame.
 
-### 4. Scaling:
+### 2. Rotation:
+* **Angle (`°`):** Rotates all selected objects by any angle (`-360.0°` to `+360.0°`).
+* **[ -90° ] / [ +90° ]:** Quick rotation by 90 degrees CCW or CW.
+* **[ Flip Horiz. ] / [ Flip Vert. ]:** Mirrors selected objects horizontally or vertically around their center.
+
+### 3. Scale:
+* **[ Fit to Printable Area ]:** Proportionally scales the selection as large as possible within the printable area.
+* **[ Fit to Sheet ] & Margin (mm):** Proportionally scales the selection to the sheet while preserving the configurable safety margin.
 * **Zoom (%):** Numerical scale percentage (100.0% = original size).
 * **[ + ] / [ - ]:** Step scaling in 10% increments (+10% / -10%).
 * **[ Original ]:** Restores original 1:1 dimensions (100%) from the source file.
-* **[ Fit to Sheet ]:** Proportionally scales the selection as large as possible within the reference frame.
-* **Margin (mm):** Safety offset applied during fit-to-sheet to preserve border margins.
 
 ---
 

@@ -100,28 +100,27 @@ Das Dock **Transformation** erlaubt die millimetergenaue Positionierung, Drehung
 ![Dock Transformation](images/dock_transformation.png)
 
 ### 1. Gruppe "Position":
-* **Bezug:** Auswahl zwischen **Blatt** (gesamtes Papierformat) und **Plottbereich** (physisches Hard-Clip-Fenster des Plotters). Alle Koordinaten und Ausrichtungen orientieren sich an diesem gewählten Rahmen.
+* **Bezug:** Auswahl zwischen **Blatt** (gesamtes Papierformat) und **Plottbarer Bereich** (physisches Hard-Clip-Fenster des Plotters). Alle Koordinaten und Ausrichtungen orientieren sich an diesem gewählten Rahmen.
 * **X / Y (mm):** Exakte Position der oberen linken Ecke des ausgewählten Objekts.
 * **B / H (mm):** Exakte Breite und Höhe des Objekts in Millimetern.
 * **Proportions-Sperre (Schloss-Symbol):**
   * *Aktiviert (geschlossen):* Änderungen an Breite oder Höhe passen die jeweils andere Achse proportional an.
   * *Deaktiviert (geöffnet):* Erlaubt unproportionales Skalieren / Verzerren.
+* **[ Horiz. Mittig ]:** Zentriert die Auswahl horizontal auf dem gewählten Bezugsrahmen (Blatt oder plottbarer Bereich).
+* **[ Vert. Mittig ]:** Zentriert die Auswahl vertikal auf dem gewählten Bezugsrahmen.
+* **[ Zentriert ] (Fadenkreuz):** Setzt die Auswahl exakt in die geometrische Mitte des Bezugsrahmens.
 
 ### 2. Gruppe "Rotation":
+* **Winkel (`°`):** Dreht alle ausgewählten Objekte um einen beliebigen Winkel (`-360,0°` bis `+360,0°`).
 * **[ -90° ] / [ +90° ]:** Schnelle Drehung der Auswahl um 90 Grad gegen den bzw. im Uhrzeigersinn.
-* **Freier Winkel (`°`) & [ Drehen ]:** Dreht alle ausgewählten Objekte um einen beliebigen Winkel (`-360,0°` bis `+360,0°`).
+* **[ Horiz. spiegeln ] / [ Vert. spiegeln ]:** Spiegelt die ausgewählten Objekte horizontal bzw. vertikal an ihrem Mittelpunkt.
 
-### 3. Gruppe "Platzieren":
-* **[ Horiz. Mittig ]:** Zentriert die Auswahl horizontal auf dem gewählten Bezugsrahmen (Blatt oder Plottbereich).
-* **[ Vert. Mittig ]:** Zentriert die Auswahl vertikal auf dem gewählten Bezugsrahmen.
-* **[ Zentrieren ] (Fadenkreuz):** Setzt die Auswahl exakt in die geometrische Mitte des Bezugsrahmens.
-
-### 4. Gruppe "Skalierung":
+### 3. Gruppe "Skalierung":
+* **[ Auf plottbaren Bereich einpassen ]:** Skaliert die Auswahl proportional so groß wie möglich in den physisch plottbaren Bereich.
+* **[ Auf Blatt einpassen ] & Rand (mm):** Skaliert die Auswahl proportional auf das Papierblatt unter Berücksichtigung des einstellbaren Sicherheitsabstands (`Rand`).
 * **Zoom (%):** Stufenlose numerische Skalierung in Prozent (100,0 % = Originalgröße).
 * **[ + ] / [ - ]:** Schnelles Vergrößern bzw. Verkleinern in 10 %-Schritten (+10 % / -10 %).
 * **[ Original ]:** Setzt die Abmessungen des Objekts sofort auf die 1:1 Originalgröße (100 %) der Quelldatei zurück.
-* **[ Einpassen ]:** Skaliert die Auswahl proportional so groß wie möglich in den gewählten Bezugsrahmen (Blatt oder Plottbereich).
-* **Rand (mm):** Einstellbarer Sicherheitsabstand beim Einpassen, um automatisch Randabstände zu wahren.
 
 ---
 
