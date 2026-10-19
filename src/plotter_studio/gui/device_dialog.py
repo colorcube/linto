@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import threading
 import uuid
+import weakref
 from typing import Optional
 
 from PySide6.QtCore import Qt, QTimer, Signal
@@ -33,10 +34,12 @@ class DeviceSettingsDialog(QDialog):
     def __init__(self, device_manager: DeviceManager, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.setWindowTitle(self.tr("Configure Plotter Devices"))
-        self.setMinimumSize(680, 480)
+        self.setMinimumSize(680, 560)
         self.manager = device_manager
         self._current_device: Optional[ConfiguredDevice] = None
         self._probe_thread: Optional[threading.Thread] = None
+        self._probe_lock = threading.Lock()
+        self._closed_event = threading.Event()
         self._probe_finished.connect(self._handle_test_result)
 
         self._init_ui()
@@ -184,7 +187,9 @@ class DeviceSettingsDialog(QDialog):
 
         self.lbl_test_result = QLabel(self.tr("Not tested yet"))
         self.lbl_test_result.setWordWrap(True)
-        self.lbl_test_result.setStyleSheet("padding: 4px; background: #f3f4f6; border-radius: 4px; font-size: 11px;")
+        self.lbl_test_result.setAlignment(Qt.AlignTop | Qt.AlignLeft)
+        self.lbl_test_result.setMinimumHeight(88)
+        self.lbl_test_result.setStyleSheet("padding: 6px 8px; background: #f3f4f6; border-radius: 4px; font-size: 11px;")
         t_layout.addWidget(self.lbl_test_result)
         e_layout.addWidget(test_group)
 
@@ -279,6 +284,7 @@ class DeviceSettingsDialog(QDialog):
         self.chk_invert_x.setChecked(dev.invert_x)
         self.chk_invert_y.setChecked(dev.invert_y)
         self.lbl_test_result.setText(self.tr("Not tested yet"))
+        self.lbl_test_result.setStyleSheet("padding: 6px 8px; background: #f3f4f6; border-radius: 4px; font-size: 11px;")
 
     def _on_model_profile_changed(self):
         """Apply default serial connection parameters from the newly selected DeviceProfile."""
@@ -378,9 +384,18 @@ class DeviceSettingsDialog(QDialog):
         self.manager.update_device(self._current_device)
         self._load_devices_list(select_id=saved_id)
         self.btn_save_item.setText(self.tr("✓ Saved"))
-        QTimer.singleShot(1500, lambda: self.btn_save_item.setText(self.tr("Save")))
+        weak_self = weakref.ref(self)
+
+        def _reset_save_label():
+            dlg = weak_self()
+            if dlg is not None and not dlg._closed_event.is_set():
+                dlg.btn_save_item.setText(dlg.tr("Save"))
+
+        QTimer.singleShot(1500, _reset_save_label)
 
     def _on_test_device(self):
+        if self._probe_thread is not None and self._probe_thread.is_alive():
+            return
         port = self.combo_port.currentText().strip()
         if not port:
             self.lbl_test_result.setText(self.tr("No port selected"))
@@ -399,7 +414,11 @@ class DeviceSettingsDialog(QDialog):
         axes_swapped = prof.axes_swapped
         self.btn_test.setEnabled(False)
         self.lbl_test_result.setText(self.tr("Probing %1 at %2 baud...").replace("%1", port).replace("%2", str(baudrate)))
-        self.lbl_test_result.setStyleSheet("padding: 4px; background: #fff9c4; color: #f57f17; border-radius: 4px; font-size: 11px;")
+        self.lbl_test_result.setStyleSheet("padding: 6px 8px; background: #fff9c4; color: #f57f17; border-radius: 4px; font-size: 11px;")
+
+        weak_self = weakref.ref(self)
+        lock = self._probe_lock
+        closed_event = self._closed_event
 
         def _worker():
             res = probe_plotter(
@@ -410,12 +429,40 @@ class DeviceSettingsDialog(QDialog):
                 stopbits=stopbits,
                 axes_swapped=axes_swapped,
             )
-            self._probe_finished.emit(res)
+            with lock:
+                if closed_event.is_set():
+                    return
+                dlg = weak_self()
+                if dlg is not None:
+                    try:
+                        dlg._probe_finished.emit(res)
+                    except RuntimeError:
+                        pass
+                    finally:
+                        del dlg
 
         self._probe_thread = threading.Thread(target=_worker, daemon=True, name="DeviceSettingsProbeThread")
         self._probe_thread.start()
 
+    def _mark_closed(self):
+        with self._probe_lock:
+            self._closed_event.set()
+            try:
+                self._probe_finished.disconnect(self._handle_test_result)
+            except (RuntimeError, TypeError):
+                pass
+
+    def done(self, result: int):
+        self._mark_closed()
+        super().done(result)
+
+    def closeEvent(self, event):
+        self._mark_closed()
+        super().closeEvent(event)
+
     def _handle_test_result(self, res):
+        if self._closed_event.is_set():
+            return
         self.btn_test.setEnabled(True)
 
         if res.success:
@@ -432,7 +479,7 @@ class DeviceSettingsDialog(QDialog):
             if res.dsr is not None:
                 pin_parts.append(f"DSR: {self.tr('High (Ready)') if res.dsr else 'Low'}")
             pin_info = f"<br>Pins: {' • '.join(pin_parts)}" if pin_parts else ""
-            self.lbl_test_result.setStyleSheet("padding: 4px; background: #e8f5e9; color: #2e7d32; border-radius: 4px; font-size: 11px;")
+            self.lbl_test_result.setStyleSheet("padding: 6px 8px; background: #e8f5e9; color: #2e7d32; border-radius: 4px; font-size: 11px;")
             self.lbl_test_result.setText(
                 self.tr("✓ <b>Success!</b><br/>Model: %1<br/>Resolution: %2 U/mm%3<br/>Sheet: %4")
                 .replace("%1", str(res.model or self.tr("Unknown")))
@@ -447,7 +494,7 @@ class DeviceSettingsDialog(QDialog):
             if res.dsr is not None:
                 pin_parts.append(f"DSR: {self.tr('High (Ready)') if res.dsr else 'Low'}")
             pin_hint = f"<br>Pins: {' • '.join(pin_parts)}" if pin_parts else ""
-            self.lbl_test_result.setStyleSheet("padding: 4px; background: #ffebee; color: #c62828; border-radius: 4px; font-size: 11px;")
+            self.lbl_test_result.setStyleSheet("padding: 6px 8px; background: #ffebee; color: #c62828; border-radius: 4px; font-size: 11px;")
             err_msg = res.error_message or self.tr("No response from plotter (timeout)")
             self.lbl_test_result.setText(
                 self.tr("Failed: %1%2").replace("%1", err_msg).replace("%2", pin_hint)

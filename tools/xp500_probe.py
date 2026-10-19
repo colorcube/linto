@@ -116,7 +116,7 @@ def run_diagnostics(port: str, baudrate: int = 19200, timeout: float = 0.8, raw_
             print(f"Antwort: {resp!r}")
             return
 
-        print("\nAbfrage-Ergebnisse (siehe docs/devices/mutoh-xp500/testplan.md):")
+        print("\nAbfrage-Ergebnisse:")
         print("-" * 65)
 
         queries = [
@@ -190,6 +190,11 @@ def run_diagnostics(port: str, baudrate: int = 19200, timeout: float = 0.8, raw_
         print(f"\n❌ FEHLER: {e}", file=sys.stderr)
     finally:
         if conn:
+            if not is_tcp:
+                try:
+                    conn.reset_output_buffer()
+                except Exception:
+                    pass
             conn.close()
 
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 import threading
+import weakref
 from typing import Optional, Dict, Any
 from PySide6.QtCore import Signal
 from PySide6.QtGui import QUndoStack
@@ -41,6 +42,8 @@ class PageSetupDialog(QDialog):
         self.device_manager = device_manager
         self.undo_stack = undo_stack
         self._probe_thread: Optional[threading.Thread] = None
+        self._probe_lock = threading.Lock()
+        self._closed_event = threading.Event()
         self._probe_finished.connect(self._handle_probe_result)
 
         # Store initial state for canceling
@@ -301,6 +304,8 @@ class PageSetupDialog(QDialog):
         self._sync_from_page()
 
     def _on_fetch_device_size(self):
+        if self._probe_thread is not None and self._probe_thread.is_alive():
+            return
         target = self._active_dev.port if self._active_dev else "/dev/ttyUSB0"
         baud = self._active_dev.baudrate if self._active_dev else 19200
         bytesize = 8
@@ -316,6 +321,10 @@ class PageSetupDialog(QDialog):
         self.btn_fetch_device.setEnabled(False)
         self.btn_fetch_device.setText(self.tr("Querying '%1'...").replace("%1", target))
 
+        weak_self = weakref.ref(self)
+        lock = self._probe_lock
+        closed_event = self._closed_event
+
         def _worker():
             res = probe_plotter(
                 target,
@@ -326,12 +335,40 @@ class PageSetupDialog(QDialog):
                 stopbits=stopbits,
                 axes_swapped=axes_swapped,
             )
-            self._probe_finished.emit(target, res)
+            with lock:
+                if closed_event.is_set():
+                    return
+                dlg = weak_self()
+                if dlg is not None:
+                    try:
+                        dlg._probe_finished.emit(target, res)
+                    except RuntimeError:
+                        pass
+                    finally:
+                        del dlg
 
         self._probe_thread = threading.Thread(target=_worker, daemon=True, name="PageSetupProbeThread")
         self._probe_thread.start()
 
+    def _mark_closed(self):
+        with self._probe_lock:
+            self._closed_event.set()
+            try:
+                self._probe_finished.disconnect(self._handle_probe_result)
+            except (RuntimeError, TypeError):
+                pass
+
+    def done(self, result: int):
+        self._mark_closed()
+        super().done(result)
+
+    def closeEvent(self, event):
+        self._mark_closed()
+        super().closeEvent(event)
+
     def _handle_probe_result(self, target: str, res):
+        if self._closed_event.is_set():
+            return
         self.btn_fetch_device.setEnabled(True)
         self.btn_fetch_device.setText(self.tr("Query paper size from plotter"))
 

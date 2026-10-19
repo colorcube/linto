@@ -141,3 +141,55 @@ def test_page_setup_dialog_asymmetric_margins_and_probe_clip(qapp, monkeypatch):
     assert doc.page.height_mm == pytest.approx(420.0)
 
 
+def test_dialog_close_during_active_probe_does_not_crash(qapp, monkeypatch, tmp_path):
+    import gc
+    import threading
+    from plotter_studio.device.manager import DeviceManager
+    from plotter_studio.gui.device_dialog import DeviceSettingsDialog
+
+    started = threading.Event()
+    release = threading.Event()
+
+    def _slow_probe(port, **_kwargs):
+        started.set()
+        release.wait(timeout=2.0)
+        return ProbeResult(port=port, success=False, error_message="Timeout")
+
+    monkeypatch.setattr("plotter_studio.gui.device_dialog.probe_plotter", _slow_probe)
+    monkeypatch.setattr("plotter_studio.gui.page_dialog.probe_plotter", _slow_probe)
+
+    dm = DeviceManager(config_path=tmp_path / "devices.yaml")
+    dlg_dev = DeviceSettingsDialog(dm)
+    dlg_dev.show()
+    dlg_dev._on_test_device()
+    assert started.wait(timeout=1.0)
+    thread_dev = dlg_dev._probe_thread
+
+    # Close and drop reference while probe thread is still running
+    dlg_dev.reject()
+    del dlg_dev
+    gc.collect()
+
+    release.set()
+    thread_dev.join(timeout=2.0)
+    qapp.processEvents()
+
+    # Now test PageSetupDialog under the same condition
+    started.clear()
+    release.clear()
+    doc = Document()
+    dlg_page = PageSetupDialog(doc, dm)
+    dlg_page.show()
+    dlg_page._on_fetch_device_size()
+    assert started.wait(timeout=1.0)
+    thread_page = dlg_page._probe_thread
+
+    dlg_page.reject()
+    del dlg_page
+    gc.collect()
+
+    release.set()
+    thread_page.join(timeout=2.0)
+    qapp.processEvents()
+
+

@@ -138,19 +138,25 @@ def probe_plotter(
                     raise
             with ser_ctx as ser:
                 try:
-                    cts_val = bool(ser.cts)
-                    dsr_val = bool(ser.dsr)
-                except Exception:
-                    pass
-                ser.reset_input_buffer()
-                ser.write(b"OI;OF;OH;\r")
-                start = time.time()
-                while time.time() - start < effective_timeout:
-                    chunk = ser.read(128)
-                    if chunk:
-                        raw_resp.extend(chunk)
-                        if raw_resp.count(b"\r") >= 3:
-                            break
+                    try:
+                        cts_val = bool(ser.cts)
+                        dsr_val = bool(ser.dsr)
+                    except Exception:
+                        pass
+                    ser.reset_input_buffer()
+                    ser.write(b"OI;OF;OH;\r")
+                    start = time.time()
+                    while time.time() - start < effective_timeout:
+                        chunk = ser.read(128)
+                        if chunk:
+                            raw_resp.extend(chunk)
+                            if raw_resp.count(b"\r") >= 3:
+                                break
+                finally:
+                    try:
+                        ser.reset_output_buffer()
+                    except Exception:
+                        pass
 
         resp_str = raw_resp.decode("ascii", errors="replace")
         parts = [p.strip() for p in resp_str.replace("\n", "").split("\r") if p.strip()]
