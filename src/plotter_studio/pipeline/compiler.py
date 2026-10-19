@@ -107,14 +107,20 @@ class PlotJob:
 
     @property
     def formatted_duration(self) -> str:
-        sec = int(self.estimated_duration_s)
-        minutes = sec // 60
-        rem_sec = sec % 60
-        hours = minutes // 60
-        rem_min = minutes % 60
-        if hours > 0:
-            return f"{hours}h {rem_min:02d}m {rem_sec:02d}s"
-        return f"{minutes:02d}m {rem_sec:02d}s"
+        return format_duration(self.estimated_duration_s)
+
+
+def format_duration(seconds: float) -> str:
+    """Format a duration in seconds as 'MMm SSs' or 'Hh MMm SSs'."""
+    sec = max(0, int(seconds))
+    minutes = sec // 60
+    rem_sec = sec % 60
+    hours = minutes // 60
+    rem_min = minutes % 60
+    if hours > 0:
+        return f"{hours}h {rem_min:02d}m {rem_sec:02d}s"
+    return f"{minutes:02d}m {rem_sec:02d}s"
+
 
 
 def compile_document_to_plot_job(

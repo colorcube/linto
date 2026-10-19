@@ -536,6 +536,7 @@ class MainWindow(QMainWindow):
         self.plot_dock.stream_step_changed.connect(self.canvas.set_simulation_step)
         self.plot_dock.stream_step_changed.connect(self.simulation_bar.set_step)
         self.plot_dock.stream_active_changed.connect(self._on_stream_active_changed)
+        self.plot_dock.stream_finished.connect(self._on_plot_stream_finished)
 
         # Object dock
         self.object_dock.btn_import.clicked.connect(self.import_svg_dialog)
@@ -576,6 +577,11 @@ class MainWindow(QMainWindow):
             if not in_layout and self.plot_dock.is_pipeline_dirty():
                 self.recompile_plot_job()
             self.lbl_info.setText(self.tr("Output active") if not in_layout else self.tr("Layout active"))
+
+    def _on_plot_stream_finished(self, success: bool, msg: str):
+        """Display the final plot outcome and elapsed duration in the footer status bar."""
+        prefix = "✓" if success else "⚠️"
+        self.lbl_info.setText(f"{prefix} {msg}")
 
     def _refresh_device_selector(self):
         self.combo_active_device.blockSignals(True)

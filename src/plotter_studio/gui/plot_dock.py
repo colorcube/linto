@@ -5,6 +5,7 @@ device connection & live plot control, and exports.
 from __future__ import annotations
 
 import threading
+import time
 from typing import Optional, Set, Any
 
 from PySide6.QtCore import Qt, Signal, QObject, QEvent, QSize, QTimer
@@ -15,7 +16,7 @@ from PySide6.QtWidgets import (
     QStyle, QDialog, QPlainTextEdit
 )
 from ..core.document import Document
-from ..pipeline.compiler import PipelineConfig, PlotJob
+from ..pipeline.compiler import PipelineConfig, PlotJob, format_duration
 from ..device import (
     get_default_profile,
     build_emitter,
@@ -76,6 +77,7 @@ class PlotDockWidget(QDockWidget):
     export_svg_requested = Signal()
     stream_step_changed = Signal(int)
     stream_active_changed = Signal(bool)
+    stream_finished = Signal(bool, str)
 
     def __init__(self, doc: Document, parent=None):
         super().__init__(self.tr("Output"), parent)
@@ -97,6 +99,7 @@ class PlotDockWidget(QDockWidget):
         self._bridge.probe_done.connect(self._on_probe_done)
 
         self._streamer: Optional[SerialStreamer] = None
+        self._plot_start_time: Optional[float] = None
         self._probe_thread: Optional[threading.Thread] = None
         self.device_manager: Optional[DeviceManager] = None
 
@@ -915,6 +918,7 @@ class PlotDockWidget(QDockWidget):
         self.chk_invert_y.setEnabled(False)
         self.progress_bar.setValue(0)
         self.lbl_stream_status.setText(self.tr("Starting transmission..."))
+        self._plot_start_time = time.monotonic()
         self.stream_active_changed.emit(True)
 
         started = self._streamer.start_stream(
@@ -929,6 +933,7 @@ class PlotDockWidget(QDockWidget):
             start_step_index=self.spin_start_step.value(),
         )
         if not started:
+            self._plot_start_time = None
             self._on_stream_finished(False, self.tr("Could not start streamer."))
 
     def toggle_pause(self):
@@ -975,6 +980,12 @@ class PlotDockWidget(QDockWidget):
             self.btn_pause_plot.setText(self.tr("⏸ Pause"))
 
     def _on_stream_finished(self, success: bool, msg: str):
+        elapsed_s: Optional[float] = None
+        if self._plot_start_time is not None:
+            elapsed_s = max(0.0, time.monotonic() - self._plot_start_time)
+            self._plot_start_time = None
+        display_msg = f"{msg} ({format_duration(round(elapsed_s))})" if elapsed_s is not None else msg
+
         self.btn_start_plot.setEnabled(bool(self.job and self.job.steps))
         self.btn_pause_plot.setEnabled(False)
         self.btn_pause_plot.setText(self.tr("⏸ Pause"))
@@ -994,14 +1005,15 @@ class PlotDockWidget(QDockWidget):
         if success:
             self.progress_bar.setValue(100)
             self.spin_start_step.setValue(0)
-            self.lbl_stream_status.setText(f"✓ {msg}")
+            self.lbl_stream_status.setText(f"✓ {display_msg}")
             if self.job:
                 self.stream_step_changed.emit(len(self.job.steps))
         else:
             last_step = getattr(self._streamer, "last_completed_step_index", 0) if self._streamer else 0
             if last_step > 0:
                 self.spin_start_step.setValue(last_step)
-            self.lbl_stream_status.setText(f"⚠️ {msg}")
+            self.lbl_stream_status.setText(f"⚠️ {display_msg}")
+        self.stream_finished.emit(success, display_msg)
 
     def show_diagnostic_log(self):
         """Open a modal dialog displaying the recorded HP-GL TX/RX trace log."""

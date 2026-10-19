@@ -264,6 +264,9 @@ def test_plot_dock_device_controls(qapp, tmp_path):
 
         assert dock.progress_bar.value() == 100
         assert "✓" in dock.lbl_stream_status.text()
+        assert "(" in dock.lbl_stream_status.text() and "m " in dock.lbl_stream_status.text()
+        assert win.lbl_info.text() == dock.lbl_stream_status.text()
+        assert "Ausgabe aktiv" not in win.lbl_info.text()
         assert dock.btn_start_plot.isEnabled()
         assert not dock.btn_pause_plot.isEnabled()
         assert not dock.btn_abort_plot.isEnabled()
