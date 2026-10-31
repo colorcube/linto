@@ -1,6 +1,6 @@
 # Analyse: MutohPlot (gefundenes Projekt)
 
-Stand: 2026-10-13 · Quelle: `MutohPlot` (github.com/oliver321/MutohPlot), v0.1.0 vom 2026-09-07, Autor „Oliver F.“, **MIT-Lizenz**.
+Stand: 2026-10-13 · Quelle: [github.com/oliver321/MutohPlot](https://github.com/oliver321/MutohPlot), v0.1.0 vom 2026-09-07, Autor „Oliver F.“, **MIT-Lizenz**.
 
 ## 1. Was MutohPlot ist
 

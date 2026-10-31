@@ -1,6 +1,6 @@
 # Analyse: InkCut (Plotter-Treiber, Protokolle & Filter)
 
-Stand: 2026-10-15 · Analyse des InkCut-Codebestands (`inkcut/`).
+Stand: 2026-10-15 · Analyse des InkCut-Codebestands ([github.com/inkcut/inkcut](https://github.com/inkcut/inkcut)).
 Dient als Referenz für Geräteprofile, Protokolle (DMPL, CAMM-GL, GPGL, G-Code) und Schleppmesser-Algorithmen in Plotter Studio.
 
 

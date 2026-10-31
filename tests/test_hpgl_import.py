@@ -102,24 +102,6 @@ def test_load_hpgl_file_and_gui_integration(tmp_path: Path, qapp):
     win.close()
 
 
-def test_load_classic_examples():
-    """Verify that bundled classic HP-GL example files load properly."""
-    examples_dir = Path(__file__).parent.parent / "examples"
-    shuttle = examples_dir / "space-columbia.hpgl"
-    if shuttle.is_file():
-        item = load_hpgl(str(shuttle))
-        assert len(item.paths) > 500
-        pens = {p.pen_id for p in item.paths}
-        assert len(pens) >= 5
-        assert item.original_bounds is not None
-        assert item.original_bounds.width > 20.0
-
-    walker = examples_dir / "imperial-walker.hpgl"
-    if walker.is_file():
-        item_w = load_hpgl(str(walker))
-        assert len(item_w.paths) > 400
-
-
 def test_hpgl_ip_sc_ro_er_and_dots():
     """Verify IP/SC user-unit scaling, RO rotation, ER relative rectangle, and PD;PU single-point dots."""
     # P1=(0,0), P2=(4000,4000) -> 100mm x 100mm; SC 0,100,0,100 -> 1 user unit = 1 mm!

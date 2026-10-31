@@ -4,16 +4,27 @@ Source / Origin Notice:
 -----------------------
 The HP-GL tokenizer (`HPGLTokenizer`, `Command`), 5x7 stroke font (`GLYPHS`, `glyph_rows`),
 and state machine / geometry parser (`HPGLParser`, `PlotState`, `HPGLPolyline`) are adapted
-from the sibling project **MutohPlot**:
-  - `MutohPlot/src/mutohplot/hpgl/tokens.py`
-  - `MutohPlot/src/mutohplot/hpgl/tokenizer.py`
-  - `MutohPlot/src/mutohplot/hpgl/stroke_font.py`
-  - `MutohPlot/src/mutohplot/hpgl/parser.py`
+from **MutohPlot** (https://github.com/oliver321/MutohPlot):
+  - `src/mutohplot/hpgl/tokens.py`
+  - `src/mutohplot/hpgl/tokenizer.py`
+  - `src/mutohplot/hpgl/stroke_font.py`
+  - `src/mutohplot/hpgl/parser.py`
 
 Adapted for Plotter Studio's `ImportItem` / `VectorPath` document model (millimeter space,
 top-left canvas origin with +Y pointing downwards).
-"""
 
+The adapted portions are used under the terms of the MutohPlot license:
+
+    MIT License
+
+    Copyright (c) 2026 Oliver F. and contributors
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to deal
+    in the Software without restriction.
+
+All other parts of this file: Copyright (c) 2026 René Fritz, GPL-3.0-or-later.
+"""
 from __future__ import annotations
 
 from dataclasses import dataclass

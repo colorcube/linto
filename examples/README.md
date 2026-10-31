@@ -1,30 +1,6 @@
 # Plotter Studio – Beispieldateien (`examples/`)
 
-Dieses Verzeichnis enthält Beispielgrafiken im **SVG**- und **HP-GL**-Format zum Testen des Layouts, der Stiftzuweisung und der Plotterausgabe.
-
----
-
-## 🚀 Klassische HP-GL Plotter-Demos
-
-Die folgenden Dateien sind historische Klassiker aus der Ära der Stiftplotter und CAD-Pioniere:
-
-### 1. `space-columbia.hpgl` (Space Shuttle Columbia)
-* **Herkunft:** Die legendäre original CAD-Musterzeichnung `COLUMBIA.DWG` aus den frühen AutoCAD-Versionen (1980er Jahre).
-* **Besonderheit:** **Mehrfarbige Stift-Demonstration** über 6 verschiedene Stiftnummern (`SP1` bis `SP6`).
-* **Inhalt:** Perspektivische Draufsicht des Space Shuttle Orbiters mit Hitzekacheln, Triebwerken und Frachtraum sowie dem klassischen Schriftzug *„The AutoCAD DRAWING COLUMBIA“*.
-* **Statistik:** 597 Pfade, 2.723 Punkte, 6 Stiftebenen.
-
-### 2. `space-shuttle-launch.hpgl` (Space Shuttle Start)
-* **Inhalt:** Das Space Shuttle beim Senkrechtstart mit Außentank, Feststoffraketen und dynamischen Rauch- und Abgaswolken.
-* **Statistik:** 226 Pfade, 4.481 Punkte.
-
-### 3. `imperial-walker.hpgl` (Star Wars AT-AT Walker)
-* **Inhalt:** Detaillierte technische Strichzeichnung des imperialen Kampfläufers All Terrain Armored Transport (AT-AT) aus *Star Wars: Das Imperium schlägt zurück*.
-* **Statistik:** 464 Pfade, 4.195 Punkte.
-
-### 4. `death-star.hpgl` (Star Wars Todesstern & TIE-Fighter)
-* **Inhalt:** Der Todesstern mit Superlaser-Schüssel im Weltraum, umgeben von einem Geschwader anfliegender TIE-Fighter und Sternenfeldern.
-* **Statistik:** 333 Pfade, 4.243 Punkte.
+Dieses Verzeichnis enthält Beispielgrafiken im **SVG**-Format zum Testen des Layouts, der Stiftzuweisung und der Plotterausgabe.
 
 ---
 

@@ -3,7 +3,7 @@
 Import HP-GL device profiles from InkCut's drivers manifest.enaml into Plotter Studio.
 
 Usage:
-    python3 tools/import_inkcut_devices.py [--source /path/to/manifest.enaml] [--output resources/devices]
+    python3 tools/import_inkcut_devices.py --source /path/to/inkcut/inkcut/device/drivers/manifest.enaml [--output resources/devices]
 """
 
 from __future__ import annotations
@@ -135,8 +135,8 @@ def main():
     parser.add_argument(
         "--source",
         type=Path,
-        default=Path("inkcut/inkcut/device/drivers/manifest.enaml"),
-        help="Path to InkCut manifest.enaml",
+        required=True,
+        help="Path to inkcut/device/drivers/manifest.enaml in a checkout of https://github.com/inkcut/inkcut",
     )
     parser.add_argument(
         "--output",
