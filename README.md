@@ -150,7 +150,7 @@ QT_QPA_PLATFORM=offscreen pytest
 ## Contributing
 
 * **Questions and ideas:** [Discussions](https://github.com/colorcube/linto/discussions)
-* **Hardware reports:** Does LINTO work with your plotter? Please share it in [Hardware Reports](https://github.com/colorcube/linto/discussions/categories/hardware-reports), whether it works or not. Only the Mutoh XP-500 has been verified so far, so reports for the InkCut-derived profiles are especially helpful.
+* **Hardware reports:** Does LINTO work with your plotter? Please share it in [Hardware reports](https://github.com/colorcube/linto/discussions/categories/hardware-reports), whether it works or not. Only the Mutoh XP-500 has been verified so far, so reports for the InkCut-derived profiles are especially helpful.
 * **Bugs:** [open an issue](https://github.com/colorcube/linto/issues/new/choose)
 * **Pull requests** are welcome. Please run the test suite (`QT_QPA_PLATFORM=offscreen pytest`) before submitting.
 
