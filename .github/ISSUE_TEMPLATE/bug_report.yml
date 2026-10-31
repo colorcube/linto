@@ -1,0 +1,85 @@
+name: Bug report
+description: Something in LINTO does not work as expected.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a problem. For questions, use [Discussions](https://github.com/colorcube/linto/discussions) instead.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the problem. If LINTO showed an error message or crashed, paste the full text.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open drawing.svg
+        2. Switch to Output mode
+        3. Click Send Plot
+        4. ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: LINTO version
+      description: Output of `linto --version`, or the commit hash if you run from a checkout.
+      placeholder: linto 0.1.0
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How did you install LINTO?
+      options:
+        - pipx
+        - pip
+        - From a git checkout (pip install -e)
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: Fedora 44, KDE Plasma (Wayland)
+    validations:
+      required: true
+  - type: input
+    id: plotter
+    attributes:
+      label: Plotter model and device profile
+      description: Leave empty if the problem is not related to a plotter.
+      placeholder: Mutoh XP-500, profile mutoh_xp500
+  - type: dropdown
+    id: connection
+    attributes:
+      label: Connection
+      options:
+        - Not related to a plotter
+        - Serial (onboard / PCIe RS-232 port)
+        - Serial (USB adapter)
+        - TCP / network
+        - Emulator
+  - type: textarea
+    id: logs
+    attributes:
+      label: Terminal output
+      description: Start LINTO from a terminal (`linto`) and paste what it prints around the problem.
+      render: text
+  - type: textarea
+    id: files
+    attributes:
+      label: Files
+      description: If the problem depends on a drawing, attach the SVG or HP-GL file (drag & drop here), or the exported `.hpgl` plot file.
