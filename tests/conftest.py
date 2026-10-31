@@ -1,6 +1,15 @@
 """Shared pytest fixtures."""
 
 import os
+import tempfile
+
+# Isolate tests from the real user configuration: device lists (~/.config/linto),
+# pen presets and QSettings must never be written to the developer's home directory.
+_TEST_HOME = tempfile.mkdtemp(prefix="linto-test-home-")
+os.environ["HOME"] = _TEST_HOME
+os.environ["XDG_CONFIG_HOME"] = os.path.join(_TEST_HOME, ".config")
+os.environ["LINTO_CONFIG_DIR"] = os.path.join(_TEST_HOME, ".config", "linto", "pens")
+
 import pytest
 from PySide6.QtCore import QSettings
 from PySide6.QtWidgets import QApplication, QMessageBox
