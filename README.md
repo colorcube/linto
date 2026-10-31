@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/manual/en/images/linto.svg" width="112" alt="LINTO icon"></p>
+
 # LINTO
 
 > **The modular slicer, layout editor, and streaming controller for physical vector pen plotters.**
@@ -49,23 +51,17 @@ If you draw with a **physical pen plotter** (from vintage workhorses like the Mu
 
 **Requirements:** Python 3.11 or newer, Linux (macOS and Windows may work but are untested). For live plotting: a plotter speaking HP-GL connected via RS-232 (USB serial adapter) or TCP.
 
-```bash
-python3 -m venv ~/.venvs/linto
-source ~/.venvs/linto/bin/activate
-pip install git+https://github.com/colorcube/linto.git
-
-linto
-```
-
-Or from a local checkout (see [Developer Setup](#developer-setup) for an editable install):
+The recommended way is [pipx](https://pipx.pypa.io/), which installs LINTO into its own isolated environment and puts the `linto` command on your `PATH`:
 
 ```bash
-git clone https://github.com/colorcube/linto.git
-cd linto
-python3 -m venv .venv
-.venv/bin/pip install .
-.venv/bin/linto
+pipx install git+https://github.com/colorcube/linto.git
+
+linto                      # start LINTO
+linto drawing.svg          # start and open a file
+linto --install-desktop    # add LINTO to your application menu (icon + .desktop entry)
 ```
+
+`pipx` is available as a package on most distributions (`sudo apt install pipx`, `sudo dnf install pipx`). Update with `pipx upgrade linto`; remove with `linto --uninstall-desktop` followed by `pipx uninstall linto`.
 
 On Linux, your user needs access to the serial port: membership in the `dialout` group (Debian, Ubuntu, Fedora, openSUSE) or `uucp` (Arch, Manjaro), e.g. `sudo usermod -aG dialout $USER`, then log in again. See the [hardware setup guide](docs/manual/en/4-hardware-setup-and-diagnostics.md) for details.
 

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <title>LINTO</title>
+  <rect x="8" y="8" width="112" height="112" rx="24" fill="#FAFAF7" stroke="#D3D8DF" stroke-width="2"/>
+  <circle cx="64" cy="64" r="44" fill="#262C37" stroke="#1A1F27" stroke-width="3"/>
+  <circle cx="64.0" cy="36.0" r="8.5" fill="#F2F3F5"/>
+  <circle cx="83.8" cy="44.2" r="8.5" fill="#D7263D"/>
+  <circle cx="92.0" cy="64.0" r="8.5" fill="#1B5FD1"/>
+  <circle cx="83.8" cy="83.8" r="8.5" fill="#1E9E5A"/>
+  <circle cx="64.0" cy="92.0" r="8.5" fill="#F28C28"/>
+  <circle cx="44.2" cy="83.8" r="8.5" fill="#7B4BD0"/>
+  <circle cx="36.0" cy="64.0" r="8.5" fill="#12A4A4"/>
+  <circle cx="44.2" cy="44.2" r="7" fill="none" stroke="#8A93A3" stroke-width="2.5" stroke-dasharray="3 3"/>
+  <circle cx="64" cy="64" r="10" fill="#3A4252"/>
+  <circle cx="64" cy="64" r="4" fill="#9AA3AF"/>
+</svg>

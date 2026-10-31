@@ -7,6 +7,20 @@ This guide takes you step by step from an existing vector file (SVG) to a finish
 
 ---
 
+## Installation
+
+LINTO requires Python 3.11 or newer. The easiest way to install it is [pipx](https://pipx.pypa.io/) (`sudo apt install pipx` or `sudo dnf install pipx`):
+
+```bash
+pipx install git+https://github.com/colorcube/linto.git
+linto --install-desktop    # optional: entry with icon in the application menu
+linto                      # start LINTO (or: linto drawing.svg)
+```
+
+Update with `pipx upgrade linto`. To uninstall, run `linto --uninstall-desktop`, then `pipx uninstall linto`.
+
+---
+
 ## Getting Started: With or Without Hardware?
 
 ### Option A: With a Connected Plotter

@@ -23,6 +23,8 @@ nav = [
 extra_css = ["stylesheets/extra.css"]
 
 [project.theme]
+logo = "images/linto.svg"
+favicon = "images/linto.svg"
 language = "en"
 font = false
 features = [
@@ -41,8 +43,6 @@ features = [
   "toc.follow",
 ]
 
-[project.theme.icon]
-logo = "lucide/pen-tool"
 
 [[project.theme.palette]]
 media = "(prefers-color-scheme)"
