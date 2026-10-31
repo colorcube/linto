@@ -2,6 +2,10 @@
 
 # LINTO
 
+[![Tests](https://github.com/colorcube/linto/actions/workflows/tests.yml/badge.svg)](https://github.com/colorcube/linto/actions/workflows/tests.yml)
+[![Documentation](https://github.com/colorcube/linto/actions/workflows/docs.yml/badge.svg)](https://colorcube.github.io/linto/)
+[![License: GPL v3+](https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg)](LICENSE)
+
 > **The modular slicer, layout editor, and streaming controller for physical vector pen plotters.**
 
 LINTO prepares vector graphics for real pen plotters: it optimizes pen paths to cut down pen-up travel, simulates the drawing process interactively on screen, and streams commands reliably with hardware flow control directly to your machine.

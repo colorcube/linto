@@ -1,0 +1,64 @@
+name: Tests
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  pytest:
+    name: pytest (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
+    env:
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install Qt runtime libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libegl1 libgl1 libxkbcommon0 libfontconfig1 libdbus-1-3
+      - name: Install LINTO
+        run: pip install -e . pytest
+      - name: Run tests
+        run: pytest -q
+
+  wheel:
+    name: Wheel install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - name: Build wheel
+        run: |
+          pip install build
+          python -m build --wheel
+      - name: Install wheel in a clean environment and check bundled resources
+        run: |
+          python -m venv /tmp/wheel-env
+          /tmp/wheel-env/bin/pip install dist/*.whl
+          cd /tmp
+          /tmp/wheel-env/bin/linto --version
+          /tmp/wheel-env/bin/python -I -c "
+          from linto import RESOURCES_DIR
+          from linto.device.profile import list_available_profiles
+          n = len(list_available_profiles())
+          assert n >= 26, f'only {n} device profiles found'
+          assert (RESOURCES_DIR / 'translations' / 'de.json').is_file()
+          assert (RESOURCES_DIR / 'icons' / 'linto.svg').is_file()
+          print(f'{n} device profiles, translations and icon found')
+          "
