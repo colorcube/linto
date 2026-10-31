@@ -52,7 +52,7 @@ If you draw with a **physical pen plotter** (from vintage workhorses like the Mu
 ```bash
 python3 -m venv ~/.venvs/linto
 source ~/.venvs/linto/bin/activate
-pip install git+<repository-url>
+pip install git+https://github.com/colorcube/linto.git
 
 linto
 ```
@@ -60,7 +60,7 @@ linto
 Or from a local checkout (see [Developer Setup](#developer-setup) for an editable install):
 
 ```bash
-git clone <repository-url> linto
+git clone https://github.com/colorcube/linto.git
 cd linto
 python3 -m venv .venv
 .venv/bin/pip install .
@@ -96,6 +96,8 @@ You don't need hardware connected to try LINTO—the built-in emulator lets you 
 ---
 
 ## Documentation
+
+Online manual: **[English](https://colorcube.github.io/linto/manual/)** | **[Deutsch](https://colorcube.github.io/linto/handbuch/)**
 
 * **English:** [Documentation Overview](docs/README.md) | [User Manual (`docs/manual/en/`)](docs/manual/en/README.md)
 * **Deutsch:** [Dokumentations-Übersicht](docs/README.de.md) | [Benutzerhandbuch (`docs/manual/de/`)](docs/manual/de/README.md)

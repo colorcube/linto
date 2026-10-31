@@ -24,6 +24,7 @@ jobs:
       - run: |
           zensical build --clean
           zensical build --clean -f zensical.de.toml
+          printf '<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=manual/"><link rel="canonical" href="manual/"><title>LINTO</title><a href="manual/">LINTO User Guide</a> · <a href="handbuch/">Benutzerhandbuch</a>\n' > site/index.html
       - uses: actions/upload-pages-artifact@v5
         with:
           path: site

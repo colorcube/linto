@@ -2,6 +2,8 @@
 site_name = "LINTO – Benutzerhandbuch"
 site_description = "Modulares Slicer- und Layout-Studio für Vektor-Stiftplotter"
 site_author = "LINTO Contributors"
+site_url = "https://colorcube.github.io/linto/handbuch/"
+repo_url = "https://github.com/colorcube/linto"
 copyright = "Copyright &copy; 2026 LINTO Contributors – GPL-3.0-or-later"
 docs_dir = "docs/manual/de"
 site_dir = "site/handbuch"

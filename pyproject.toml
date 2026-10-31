@@ -18,6 +18,11 @@ dependencies = [
     "pyyaml>=6.0",
 ]
 
+[project.urls]
+Homepage = "https://github.com/colorcube/linto"
+Documentation = "https://colorcube.github.io/linto/manual/"
+Issues = "https://github.com/colorcube/linto/issues"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0.0",
