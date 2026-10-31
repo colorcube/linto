@@ -1,12 +1,17 @@
 # 5. Adding Plotter Models & Device Profiles
 
-LINTO is not restricted to the Mutoh XP-500. Every supported plotter model is defined by a declarative YAML profile located in `src/linto/resources/devices/`. At startup, LINTO (`list_available_profiles()` in `src/linto/device/profile.py`) automatically loads all `*.yaml` files in that directory and makes them available in the **[Device Settings Dialog](4-hardware-setup-and-diagnostics.md#3-device-settings-dialog)**.
+LINTO is not restricted to the Mutoh XP-500. Every supported plotter model is defined by a declarative YAML profile. LINTO reads profiles from two places and offers them in the **[Device Settings Dialog](4-hardware-setup-and-diagnostics.md#3-device-settings-dialog)**:
+
+* **Bundled profiles** shipped with LINTO (`src/linto/resources/devices/` in the source code).
+* **Your own profiles** in `~/.config/linto/devices/`. A profile there with the same file name as a bundled one replaces the bundled profile, so you can adjust e.g. `roland_cm_24.yaml` without touching the installation.
 
 ---
 
-## 1. Creating Custom YAML Device Profiles (`src/linto/resources/devices/*.yaml`)
+## 1. Creating Custom YAML Device Profiles (`~/.config/linto/devices/*.yaml`)
 
-To add a new plotter model, simply create a new file `src/linto/resources/devices/<name>.yaml`. As soon as the file is saved, the model becomes available in LINTO.
+To add a new plotter model, create a new file `~/.config/linto/devices/<model_id>.yaml`. The quickest way to get there is the folder button next to **Model Profile** in the Device Settings dialog: it creates the folder and opens it in your file manager. The file name must match the `model_id` inside the file. New profiles appear the next time you open the Device Settings dialog.
+
+A good starting point is a copy of a similar bundled profile (see the [profile list on GitHub](https://github.com/colorcube/linto/tree/main/src/linto/resources/devices)). If a profile contains an error, LINTO skips it and logs a warning in the terminal. If your profile works, please share it in [Hardware reports](https://github.com/colorcube/linto/discussions/categories/hardware-reports).
 
 ### Example 1: Flatbed Plotter (`roland_dxy.yaml`, Bottom-Left Origin)
 

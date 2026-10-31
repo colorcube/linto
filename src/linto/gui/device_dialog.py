@@ -8,7 +8,8 @@ import uuid
 import weakref
 from typing import Optional
 
-from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtCore import Qt, QTimer, QUrl, Signal
+from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QDialog, QWidget, QVBoxLayout, QHBoxLayout,
     QFormLayout, QLabel, QLineEdit, QComboBox, QCheckBox,
@@ -17,7 +18,7 @@ from PySide6.QtWidgets import (
 )
 
 from ..device.manager import DeviceManager, ConfiguredDevice
-from ..device.profile import list_available_profiles, load_profile, get_default_profile
+from ..device.profile import list_available_profiles, load_profile, get_default_profile, user_devices_dir
 from ..device.probe import list_serial_ports, probe_plotter
 from .i18n import localize
 
@@ -92,7 +93,18 @@ class DeviceSettingsDialog(QDialog):
         if not avail_profiles:
             self.combo_model.addItem("Mutoh XP-500", "mutoh_xp500")
         self.combo_model.currentIndexChanged.connect(self._on_model_profile_changed)
-        form.addRow(self.tr("Model Profile:"), self.combo_model)
+        self.btn_profile_folder = QPushButton()
+        self.btn_profile_folder.setIcon(get_icon("open"))
+        self.btn_profile_folder.setToolTip(
+            self.tr("Open the folder for your own device profiles (%1).\nNew profiles appear after reopening this dialog.")
+            .replace("%1", str(user_devices_dir()))
+        )
+        self.btn_profile_folder.setFixedWidth(32)
+        self.btn_profile_folder.clicked.connect(self._open_profile_folder)
+        model_row = QHBoxLayout()
+        model_row.addWidget(self.combo_model)
+        model_row.addWidget(self.btn_profile_folder)
+        form.addRow(self.tr("Model Profile:"), model_row)
 
         port_row = QHBoxLayout()
         self.combo_port = QComboBox()
@@ -209,6 +221,12 @@ class DeviceSettingsDialog(QDialog):
         buttons = QDialogButtonBox(QDialogButtonBox.Close)
         buttons.rejected.connect(self.accept)
         main_layout.addWidget(buttons)
+
+    def _open_profile_folder(self):
+        """Create (if needed) and open the user's device profile folder in the file manager."""
+        folder = user_devices_dir()
+        folder.mkdir(parents=True, exist_ok=True)
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(folder)))
 
     def _refresh_ports(self):
         cur_text = self.combo_port.currentText()

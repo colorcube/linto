@@ -46,7 +46,7 @@ If you draw with a **physical pen plotter** (from vintage workhorses like the Mu
 * **Pen Palette & Color Clustering:** Automatically clusters stroke colors to 8 logical pens using perceptual Delta-E in CIE-Lab color space. Configurable pen speed (`VS` in cm/s) and force (`FS` in grams).
 * **Precise Transformation:** Numerical positioning (sheet or plottable area reference), proportional scaling with zoom presets, 1:1 original size, margin-aware fitting, free rotation, and flipping.
 * **Layers & Z-Order:** Reorder drawing sequence via drag & drop, lock layers against accidental edits, or toggle visibility.
-* **Multi-Plotter Support:** Modular YAML profiles (`src/linto/resources/devices/*.yaml`). Ships with 26 profiles: Mutoh XP-500, Generic Flatbed, and **24 profiles adapted from InkCut** (Roland, Graphtec, Summa, US Cutter, etc.). Only the Mutoh XP-500 has been verified on real hardware so far.
+* **Multi-Plotter Support:** Modular YAML profiles; add or override your own in `~/.config/linto/devices/`. Ships with 26 profiles: Mutoh XP-500, Generic Flatbed, and **24 profiles adapted from InkCut** (Roland, Graphtec, Summa, US Cutter, etc.). Only the Mutoh XP-500 has been verified on real hardware so far.
 * **Hardware Diagnostics & Emulator:** Standalone terminal probing tool (`tools/xp500_probe.py`), calibration pattern (`src/linto/resources/calibration_plot_a3.svg`), and a complete software emulator (`VirtualPlotter`) for instant headless testing without hardware.
 
 ---

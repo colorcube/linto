@@ -1,12 +1,17 @@
 # 5. Anbindung weiterer Plottermodelle & Geräteprofile
 
-LINTO beschränkt sich nicht auf den Mutoh XP-500. Jedes unterstützte Plottermodell wird über eine deklarative YAML-Profildatei im Verzeichnis `src/linto/resources/devices/` beschrieben. Beim Programmstart liest LINTO (`list_available_profiles()` in `src/linto/device/profile.py`) alle `*.yaml`-Dateien in diesem Ordner automatisch ein und stellt sie im Dialog **[Geräte-Einstellungen](4-hardware-setup-und-test.md#3-dialog-gerate-einstellungen)** zur Auswahl bereit.
+LINTO beschränkt sich nicht auf den Mutoh XP-500. Jedes unterstützte Plottermodell wird über eine deklarative YAML-Profildatei beschrieben. LINTO liest Profile aus zwei Orten und stellt sie im Dialog **[Geräte-Einstellungen](4-hardware-setup-und-test.md#3-dialog-gerate-einstellungen)** zur Auswahl bereit:
+
+* **Mitgelieferte Profile** aus der Installation (`src/linto/resources/devices/` im Quellcode).
+* **Eigene Profile** in `~/.config/linto/devices/`. Ein Profil dort mit demselben Dateinamen wie ein mitgeliefertes ersetzt dieses. So kannst du z. B. `roland_cm_24.yaml` anpassen, ohne die Installation zu verändern.
 
 ---
 
-## 1. Eigene Geräteprofile anlegen (`src/linto/resources/devices/*.yaml`)
+## 1. Eigene Geräteprofile anlegen (`~/.config/linto/devices/*.yaml`)
 
-Um ein weiteres Plottermodell einzubinden, legst du einfach eine neue Datei `src/linto/resources/devices/<name>.yaml` an. Sobald die Datei dort gespeichert ist, steht das Modell sofort in LINTO zur Verfügung.
+Um ein weiteres Plottermodell einzubinden, legst du eine neue Datei `~/.config/linto/devices/<model_id>.yaml` an. Am schnellsten kommst du dorthin über die Ordner-Schaltfläche neben **Modellprofil** im Dialog Geräte-Einstellungen: Sie legt den Ordner an und öffnet ihn im Dateimanager. Der Dateiname muss zur `model_id` in der Datei passen. Neue Profile erscheinen, sobald du den Dialog Geräte-Einstellungen das nächste Mal öffnest.
+
+Als Ausgangspunkt eignet sich eine Kopie eines ähnlichen mitgelieferten Profils (siehe die [Profilliste auf GitHub](https://github.com/colorcube/linto/tree/main/src/linto/resources/devices)). Enthält ein Profil einen Fehler, überspringt LINTO es und schreibt eine Warnung ins Terminal. Wenn dein Profil funktioniert, teile es gern unter [Hardware reports](https://github.com/colorcube/linto/discussions/categories/hardware-reports).
 
 ### Beispiel 1: Flachbettplotter (`roland_dxy.yaml`, Ursprung unten links)
 

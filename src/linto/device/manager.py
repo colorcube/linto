@@ -141,8 +141,9 @@ def _migrate_axis_settings(d: dict, prof: Optional[DeviceProfile]) -> None:
 
 def _get_config_path() -> Path:
     """Return path to user's devices.yaml in ~/.config/linto/."""
-    config_dir = Path.home() / ".config" / "linto"
-    return config_dir / "devices.yaml"
+    from .. import user_config_dir
+
+    return user_config_dir() / "devices.yaml"
 
 
 class DeviceManager:

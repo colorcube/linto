@@ -521,5 +521,6 @@
   "Plot completed successfully": "Plot erfolgreich abgeschlossen",
   "Transmission error: %1": "Übertragungsfehler: %1",
   "Error: %1": "Fehler: %1",
-  "No response from plotter (timeout) – note: CTS is LOW (plotter offline/paused or cable without handshake lines)": "Keine Antwort vom Plotter (Timeout) – Hinweis: CTS ist LOW (Plotter offline/pausiert oder Kabel ohne Handshake-Leitung)"
+  "No response from plotter (timeout) – note: CTS is LOW (plotter offline/paused or cable without handshake lines)": "Keine Antwort vom Plotter (Timeout) – Hinweis: CTS ist LOW (Plotter offline/pausiert oder Kabel ohne Handshake-Leitung)",
+  "Open the folder for your own device profiles (%1).\nNew profiles appear after reopening this dialog.": "Ordner für eigene Geräteprofile öffnen (%1).\nNeue Profile erscheinen, nachdem der Dialog neu geöffnet wurde."
 }

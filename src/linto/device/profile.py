@@ -5,10 +5,13 @@ Defines plotter parameters, connection defaults, and coordinate settings.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 import yaml
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -114,19 +117,34 @@ class DeviceProfile:
 
 
 def _get_devices_dir() -> Path:
+    """Directory of the device profiles bundled with LINTO."""
     from .. import RESOURCES_DIR
 
     return RESOURCES_DIR / "devices"
 
 
+def user_devices_dir() -> Path:
+    """Directory for the user's own device profiles (``~/.config/linto/devices``).
+
+    A profile here with the same file name (model ID) as a bundled one replaces it.
+    """
+    from .. import user_config_dir
+
+    return user_config_dir() / "devices"
+
+
 def load_profile(path_or_id: str | Path) -> DeviceProfile:
-    """Load DeviceProfile from a YAML file path or model ID."""
+    """Load DeviceProfile from a YAML file path or model ID.
+
+    Model IDs are looked up in the user's profile directory first, then in the bundled profiles.
+    """
     p = Path(path_or_id)
     if not p.is_file():
-        # Check resources/devices/<id>.yaml
-        candidate = _get_devices_dir() / f"{path_or_id}.yaml"
-        if candidate.is_file():
-            p = candidate
+        for directory in (user_devices_dir(), _get_devices_dir()):
+            candidate = directory / f"{path_or_id}.yaml"
+            if candidate.is_file():
+                p = candidate
+                break
         else:
             raise FileNotFoundError(f"Device profile not found: {path_or_id}")
 
@@ -235,15 +253,23 @@ def get_margin_profile_items(profile: Optional[DeviceProfile] = None) -> list[tu
 
 
 def list_available_profiles() -> list[DeviceProfile]:
-    """Scan resources/devices/ and return all valid DeviceProfiles."""
+    """Return all valid device profiles: bundled ones plus the user's own.
+
+    User profiles (see :func:`user_devices_dir`) replace bundled profiles with the same
+    file name. Files that cannot be read are skipped with a warning in the log.
+    """
+    files: dict[str, Path] = {}
+    for directory in (_get_devices_dir(), user_devices_dir()):
+        if directory.is_dir():
+            for yaml_file in directory.glob("*.yaml"):
+                files[yaml_file.stem] = yaml_file
+
     profiles: list[DeviceProfile] = []
-    d = _get_devices_dir()
-    if d.is_dir():
-        for yaml_file in sorted(d.glob("*.yaml")):
-            try:
-                profiles.append(load_profile(yaml_file))
-            except Exception:
-                pass
+    for stem in sorted(files):
+        try:
+            profiles.append(load_profile(files[stem]))
+        except Exception as exc:
+            logger.warning("Skipping invalid device profile %s: %s", files[stem], exc)
     if not profiles:
         profiles.append(get_default_profile())
     return profiles
