@@ -162,7 +162,9 @@ Please run the test suite before submitting a pull request.
 * **[MutohPlot](https://github.com/oliver321/MutohPlot) (Oliver F., MIT License):** The HP-GL tokenizer, parser and 5×7 `LB` label stroke font in `core/hpgl_import.py` are adapted from MutohPlot (MIT license notice in the file header). Also a valuable reference for Mutoh XP-500 hard-clip margins and SVG `<text>` diagnostic warnings.
 * **Hershey Vector Fonts (A. V. Hershey, 1967, Public Domain):** Basis for the integrated **Hershey Simplex** single-line vector font used to render SVG `<text>` elements directly for pen plotters.
 
----
+## About the development
+
+LumaPrint was developed with extensive help from AI. The code, the tests and the documentation were written by Google's Gemini and Anthropic's Claude under my direction. Requirements, design decisions, review and all tests with real hardware are my own.
 
 ## License
 
@@ -171,9 +173,3 @@ Copyright © 2026 René Fritz.
 Licensed under the **GNU General Public License v3.0 or later (GPL-3.0-or-later)**. See [LICENSE](LICENSE).
 
 Portions adapted from MutohPlot are licensed under the MIT License; see the header of `src/linto/core/hpgl_import.py`.
-
----
-
-## Built with AI Collaboration
-
-This project was built through pair-programming between a human developer and autonomous AI coding agents.
