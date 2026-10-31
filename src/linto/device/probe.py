@@ -15,6 +15,7 @@ from typing import Optional
 import serial
 import serial.tools.list_ports
 
+from .messages import Text
 from .streamer import parse_tcp_address, resolve_serial_framing
 
 
@@ -162,9 +163,13 @@ def probe_plotter(
         parts = [p.strip() for p in resp_str.replace("\n", "").split("\r") if p.strip()]
 
         if not parts:
-            err = "Keine Antwort vom Plotter (Timeout)"
             if cts_val is False:
-                err += " – Hinweis: CTS ist LOW (Plotter offline/pausiert oder Kabel ohne Handshake-Leitung)"
+                err = Text(
+                    "No response from plotter (timeout) – note: CTS is LOW "
+                    "(plotter offline/paused or cable without handshake lines)"
+                )
+            else:
+                err = Text("No response from plotter (timeout)")
             return ProbeResult(
                 port=port_clean,
                 success=False,

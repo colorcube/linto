@@ -11,7 +11,7 @@ import logging
 from pathlib import Path
 from typing import Optional, Tuple
 
-from PySide6.QtCore import QLibraryInfo, QLocale, QTranslator
+from PySide6.QtCore import QCoreApplication, QLibraryInfo, QLocale, QTranslator
 from PySide6.QtWidgets import QApplication
 
 logger = logging.getLogger(__name__)
@@ -22,6 +22,19 @@ def get_translations_dir() -> Path:
     from .. import RESOURCES_DIR
 
     return RESOURCES_DIR / "translations"
+
+
+def localize(msg: object) -> str:
+    """Translate a message from the device layer (``linto.device.messages.Text``).
+
+    Plain strings are returned unchanged. Safe to call from worker threads.
+    """
+    template = getattr(msg, "template", None)
+    if template is None:
+        return str(msg)
+    from ..device.messages import fill_placeholders
+
+    return fill_placeholders(QCoreApplication.translate("linto", template), msg.args)
 
 
 class PlotterTranslator(QTranslator):

@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
 )
 from ..core.document import Document
 from ..pipeline.compiler import PipelineConfig, PlotJob, format_duration
+from .i18n import localize
 from ..device import (
     get_default_profile,
     build_emitter,
@@ -753,7 +754,7 @@ class PlotDockWidget(QDockWidget):
                 border-radius: 4px;
             """)
         else:
-            self.lbl_probe_status.setText(f"⚠️ {result.error_message}")
+            self.lbl_probe_status.setText(f"⚠️ {localize(result.error_message)}")
             self.lbl_probe_status.setStyleSheet("""
                 padding: 6px 8px;
                 background-color: #ffebee;
@@ -931,8 +932,8 @@ class PlotDockWidget(QDockWidget):
 
         self._streamer = SerialStreamer(
             on_progress=lambda s, t, pct, p, d: self._bridge.progress.emit(s, t, pct, p, d),
-            on_status=lambda state, msg: self._bridge.status.emit(state.value, msg),
-            on_finished=lambda success, msg: self._bridge.finished.emit(success, msg),
+            on_status=lambda state, msg: self._bridge.status.emit(state.value, localize(msg)),
+            on_finished=lambda success, msg: self._bridge.finished.emit(success, localize(msg)),
         )
 
         self.btn_start_plot.setEnabled(False)

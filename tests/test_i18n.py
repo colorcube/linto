@@ -159,3 +159,33 @@ def test_all_gui_tr_keys_translated_in_de_json():
     assert missing == [], f"Missing keys in de.json: {missing}"
 
 
+
+
+def test_device_messages_are_english_and_translatable(qapp):
+    """Device-layer texts are English and are translated by localize() in the German UI."""
+    from linto.device.messages import Text
+    from linto.gui.i18n import localize
+
+    msg = Text("Pen change to SP%1 – change the pen and click Resume", 3)
+    assert msg == "Pen change to SP3 – change the pen and click Resume"
+    assert msg.template == "Pen change to SP%1 – change the pen and click Resume"
+
+    setup_i18n(qapp, language_override="de")
+    assert localize(msg) == "Stiftwechsel auf SP3 – bitte Stift wechseln und Fortsetzen klicken"
+    assert localize(Text("Transmission error: %1", "port closed")) == "Übertragungsfehler: port closed"
+    assert localize("plain text") == "plain text"
+
+
+def test_device_layer_has_no_german_status_texts():
+    """Status and error texts in streamer/probe must be English source strings."""
+    import re
+    from pathlib import Path
+
+    import linto.device as device_pkg
+
+    pattern = re.compile(r"\b(Sende|abgebrochen|abgeschlossen|Fehler|Keine Antwort|Stiftwechsel|pausiert|fortgesetzt)\b")
+    for name in ("streamer.py", "probe.py"):
+        source = (Path(device_pkg.__file__).parent / name).read_text(encoding="utf-8")
+        code_lines = [l for l in source.splitlines() if not l.lstrip().startswith("#")]
+        hits = [l.strip() for l in code_lines if pattern.search(l)]
+        assert not hits, f"German text in {name}: {hits}"

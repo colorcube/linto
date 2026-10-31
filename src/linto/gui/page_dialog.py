@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
 )
 from ..core.document import Document, PAPER_PRESETS
 from ..device import probe_plotter, DeviceManager, ConfiguredDevice
+from .i18n import localize
 from .commands import PageConfigCommand
 from .icons import get_icon
 
@@ -391,7 +392,7 @@ class PageSetupDialog(QDialog):
                 msg
             )
         else:
-            err_detail = res.error_message or self.tr("No response from device")
+            err_detail = localize(res.error_message) if res.error_message else self.tr("No response from device")
             msg = self.tr("Could not query paper size from '%1':\n%2").replace("%1", target).replace("%2", err_detail)
             QMessageBox.warning(
                 self,

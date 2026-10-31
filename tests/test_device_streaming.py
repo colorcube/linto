@@ -589,7 +589,7 @@ def test_abort_during_xoff_on_last_command(monkeypatch):
         time.sleep(0.01)
 
     assert finished_res[0] is False
-    assert "abgebrochen" in finished_res[1].lower()
+    assert "aborted" in finished_res[1].lower()
     assert output_flushed[0] is True
     assert any(b"\x1b.K" in chunk for chunk in written)
 

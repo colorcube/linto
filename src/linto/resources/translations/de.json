@@ -401,7 +401,6 @@
   "Jump to start": "Zum Anfang",
   "Step backward": "Einen Schritt zurück",
   "▶ Play": "▶ Abspielen",
-  "⏸ Pause": "⏸ Pause",
   "Play / Pause simulation": "Simulation abspielen / pausieren",
   "Step forward": "Einen Schritt vor",
   "Jump to end (full view)": "Zum Ende (Vollansicht)",
@@ -509,6 +508,18 @@
   "Send manual pen force (FS)": "Manuellen Stiftandruck (FS) senden",
   "Send manual pen force (FS) — device has auto pen force": "Manuellen Stiftandruck (FS) senden (Gerät hat Auto-Andruck)",
   "This plotter detects pen types automatically and sets pen force on hardware.\nEnable only if you want to override the automatic hardware force with the manual values from the Pens tab.": "Dieser Plotter erkennt den Stifttyp automatisch und stellt den Andruck selbst am Gerät ein.\nNur aktivieren, wenn du die automatische Hardware-Einstellung mit den manuellen Werten aus dem Stifte-Reiter überschreiben möchtest.",
-  "Send the pen force (FS command) configured in the Pens tab to the plotter.\nDisable if the plotter sets force on the device panel or does not support FS.": "Sendet den im Stifte-Reiter eingestellten Stiftandruck (Befehl FS) an den Plotter.\nDeaktivieren, wenn der Andruck direkt am Gerät eingestellt wird oder der Plotter FS nicht unterstützt."
+  "Send the pen force (FS command) configured in the Pens tab to the plotter.\nDisable if the plotter sets force on the device panel or does not support FS.": "Sendet den im Stifte-Reiter eingestellten Stiftandruck (Befehl FS) an den Plotter.\nDeaktivieren, wenn der Andruck direkt am Gerät eingestellt wird oder der Plotter FS nicht unterstützt.",
+  "Plot paused": "Plot pausiert",
+  "Plotter buffer full (XOFF) – waiting for plotter...": "Plotter-Puffer voll (XOFF) – warte auf Plotter...",
+  "Plot resumed": "Plot fortgesetzt",
+  "Sending plot data...": "Sende Plotdaten...",
+  "Sending plot data (XON)...": "Sende Plotdaten (XON)...",
+  "Sending abort command...": "Sende Abbruch-Befehl...",
+  "Plot aborted": "Plot abgebrochen",
+  "Plot aborted by user": "Plot durch Benutzer abgebrochen",
+  "Pen change to SP%1 – change the pen and click Resume": "Stiftwechsel auf SP%1 – bitte Stift wechseln und Fortsetzen klicken",
+  "Plot completed successfully": "Plot erfolgreich abgeschlossen",
+  "Transmission error: %1": "Übertragungsfehler: %1",
+  "Error: %1": "Fehler: %1",
+  "No response from plotter (timeout) – note: CTS is LOW (plotter offline/paused or cable without handshake lines)": "Keine Antwort vom Plotter (Timeout) – Hinweis: CTS ist LOW (Plotter offline/pausiert oder Kabel ohne Handshake-Leitung)"
 }
-

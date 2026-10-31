@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 from ..device.manager import DeviceManager, ConfiguredDevice
 from ..device.profile import list_available_profiles, load_profile, get_default_profile
 from ..device.probe import list_serial_ports, probe_plotter
+from .i18n import localize
 
 AXIS_CORRECTION_TIP = (
     "Additional correction on top of the device profile's built-in axis mapping.\n"
@@ -495,7 +496,7 @@ class DeviceSettingsDialog(QDialog):
                 pin_parts.append(f"DSR: {self.tr('High (Ready)') if res.dsr else 'Low'}")
             pin_hint = f"<br>Pins: {' • '.join(pin_parts)}" if pin_parts else ""
             self.lbl_test_result.setStyleSheet("padding: 6px 8px; background: #ffebee; color: #c62828; border-radius: 4px; font-size: 11px;")
-            err_msg = res.error_message or self.tr("No response from plotter (timeout)")
+            err_msg = localize(res.error_message) if res.error_message else self.tr("No response from plotter (timeout)")
             self.lbl_test_result.setText(
                 self.tr("Failed: %1%2").replace("%1", err_msg).replace("%2", pin_hint)
             )

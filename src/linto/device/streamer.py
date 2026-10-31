@@ -17,6 +17,7 @@ from typing import Callable, Optional
 import serial
 
 from .emitter import EmittedCommand
+from .messages import Text
 
 logger = logging.getLogger("linto.device.streamer")
 
@@ -240,7 +241,7 @@ class TcpTransport(Transport):
             return 0
         n = self.sock.send(data)
         if n <= 0:
-            raise ConnectionError("TCP-Verbindung geschlossen")
+            raise ConnectionError("TCP connection closed")
         return n
 
     def read_available(self) -> bytes:
@@ -434,7 +435,7 @@ class SerialStreamer:
                 self._pause_event.clear()
                 should_emit = True
         if should_emit:
-            self._emit_status(StreamerState.PAUSED, "Plot pausiert")
+            self._emit_status(StreamerState.PAUSED, Text("Plot paused"))
 
     def resume(self) -> None:
         """Resume transmission from manual user pause."""
@@ -445,7 +446,7 @@ class SerialStreamer:
                 self._pause_event.set()
                 new_state = StreamerState.PAUSED if self._xoff_paused else StreamerState.STREAMING
                 self._state = new_state
-                msg = "Plotter-Puffer voll (XOFF) – warte auf Plotter..." if self._xoff_paused else "Plot fortgesetzt"
+                msg = Text("Plotter buffer full (XOFF) – waiting for plotter...") if self._xoff_paused else Text("Plot resumed")
         if new_state is not None:
             self._emit_status(new_state, msg)
 
@@ -507,7 +508,7 @@ class SerialStreamer:
                 sent += n
                 if stall_notified and not self.is_user_paused():
                     stall_notified = False
-                    self._emit_status(StreamerState.STREAMING, "Sende Plotdaten...")
+                    self._emit_status(StreamerState.STREAMING, Text("Sending plot data..."))
             except timeout_exc:
                 if self._abort_requested:
                     return False
@@ -547,7 +548,7 @@ class SerialStreamer:
 
     def _execute_abort_sequence(self) -> None:
         """Flush host output buffer, send ESC.K and lift/park pen immediately."""
-        self._emit_status(StreamerState.ABORTING, "Sende Abbruch-Befehl...")
+        self._emit_status(StreamerState.ABORTING, Text("Sending abort command..."))
         try:
             if self._transport:
                 self._transport.discard_output()
@@ -562,9 +563,9 @@ class SerialStreamer:
         except Exception:
             pass
         self._close_connection()
-        self._emit_status(StreamerState.IDLE, "Plot abgebrochen")
+        self._emit_status(StreamerState.IDLE, Text("Plot aborted"))
         if self.on_finished:
-            self.on_finished(False, "Plot durch Benutzer abgebrochen")
+            self.on_finished(False, Text("Plot aborted by user"))
 
     def _check_and_wait_xoff(self) -> None:
         """Process incoming bytes for XON / XOFF flow control."""
@@ -584,7 +585,7 @@ class SerialStreamer:
                         elif b == XON:
                             logger.info("Plotter sent XON (0x11) - resuming send")
                             self._xoff_paused = False
-                            self._emit_status(StreamerState.STREAMING, "Sende Plotdaten (XON)...")
+                            self._emit_status(StreamerState.STREAMING, Text("Sending plot data (XON)..."))
             except Exception as e:
                 logger.warning(f"Error checking flow control: {e}")
                 break
@@ -665,7 +666,7 @@ class SerialStreamer:
                 self._transport = ser_t
                 self._serial = ser_t.ser
 
-            self._emit_status(StreamerState.STREAMING, "Sende Plotdaten...")
+            self._emit_status(StreamerState.STREAMING, Text("Sending plot data..."))
             active_pen: Optional[int] = None
             resumed_from_skip = False
             pending_pen_cmd: Optional[EmittedCommand] = None
@@ -721,7 +722,7 @@ class SerialStreamer:
                         if should_pause_pen:
                             self._emit_status(
                                 StreamerState.PAUSED,
-                                f"Stiftwechsel auf SP{cmd.pen} – Bitte Stift wechseln und Fortsetzen klicken",
+                                Text("Pen change to SP%1 – change the pen and click Resume", cmd.pen),
                             )
                     active_pen = cmd.pen
 
@@ -765,9 +766,9 @@ class SerialStreamer:
                 return
 
             self._close_connection()
-            self._emit_status(StreamerState.COMPLETED, "Plot erfolgreich abgeschlossen")
+            self._emit_status(StreamerState.COMPLETED, Text("Plot completed successfully"))
             if self.on_finished:
-                self.on_finished(True, "Plot erfolgreich abgeschlossen")
+                self.on_finished(True, Text("Plot completed successfully"))
 
         except Exception as e:
             if self._abort_requested:
@@ -775,9 +776,9 @@ class SerialStreamer:
                 return
             logger.error(f"Streamer exception: {e}")
             self._close_connection()
-            self._emit_status(StreamerState.ERROR, f"Übertragungsfehler: {e}")
+            self._emit_status(StreamerState.ERROR, Text("Transmission error: %1", e))
             if self.on_finished:
-                self.on_finished(False, f"Fehler: {e}")
+                self.on_finished(False, Text("Error: %1", e))
 
     def _close_connection(self) -> None:
         if self._transport:
