@@ -1,6 +1,6 @@
 # 6. Vector Formats, Sources & Workflows
 
-A pen plotter does not render pixel grids—it drives mathematical vector paths using physical pens. Whether you create artwork with code (Python, Processing), 3D applications like Blender, vector editors like Inkscape, or CAD systems, here are the best practices for generating clean data for Plotter Studio.
+A pen plotter does not render pixel grids—it drives mathematical vector paths using physical pens. Whether you create artwork with code (Python, Processing), 3D applications like Blender, vector editors like Inkscape, or CAD systems, here are the best practices for generating clean data for LINTO.
 
 ---
 
@@ -20,7 +20,7 @@ For generative art (Plotter Art) created via Python, JavaScript, or Processing, 
    *(Without explicit units, SVG defaults to pixels at 96 DPI, where `1 px ≈ 0.2646 mm`.)*
 
 2. **Pen Mapping via Stroke Color (`stroke`):**
-   Plotter Studio maps paths to pens 1–8 based on their `stroke` hex color. If your script uses the 8 default hex colors, every path will land reliably on the intended pen:
+   LINTO maps paths to pens 1–8 based on their `stroke` hex color. If your script uses the 8 default hex colors, every path will land reliably on the intended pen:
    
    | Pen | Default Color | Hex Code | Recommended Use |
    |---|---|---|---|
@@ -47,7 +47,7 @@ For generative art (Plotter Art) created via Python, JavaScript, or Processing, 
 
 4. **Supported SVG Elements:**
    You can freely mix `<path>`, `<line>`, `<polyline>`, `<polygon>`, `<rect>`, `<circle>`, `<ellipse>`, `<text>` (including `<tspan>`), and nested `<g transform="...">` groups. Curves (`C`, `Q`, `A`) are parsed losslessly.
-   * **SVG `<text>` Import (Single-Line Font Fallback):** Standard `<text>` elements are automatically rendered using an integrated **Hershey Simplex** single-stroke vector font (supporting ASCII, German umlauts/`ß`, and common diacritics) with `font-size`, `text-anchor` (`start`, `middle`, `end`), and `dx`/`dy` offsets. Plotter Studio still displays an informational warning on import and in the pre-flight panel reminding you that `<text>` was replaced by a single-line font (convert text to paths in your editor if you need the exact original typeface outlines).
+   * **SVG `<text>` Import (Single-Line Font Fallback):** Standard `<text>` elements are automatically rendered using an integrated **Hershey Simplex** single-stroke vector font (supporting ASCII, German umlauts/`ß`, and common diacritics) with `font-size`, `text-anchor` (`start`, `middle`, `end`), and `dx`/`dy` offsets. LINTO still displays an informational warning on import and in the pre-flight panel reminding you that `<text>` was replaced by a single-line font (convert text to paths in your editor if you need the exact original typeface outlines).
 
 ---
 
@@ -58,7 +58,7 @@ For generative art (Plotter Art) created via Python, JavaScript, or Processing, 
 * **Vector & Print Formats:** `.pdf`, `.eps`, `.ps` (note: PDF text fonts often import as double-line outlines), Adobe Illustrator (`.ai`), CorelDRAW (`.cdr`), Visio (`.vsd`/`.vsdx`), `.wmf`/`.emf`.
 * **CAD Formats:** `.dxf` (AutoCAD R12/R14/2000+) and `.hpgl`/`.plt`.
 * **Single-Line Fonts (Hershey Text):**
-  Standard fonts (TrueType/OpenType) consist of closed outline contours (e.g. an "I" is drawn as a narrow rectangle). While Plotter Studio automatically substitutes raw SVG `<text>` elements with its built-in **Hershey Simplex** single-line font, Inkscape provides additional typeface styles under `Extensions → Text → Hershey Text` (or `Path → Object to Path` if you intentionally want double-line outline lettering).
+  Standard fonts (TrueType/OpenType) consist of closed outline contours (e.g. an "I" is drawn as a narrow rectangle). While LINTO automatically substitutes raw SVG `<text>` elements with its built-in **Hershey Simplex** single-line font, Inkscape provides additional typeface styles under `Extensions → Text → Hershey Text` (or `Path → Object to Path` if you intentionally want double-line outline lettering).
 * **Bitmap Vectorization (Centerline Tracing):**
   Via `Path → Trace Bitmap`, Inkscape offers **Centerline Tracing (Autotrace)**. Unlike outline tracing (which traces both sides of a black line), centerline tracing creates a single clean centerline for the pen.
 
@@ -82,12 +82,12 @@ Blender is well-suited for 3D generative art, architectural wireframes, and pers
 
 **HP-GL** (*Hewlett-Packard Graphics Language*) is an industry-standard machine control language (`PU` = Pen Up, `PD` = Pen Down, `SP` = Select Pen) with a fixed coordinate step of `1 unit = 0.025 mm`.
 
-* **Direct Import in Plotter Studio:**
+* **Direct Import in LINTO:**
   Load existing `.hpgl` and `.plt` files directly via `File → Import` (`Ctrl+I`), `File → Open Project` (`Ctrl+O`), or drag-and-drop.
 * **Supported Commands:**
   In addition to absolute/relative moves (`PA`, `PR`, `PU`, `PD`) and pen changes (`SP1`–`SP8`), the parser supports geometric primitives (`CI` circles, `AA`/`AR` arcs, `EA`/`RA` rectangles) and **`LB` text labels** (including sizing `SI`, direction `DI`/`DR`, slant `SL`, and character plot `CP`) via an integrated 5×7 vector font.
 * **Accuracy & External Converters:**
-  Curves in HP-GL files are broken into short linear segments. If you need to convert old HP-GL files outside Plotter Studio, tools like **Inkscape**, **`vpype`** (with `vpype-hpgl`), or the classic CLI utility **`hp2xx`** (`hp2xx -m svg input.hpgl -f output.svg`) work well.
+  Curves in HP-GL files are broken into short linear segments. If you need to convert old HP-GL files outside LINTO, tools like **Inkscape**, **`vpype`** (with `vpype-hpgl`), or the classic CLI utility **`hp2xx`** (`hp2xx -m svg input.hpgl -f output.svg`) work well.
 
 ---
 
@@ -98,7 +98,7 @@ Blender is well-suited for 3D generative art, architectural wireframes, and pers
 * **Plotter Considerations:**
   CAD drawings often organize geometry across layers or ACI color numbers and may contain disconnected line fragments or dimension blocks.
 * **Recommended Workflow:**
-  Export drawings directly as **SVG** from your CAD software (e.g. in QCAD or FreeCAD TechDraw) or open the `.dxf` in **Inkscape** (keep scaling factor at `1.0` for millimeters) and save as `.svg` for Plotter Studio.
+  Export drawings directly as **SVG** from your CAD software (e.g. in QCAD or FreeCAD TechDraw) or open the `.dxf` in **Inkscape** (keep scaling factor at `1.0` for millimeters) and save as `.svg` for LINTO.
 
 ---
 

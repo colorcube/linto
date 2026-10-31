@@ -4,7 +4,7 @@ Quelle: 📘 Handbuch Appendix-5…10 (`mhgl-001…006.png`), Parameter wie dort
 
 MH-GL ist Mutohs HP-GL-kompatible Sprache. Das Gerät meldet sich mit `OI;` → `7585B` (HP-7585B-Emulation, **HP-GL, nicht HP-GL/2**). Fehlermeldungen am Panel haben laut 🇯🇵 FAQ die Form „Befehlsfehler MHxx“.
 
-**Relevanz für Plotter Studio:** ● wird verwendet · ○ optional/später · – nicht vorgesehen
+**Relevanz für LINTO:** ● wird verwendet · ○ optional/später · – nicht vorgesehen
 **Status:** 📘 = nur Handbuch · ✅ = an deinem Gerät getestet
 
 ## Linien
@@ -61,7 +61,7 @@ MH-GL ist Mutohs HP-GL-kompatible Sprache. Das Gerät meldet sich mit `OI;` → 
 | `SI` / `SR` | `width,height` | Zeichengröße absolut/relativ |
 | `SL` | `tangent` | Neigung |
 
-Rel.: – Plotter Studio rendert Text selbst zu Linien (Hershey/Single-Line-Fonts), damit Vorschau = Plot. `LB` wäre höchstens für Beschriftungen im Testplot interessant (○).
+Rel.: – LINTO rendert Text selbst zu Linien (Hershey/Single-Line-Fonts), damit Vorschau = Plot. `LB` wäre höchstens für Beschriftungen im Testplot interessant (○).
 
 ## Zeichnen
 
@@ -126,7 +126,7 @@ Rel.: – Plotter Studio rendert Text selbst zu Linien (Hershey/Single-Line-Font
 | `OO` | Optionen | ○ | 📘 |
 | `IM` | `E-mask[,S-mask(,P-mask)]` Fehlermasken | ○ | 📘 |
 
-## Minimaler Befehlssatz für Plotter Studio (Dialekt `mhgl-7585b`)
+## Minimaler Befehlssatz für LINTO (Dialekt `mhgl-7585b`)
 
 ```text
 Verbindungsaufbau:  ESC.R  IN;  OI;  OF;  OH;  OT;

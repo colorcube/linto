@@ -1,4 +1,4 @@
-"""GUI package for Plotter Studio."""
+"""GUI package for LINTO."""
 
 from .main_window import MainWindow
 from .canvas import PlotterCanvas

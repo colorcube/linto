@@ -11,7 +11,7 @@ import yaml
 from .profile import DeviceProfile, load_profile, get_default_profile
 from .probe import list_serial_ports
 
-logger = logging.getLogger("plotter_studio.device.manager")
+logger = logging.getLogger("linto.device.manager")
 
 
 class _EventSignal:
@@ -140,8 +140,8 @@ def _migrate_axis_settings(d: dict, prof: Optional[DeviceProfile]) -> None:
 
 
 def _get_config_path() -> Path:
-    """Return path to user's devices.yaml in ~/.config/plotter-studio/."""
-    config_dir = Path.home() / ".config" / "plotter-studio"
+    """Return path to user's devices.yaml in ~/.config/linto/."""
+    config_dir = Path.home() / ".config" / "linto"
     return config_dir / "devices.yaml"
 
 

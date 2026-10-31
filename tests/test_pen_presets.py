@@ -2,9 +2,9 @@ import pytest
 import os
 import tempfile
 import numpy as np
-from plotter_studio.core.document import Document, ImportItem, VectorPath, LogicalPen
-from plotter_studio.core.geometry import Point
-from plotter_studio.core.pen_presets import (
+from linto.core.document import Document, ImportItem, VectorPath, LogicalPen
+from linto.core.geometry import Point
+from linto.core.pen_presets import (
     PenPreset,
     get_builtin_presets,
     save_preset_json,

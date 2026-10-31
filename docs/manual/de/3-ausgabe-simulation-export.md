@@ -84,7 +84,7 @@ Die Sektion **Plotter-Verbindung & Ausgabe** steuert den physikalischen Datentra
 ### Schritt 1: Verbindung & Hardware-Inquiry
 1. Wähle den gewünschten Anschluss (z.B. `/dev/ttyUSB0` unter Linux oder `COM3` unter Windows bzw. `tcp://...`).
 2. Klicke auf **[ Plotter prüfen (Inquiry) ]**.
-3. Plotter Studio sendet `OI;` (Modellabfrage) und `OH;` (Hard-Clip-Abfrage) an das Gerät.
+3. LINTO sendet `OI;` (Modellabfrage) und `OH;` (Hard-Clip-Abfrage) an das Gerät.
 4. Bei erfolgreicher Rückmeldung leuchtet das Banner grün auf:
    `7585B (A3, 40 U/mm) • Hard-Clip: 390x287 mm`.
 

@@ -19,10 +19,10 @@ from typing import Optional, Tuple
 import serial
 import serial.tools.list_ports
 
-# Add src to pythonpath so plotter_studio modules can be imported if needed
+# Add src to pythonpath so linto modules can be imported if needed
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from plotter_studio.device.probe import FORMAT_RANGES, list_serial_ports
+from linto.device.probe import FORMAT_RANGES, list_serial_ports
 
 
 def send_query(
@@ -66,7 +66,7 @@ def send_query(
 
 def run_diagnostics(port: str, baudrate: int = 19200, timeout: float = 0.8, raw_cmd: Optional[str] = None):
     print("=" * 65)
-    print("  PLOTTER STUDIO – Mutoh XP-500 Hardware-Diagnose (AP0)")
+    print("  LINTO – Mutoh XP-500 Hardware-Diagnose (AP0)")
     print("=" * 65)
     print(f"Ziel:      {port}")
     print(f"Baudrate:  {baudrate}")

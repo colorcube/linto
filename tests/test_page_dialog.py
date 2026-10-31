@@ -1,7 +1,7 @@
 import pytest
-from plotter_studio.core.document import Document
-from plotter_studio.device import DeviceManager, ConfiguredDevice, ProbeResult
-from plotter_studio.gui.page_dialog import PageSetupDialog
+from linto.core.document import Document
+from linto.device import DeviceManager, ConfiguredDevice, ProbeResult
+from linto.gui.page_dialog import PageSetupDialog
 from PySide6.QtGui import QUndoStack
 
 
@@ -144,8 +144,8 @@ def test_page_setup_dialog_asymmetric_margins_and_probe_clip(qapp, monkeypatch):
 def test_dialog_close_during_active_probe_does_not_crash(qapp, monkeypatch, tmp_path):
     import gc
     import threading
-    from plotter_studio.device.manager import DeviceManager
-    from plotter_studio.gui.device_dialog import DeviceSettingsDialog
+    from linto.device.manager import DeviceManager
+    from linto.gui.device_dialog import DeviceSettingsDialog
 
     started = threading.Event()
     release = threading.Event()
@@ -155,8 +155,8 @@ def test_dialog_close_during_active_probe_does_not_crash(qapp, monkeypatch, tmp_
         release.wait(timeout=2.0)
         return ProbeResult(port=port, success=False, error_message="Timeout")
 
-    monkeypatch.setattr("plotter_studio.gui.device_dialog.probe_plotter", _slow_probe)
-    monkeypatch.setattr("plotter_studio.gui.page_dialog.probe_plotter", _slow_probe)
+    monkeypatch.setattr("linto.gui.device_dialog.probe_plotter", _slow_probe)
+    monkeypatch.setattr("linto.gui.page_dialog.probe_plotter", _slow_probe)
 
     dm = DeviceManager(config_path=tmp_path / "devices.yaml")
     dlg_dev = DeviceSettingsDialog(dm)

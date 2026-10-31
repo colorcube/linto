@@ -120,25 +120,25 @@ Unter `SETUP → Command → MH-GL` befinden sich die wesentlichen Spracheinstel
 
 ### 2.5 User Parameter (S. 7-23…7-25)
 
-Es können bis zu 4 Benutzer-Profile (**User 1 bis User 4**) gespeichert werden. Im Standby-Bildschirm lässt sich mit der Taste `USER` und `1…4` sekundenschnell zwischen verschiedenen Vorkonfigurationen (z. B. User 1 = Plotter Studio 19200 8N1 CTS 0.025mm Buffer Small; User 2 = Altes CAD-System 9600 XON) wechseln.
+Es können bis zu 4 Benutzer-Profile (**User 1 bis User 4**) gespeichert werden. Im Standby-Bildschirm lässt sich mit der Taste `USER` und `1…4` sekundenschnell zwischen verschiedenen Vorkonfigurationen (z. B. User 1 = LINTO 19200 8N1 CTS 0.025mm Buffer Small; User 2 = Altes CAD-System 9600 XON) wechseln.
 
 ---
 
 ### 2.6 Wide Line & Time Out (S. 7-26…7-31)
 
-- **Wide Line:** Strichstärkenverarbeitung für MH-GL/2 (Dicken von 0,20 bis 1,00 mm pro Stift zuweisbar). Für Plotter Studio in Phase 1 irrelevant, da wir Pfade selbst mit Stiftbreiten und Füllmustern zerlegen.
+- **Wide Line:** Strichstärkenverarbeitung für MH-GL/2 (Dicken von 0,20 bis 1,00 mm pro Stift zuweisbar). Für LINTO in Phase 1 irrelevant, da wir Pfade selbst mit Stiftbreiten und Füllmustern zerlegen.
 - **Time Out:** Wenn zwei Rechner an Port 1 und Port 2 hängen, schaltet der Plotter nach einer Inaktivität von z. B. 30 Sekunden wieder frei für den anderen Port.
 
 ---
 
-## 3. Zentrale Erkenntnisse & Konsequenzen für Plotter Studio
+## 3. Zentrale Erkenntnisse & Konsequenzen für LINTO
 
 1. **Rätsel um MutohPlot gelöst (`Program Step`):**
-   Das Handbuch belegt schwarz auf weiß: `0.025mm` vs. `0.010mm` ist ein Menüpunkt am Panel! Plotter Studio muss sich nie auf einen festen Wert verlassen, sondern fragt bei Verbindungsaufbau `OF;` ab und skaliert dynamisch.
+   Das Handbuch belegt schwarz auf weiß: `0.025mm` vs. `0.010mm` ist ein Menüpunkt am Panel! LINTO muss sich nie auf einen festen Wert verlassen, sondern fragt bei Verbindungsaufbau `OF;` ab und skaliert dynamisch.
 2. **Buffer Size (`Norm` vs. `Small`):**
    Am Panel kann direkt `Buffer Size: Small` (1 KByte / 1000 Zeichen) gewählt werden. Damit ist das Pufferproblem bei Pause/Abbruch ohne Firmware-Tricks hardwareseitig gelöst.
 3. **Firmware-Sortierung (`Sort: Off` zwingend):**
-   Wenn `Sort` am Panel auf `Pen` oder `All` steht, ignoriert der Plotter unsere im Slicer optimierte Strichreihenfolge und Leerweg-Planung! **Empfehlung:** Am Plotter für Plotter Studio immer `Sort: Off` wählen.
+   Wenn `Sort` am Panel auf `Pen` oder `All` steht, ignoriert der Plotter unsere im Slicer optimierte Strichreihenfolge und Leerweg-Planung! **Empfehlung:** Am Plotter für LINTO immer `Sort: Off` wählen.
 4. **Befehlsakzeptanz (`VS, AS, FS: Good`):**
    Muss auf `Good` stehen, damit unsere Werkzeugbibliothek Geschwindigkeit und Andruck pro Stift steuern kann.
 5. **Freie Formate / Rollenposition:**

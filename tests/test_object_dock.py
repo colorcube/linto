@@ -6,11 +6,11 @@ import pytest
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QGraphicsItem
 
-from plotter_studio.core.document import Document, ImportItem, VectorPath
-from plotter_studio.core.geometry import AffineTransform, BoundingBox
-from plotter_studio.pipeline.compiler import compile_document_to_plot_job
-from plotter_studio.gui.main_window import MainWindow
-from plotter_studio.gui.icons import get_icon
+from linto.core.document import Document, ImportItem, VectorPath
+from linto.core.geometry import AffineTransform, BoundingBox
+from linto.pipeline.compiler import compile_document_to_plot_job
+from linto.gui.main_window import MainWindow
+from linto.gui.icons import get_icon
 
 
 def _create_sample_item(name: str, x: float, y: float, w: float = 40.0, h: float = 20.0) -> ImportItem:
@@ -170,7 +170,7 @@ def test_toolbar_clean_style_and_device_selector(qapp):
 def test_multi_selection_duplicate_delete_and_drag_undo(qapp):
     """Verify multi-selection in ObjectDock, multi-duplicate/delete, drag undo, spinbox merging, and flipping."""
     import numpy as np
-    from plotter_studio.core.geometry import AffineTransform
+    from linto.core.geometry import AffineTransform
 
     doc = Document()
     pts = np.array([[10.0, 10.0], [40.0, 10.0], [40.0, 30.0], [10.0, 10.0]])

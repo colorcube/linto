@@ -1,8 +1,8 @@
 """CLI entry point for Mutoh XP-500 Software Emulator.
 
 Usage:
-    python -m plotter_studio.emulator
-    python -m plotter_studio.emulator --paper A2 --buffer small --symlink ./virtual_plotter
+    python -m linto.emulator
+    python -m linto.emulator --paper A2 --buffer small --symlink ./virtual_plotter
 """
 
 from __future__ import annotations

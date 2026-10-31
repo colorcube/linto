@@ -1,7 +1,7 @@
 import math
 import pytest
 import numpy as np
-from plotter_studio.pipeline.sort import (
+from linto.pipeline.sort import (
     sort_and_optimize_lines,
     compute_polyline_length,
     compute_unsorted_travel_distance,
@@ -87,7 +87,7 @@ def test_sort_no_reverse():
 
 def test_2opt_uncrosses_paths_and_maintains_endpoints():
     """Verify optimize_paths_2opt resolves crossed travels and keeps travel list consistent."""
-    from plotter_studio.pipeline.sort import optimize_paths_2opt
+    from linto.pipeline.sort import optimize_paths_2opt
 
     # Construct a deliberately sub-optimal order with crossing travel moves:
     # 0: (0,0)->(10,0), 1: (30,0)->(20,0), 2: (20,0)->(10,0), 3: (30,0)->(40,0)

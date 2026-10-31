@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from plotter_studio.pipeline.clip import clip_segment, clip_polyline_to_box, clip_polylines_to_box
+from linto.pipeline.clip import clip_segment, clip_polyline_to_box, clip_polylines_to_box
 
 
 def test_clip_segment_inside():

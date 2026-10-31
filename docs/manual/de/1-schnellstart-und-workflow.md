@@ -2,8 +2,8 @@
 
 Dieser Leitfaden führt dich Schritt für Schritt von einer vorhandenen Vektordatei (SVG) bis zur fertigen Stiftzeichnung auf Papier.
 
-> **Tipp: Du kannst Plotter Studio sofort ohne echte Hardware ausprobieren!**  
-> Plotter Studio enthält einen integrierten virtuellen Software-Plotter (`VirtualPlotter`), der die serielle Schnittstelle und Firmware-Befehle vollständig über das lokale Netzwerk emuliert.
+> **Tipp: Du kannst LINTO sofort ohne echte Hardware ausprobieren!**  
+> LINTO enthält einen integrierten virtuellen Software-Plotter (`VirtualPlotter`), der die serielle Schnittstelle und Firmware-Befehle vollständig über das lokale Netzwerk emuliert.
 
 ---
 
@@ -19,9 +19,9 @@ Dieser Leitfaden führt dich Schritt für Schritt von einer vorhandenen Vektorda
 Wenn du noch keine Hardware aufgebaut hast:
 1. Öffne ein Terminal und starte den integrierten Emulator (z. B. mit realistischer Zeichenzeit-Simulation):
    ```bash
-   python3 -m plotter_studio.emulator --tcp 9999 --realtime
+   python3 -m linto.emulator --tcp 9999 --realtime
    ```
-2. Wähle in der oberen Leiste von Plotter Studio als Gerät **Mutoh XP-500 Simulator (TCP)** aus.
+2. Wähle in der oberen Leiste von LINTO als Gerät **Mutoh XP-500 Simulator (TCP)** aus.
 3. **Flusssteuerung (Handshake):** Da virtuelle Pseudoterminals (PTY) und TCP-Sockets keine physikalischen Hardware-Pins (RTS/CTS) besitzen, verwendet der Emulator **Software-Handshake (`XON / XOFF`)**. Das Profil *Mutoh XP-500 Simulator (TCP)* ist bereits ab Werk darauf eingestellt. Falls du ein eigenes Profil für den Emulator anlegst (z. B. für `./virtual_plotter`), stelle unter *Plotter-Geräte konfigurieren* die Flusssteuerung stets auf **Software (XON / XOFF)**.
 
 ---
@@ -40,7 +40,7 @@ Klicke in der oberen Leiste auf **[ Seiteneinrichtung... ]**:
 
 1. **Format wählen:** Wähle z.B. **DIN A3** und **Querformat (Landscape)**.
 2. **Randprofil:** Belasse die Voreinstellung auf **EXP** (Expanded – maximale Zeichenfläche).
-3. **Live-Abfrage (optional):** Ist ein physischer Plotter verbunden, klicke auf **[ Plotter abfragen ]**. Plotter Studio fragt über den Befehl `OH;` die exakten Abmessungen des eingespannten Papiers direkt von den optischen Sensoren der Hardware ab.
+3. **Live-Abfrage (optional):** Ist ein physischer Plotter verbunden, klicke auf **[ Plotter abfragen ]**. LINTO fragt über den Befehl `OH;` die exakten Abmessungen des eingespannten Papiers direkt von den optischen Sensoren der Hardware ab.
 4. Bestätige mit **OK**. Das Canvas zeigt nun das Papierblatt mit dem rot gestrichelten *Hard-Clip-Rahmen* an.
 
 *(Ausführliche Details: [Kapitel 2: Layout & Seiteneinrichtung](2-layout-und-objektverwaltung.md#2-blatt-seiteneinrichtung))*
@@ -50,7 +50,7 @@ Klicke in der oberen Leiste auf **[ Seiteneinrichtung... ]**:
 ### Schritt 2: Vektorgrafik importieren und ausrichten
 
 1. Ziehe eine beliebige `.svg`- oder `.hpgl`-Datei per **Drag & Drop** aus deinem Dateimanager direkt in das Canvas (oder drücke `Strg+O` bzw. `Strg+I`).
-2. Das Dokument wird geladen. Beim Import analysiert Plotter Studio alle Strichfarben und teilt sie automatisch den Stiften 1 bis 8 zu.
+2. Das Dokument wird geladen. Beim Import analysiert LINTO alle Strichfarben und teilt sie automatisch den Stiften 1 bis 8 zu.
 3. Wechsle in das rechte Dock **Transformation**:
    * Klicke in der Gruppe *Position* auf **[ Zentriert ]** (Fadenkreuz), um das Motiv exakt in der Blattmitte auszurichten.
    * Klicke in der Gruppe *Skalierung* auf **[ Auf Blatt einpassen ]** oder **[ Auf plottbaren Bereich einpassen ]**, um die Grafik maximal vergrößert auf der Fläche zu platzieren (den gewünschten Randabstand kannst du direkt daneben in mm wählen).

@@ -1,6 +1,6 @@
 # 7. Concepts, Algorithms & Architecture (Deep Dive)
 
-This chapter provides a detailed technical insight into the mathematical and machine-level mechanics of Plotter Studio: how the slicer operates, how algorithms like 2-Opt TSP and Ramer-Douglas-Peucker work, how coordinates are transformed, and how the multi-plotter architecture is structured.
+This chapter provides a detailed technical insight into the mathematical and machine-level mechanics of LINTO: how the slicer operates, how algorithms like 2-Opt TSP and Ramer-Douglas-Peucker work, how coordinates are transformed, and how the multi-plotter architecture is structured.
 
 ---
 
@@ -23,7 +23,7 @@ This introduces fundamental challenges that standard printing systems cannot han
 
 ## 2. The Plotter Slicer: Pipeline Architecture
 
-Plotter Studio acts as a **slicer** for pen plotters, translating vector geometries through a multi-stage pipeline into optimized machine paths:
+LINTO acts as a **slicer** for pen plotters, translating vector geometries through a multi-stage pipeline into optimized machine paths:
 
 ```
 [ SVG / Vector Input ]
@@ -50,7 +50,7 @@ Plotter Studio acts as a **slicer** for pen plotters, translating vector geometr
 ### Optimization Stages:
 
 * **Color Clustering:** Graphical elements with distinct RGB stroke colors are automatically grouped onto the active pen channels (1 through 8). Paths sharing a pen are batched to keep tool swaps to an absolute minimum.
-* **Line Merging:** When two endpoints meet within a configurable tolerance (e.g. 0.1 mm), Plotter Studio joins them into a continuous polyline. The pen stays down on the paper instead of lifting.
+* **Line Merging:** When two endpoints meet within a configurable tolerance (e.g. 0.1 mm), LINTO joins them into a continuous polyline. The pen stays down on the paper instead of lifting.
 * **Path Reversal:** Polylines can be drawn in either direction. The pipeline reverses paths when the end of a stroke is closer to the start of the next stroke than its beginning.
 * **RDP Simplification (Ramer-Douglas-Peucker):** CAD tools and freehand vector curves often generate thousands of collinear micro-vertices. The RDP algorithm prunes redundant nodes without altering visual contours, preventing stepper motor jitter.
 * **2-Opt Path Optimization (Traveling Salesperson Problem):** A heuristic permutation algorithm rearranges path ordering to minimize total rapid travel distance (`Pen Up`), often reducing air travel by **40% to 70%**.
@@ -59,12 +59,12 @@ Plotter Studio acts as a **slicer** for pen plotters, translating vector geometr
 
 ## 3. Coordinate Systems & Origins
 
-In Plotter Studio, you always work in intuitive **sheet coordinates**:
+In LINTO, you always work in intuitive **sheet coordinates**:
 * Unit: Millimeters (mm).
 * Origin: Top-left corner of the paper sheet.
 * X-axis extends to the right, Y-axis extends downwards.
 
-For hardware output, Plotter Studio converts these coordinates into the target machine's native coordinate space:
+For hardware output, LINTO converts these coordinates into the target machine's native coordinate space:
 
 ### Center-Origin vs. Bottom-Left
 
@@ -94,7 +94,7 @@ Grit-roller plotters need extra clearance along the leading edge for the paper s
 | **TYPE1** | 25.0 mm | 5.0 mm | 11.0 mm | 11.0 mm | Roll paper with side margins |
 | **TYPE3** | 25.0 mm | 10.0 mm | 10.0 mm | 10.0 mm | Alternative for continuous rolls |
 
-Plotter Studio renders these margins on the canvas as a dotted outline and warns you of any clipping.
+LINTO renders these margins on the canvas as a dotted outline and warns you of any clipping.
 
 ---
 
@@ -103,13 +103,13 @@ Plotter Studio renders these margins on the canvas as a dotted outline and warns
 Communication with physical plotters uses RS-232 serial interfaces (or USB-to-serial adapters) or TCP network sockets.
 
 ### Flow Control
-Plotter Studio relies on strict **hardware handshaking (RTS/CTS)**:
+LINTO relies on strict **hardware handshaking (RTS/CTS)**:
 * The plotter toggles its CTS line (Clear to Send) to indicate when internal buffer space is available.
 * The `SerialStreamer` thread waits atomically on CTS before transmitting chunks of data, preventing buffer overflows and corrupted drawings.
 
 ### Emergency Stop & Safe Abort
 When a plot is canceled from the user interface:
-1. Plotter Studio transmits `\x1b.K` (Clear Device Buffer) to flush the plotter's hardware buffer.
+1. LINTO transmits `\x1b.K` (Clear Device Buffer) to flush the plotter's hardware buffer.
 2. The pen is immediately raised (`PU;`).
 3. The pen is safely parked into the carousel (`SP0;`) to prevent nib drying and paper damage.
 
@@ -117,7 +117,7 @@ When a plot is canceled from the user interface:
 
 ## 5. Multi-Plotter Architecture
 
-Plotter Studio is modular by design. While the **Mutoh XP-500** serves as the reference large-format plotter, the architecture supports any HP-GL machine.
+LINTO is modular by design. While the **Mutoh XP-500** serves as the reference large-format plotter, the architecture supports any HP-GL machine.
 
 ### Declarative Device Profiles (`resources/devices/*.yaml`)
 Every device is defined by a concise YAML specification:
@@ -153,7 +153,7 @@ margins_mm:
 ```
 
 ### The `DeviceManager`
-* Maintains configured plotters in `~/.config/plotter-studio/devices.yaml`.
+* Maintains configured plotters in `~/.config/linto/devices.yaml`.
 * Enables 1-click switching between plotters in the UI (e.g. from Mutoh XP-500 roller to Roland DXY flatbed or software simulator).
 * Canvas rulers, margins, and emitters adapt dynamically to the selected device profile.
 

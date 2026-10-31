@@ -4,14 +4,14 @@ import math
 from pathlib import Path
 import pytest
 
-from plotter_studio.core.hpgl_import import (
+from linto.core.hpgl_import import (
     HPGLTokenizer,
     HPGLParser,
     load_hpgl,
     is_hpgl_file,
     glyph_rows,
 )
-from plotter_studio.core.svg_export import load_document_from_svg
+from linto.core.svg_export import load_document_from_svg
 
 
 def test_is_hpgl_file():
@@ -76,7 +76,7 @@ def test_load_hpgl_labels_and_text_attributes():
 
 
 def test_load_hpgl_file_and_gui_integration(tmp_path: Path, qapp):
-    from plotter_studio.gui.main_window import MainWindow
+    from linto.gui.main_window import MainWindow
 
     hpgl_path = tmp_path / "sample.plt"
     hpgl_path.write_text("IN;SP3;PU0,0;PD2000,0,2000,1000;PU;SP0;", encoding="ascii")

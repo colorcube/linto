@@ -1,8 +1,8 @@
-# Mutoh XP-500 – Einrichtung & Schnellstart für Plotter Studio
+# Mutoh XP-500 – Einrichtung & Schnellstart für LINTO
 
 Stand: 2026-10-14 · Praxis-Leitfaden für die Inbetriebnahme am Linux-Rechner
 
-Dieses Dokument fasst die konkreten Schritte zusammen, um den **Mutoh XP-500** am Bedienfeld und unter Linux optimal für den Betrieb mit **Plotter Studio** (oder MutohPlot) zu konfigurieren.
+Dieses Dokument fasst die konkreten Schritte zusammen, um den **Mutoh XP-500** am Bedienfeld und unter Linux optimal für den Betrieb mit **LINTO** (oder MutohPlot) zu konfigurieren.
 
 ---
 
@@ -61,13 +61,13 @@ Drücke am Bedienfeld `MENU` und wähle **`SETUP`**:
 | **Circle Resolution** | **`Fine`** | Glatte Kreis- und Bogeninterpolation |
 
 > [!NOTE]
-> Wenn `Program Step` auf `0.025 mm` steht, antwortet der Plotter auf `OF;` mit `40,40`. Steht er auf `0.010 mm`, antwortet er mit `100,100`. Plotter Studio erkennt dies automatisch.
+> Wenn `Program Step` auf `0.025 mm` steht, antwortet der Plotter auf `OF;` mit `40,40`. Steht er auf `0.010 mm`, antwortet er mit `100,100`. LINTO erkennt dies automatisch.
 
 ### D. Gerätespezifikationen (`SETUP → Spec`)
-| Parameter | Wert | Warum dieser Wert für Plotter Studio kritisch ist |
+| Parameter | Wert | Warum dieser Wert für LINTO kritisch ist |
 |---|---|---|
 | **Buffer Size** | **`Small`** (1000 Zeichen) | **Extrem wichtig:** Bei `Small` reagiert der Plotter bei Pause/Abbruch am PC innerhalb von Bruchteilen einer Sekunde. Bei `Norm` (1 MB) würde er minutenlang weiterplotten! |
-| **Sort** | **`Off`** | **Extrem wichtig:** Verhindert, dass die interne Firmware die optimierte Reihenfolge von Plotter Studio (2-Opt / Traveling Salesperson) durcheinanderbringt. |
+| **Sort** | **`Off`** | **Extrem wichtig:** Verhindert, dass die interne Firmware die optimierte Reihenfolge von LINTO (2-Opt / Traveling Salesperson) durcheinanderbringt. |
 | **Hard Clip** | **`Exp`** (Expanded) | Nutzt die maximale Papierfläche mit minimalen Rändern (nur 5 mm an den Rollen). |
 | **Pen Setup** | **`VS, AS, FS: Good`** | Gestattet der Software, Geschwindigkeit (`VS`), Anpressdruck (`FS`) und Beschleunigung (`AS`) pro Stift zu steuern. |
 
@@ -94,7 +94,7 @@ Der Mutoh XP-500 besitzt optische Sensoren und verschiebbare Andruckrollen (**Pi
 ## 4. Stifte bestücken
 * Das 8-fach-Stiftkarussell nimmt Faser-, Tusche- oder Kugelschreiber auf.
 * Stifte ohne Schutzkappe in die Plätze 1–8 einsetzen und arretieren.
-* In Plotter Studio können den Plätzen 1–8 die passenden Farben und Parameter zugeordnet werden.
+* In LINTO können den Plätzen 1–8 die passenden Farben und Parameter zugeordnet werden.
 
 ---
 
@@ -129,4 +129,4 @@ with serial.Serial(port, 19200, bytesize=8, parity='N', stopbits=1, rtscts=True,
 * `40,40`: Schrittweite $0,025\,\text{mm}$ (bei 0,010 mm stünde hier `100,100`).
 * Koordinaten: Die Grenzen $X_{\min}, Y_{\min}, X_{\max}, Y_{\max}$ in Plotter-Einheiten um den zentrierten Nullpunkt `(0,0)`.
 
-Damit ist das Gerät zu 100 % einsatzbereit für Plotter Studio!
+Damit ist das Gerät zu 100 % einsatzbereit für LINTO!

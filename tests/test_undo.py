@@ -4,9 +4,9 @@ import os
 import pytest
 from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QUndoStack
-from plotter_studio.core.document import Document, ImportItem, VectorPath, LogicalPen
-from plotter_studio.core.geometry import AffineTransform, Point, BoundingBox
-from plotter_studio.gui.commands import (
+from linto.core.document import Document, ImportItem, VectorPath, LogicalPen
+from linto.core.geometry import AffineTransform, Point, BoundingBox
+from linto.gui.commands import (
     TransformItemCommand, AssignPenCommand, AddItemCommand,
     DeleteItemsCommand, PageConfigCommand, PenRemapCommand, ApplyPresetCommand
 )
@@ -137,7 +137,7 @@ def test_page_config_undo_redo(qapp):
 
 
 def test_pen_dock_columns_and_undo_without_duplicate_signals(qapp):
-    from plotter_studio.gui.pen_dock import PenDockWidget
+    from linto.gui.pen_dock import PenDockWidget
     from PySide6.QtCore import Qt
     doc = Document()
     stack = QUndoStack()
@@ -176,7 +176,7 @@ def test_pen_dock_columns_and_undo_without_duplicate_signals(qapp):
 
 
 def test_object_dock_undo_rename_and_lock_protection(qapp):
-    from plotter_studio.gui.main_window import MainWindow
+    from linto.gui.main_window import MainWindow
     from PySide6.QtCore import Qt
 
     doc = Document()

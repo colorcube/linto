@@ -6,7 +6,7 @@ import json
 from PySide6.QtCore import QCoreApplication
 from PySide6.QtWidgets import QLabel
 
-from plotter_studio.gui.i18n import PlotterTranslator, setup_i18n, get_translations_dir
+from linto.gui.i18n import PlotterTranslator, setup_i18n, get_translations_dir
 
 
 def test_translator_fallback_to_source_text(qapp):
@@ -137,7 +137,7 @@ def test_all_gui_tr_keys_translated_in_de_json():
     de = json.loads(de_path.read_text(encoding="utf-8"))
     all_de_keys = set(de.keys())
 
-    gui_glob = str(de_path.parent.parent.parent / "src" / "plotter_studio" / "gui" / "*.py")
+    gui_glob = str(de_path.parent.parent.parent / "src" / "linto" / "gui" / "*.py")
     missing = []
     for path in sorted(glob.glob(gui_glob)):
         with open(path, "r", encoding="utf-8") as f:

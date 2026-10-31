@@ -1,8 +1,8 @@
 [project]
-site_name = "Plotter Studio – Benutzerhandbuch"
+site_name = "LINTO – Benutzerhandbuch"
 site_description = "Modulares Slicer- und Layout-Studio für Vektor-Stiftplotter"
-site_author = "Plotter Studio Contributors"
-copyright = "Copyright &copy; 2026 Plotter Studio Contributors – GPL-3.0-or-later"
+site_author = "LINTO Contributors"
+copyright = "Copyright &copy; 2026 LINTO Contributors – GPL-3.0-or-later"
 docs_dir = "docs/manual/de"
 site_dir = "site/handbuch"
 

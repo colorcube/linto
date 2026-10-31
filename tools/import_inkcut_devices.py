@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Import HP-GL device profiles from InkCut's drivers manifest.enaml into Plotter Studio.
+Import HP-GL device profiles from InkCut's drivers manifest.enaml into LINTO.
 
 Usage:
     python3 tools/import_inkcut_devices.py --source /path/to/inkcut/inkcut/device/drivers/manifest.enaml [--output resources/devices]
@@ -74,7 +74,7 @@ def extract_hpgl_drivers(manifest_path: Path) -> list[dict]:
 
 
 def convert_driver_to_profile(driver: dict) -> dict:
-    """Convert an InkCut driver dictionary into a Plotter Studio DeviceProfile dict."""
+    """Convert an InkCut driver dictionary into a LINTO DeviceProfile dict."""
     m = driver.get("manufacturer", "Generic").strip("'\" ")
     mod = driver.get("model", "Plotter").strip("'\" ")
     w = parse_dimension_mm(driver.get("width"))
@@ -131,7 +131,7 @@ def convert_driver_to_profile(driver: dict) -> dict:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Import InkCut HP-GL drivers into Plotter Studio")
+    parser = argparse.ArgumentParser(description="Import InkCut HP-GL drivers into LINTO")
     parser.add_argument(
         "--source",
         type=Path,

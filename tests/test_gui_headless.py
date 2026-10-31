@@ -1,10 +1,10 @@
 import os
 import pytest
 from PySide6.QtWidgets import QApplication
-from plotter_studio.core.document import Document
-from plotter_studio.core.svg_import import load_svg
-from plotter_studio.core.svg_export import export_document_to_svg
-from plotter_studio.gui.main_window import MainWindow
+from linto.core.document import Document
+from linto.core.svg_import import load_svg
+from linto.core.svg_export import export_document_to_svg
+from linto.gui.main_window import MainWindow
 
 
 
@@ -142,7 +142,7 @@ def test_docks_and_page_setup_dialog(qapp):
     assert "DIN A3" in win.lbl_paper_status.text()
 
     # Test PageSetupDialog interaction
-    from plotter_studio.gui.page_dialog import PageSetupDialog
+    from linto.gui.page_dialog import PageSetupDialog
     dlg = PageSetupDialog(doc, win.device_manager, win.undo_stack, parent=win)
     dlg.page_changed.connect(win._on_page_changed)
     dlg.combo_preset.setCurrentIndex(dlg.combo_preset.findData("A4"))
@@ -291,7 +291,7 @@ def test_menu_exit_clean_shutdown(qapp, tmp_path):
 def test_rotation_ui_and_undo(qapp, tmp_path):
     import math
     import numpy as np
-    from plotter_studio.pipeline.compiler import compile_document_to_plot_job
+    from linto.pipeline.compiler import compile_document_to_plot_job
 
     doc = Document()
     win = MainWindow(doc)

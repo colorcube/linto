@@ -1,4 +1,4 @@
-"""CLI entrypoint for running plotter-studio."""
+"""CLI entrypoint for running linto."""
 
 import sys
 from .gui.app import run_gui

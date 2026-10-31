@@ -1,4 +1,4 @@
-"""Internationalization (i18n) support for Plotter Studio.
+"""Internationalization (i18n) support for LINTO.
 
 Provides QTranslator-based localization with automatic system locale detection
 and fallback to English.
@@ -142,7 +142,7 @@ def setup_i18n(
         app.installTranslator(app_translator)
     else:
         # Check for compiled .qm file if available
-        qm_path = trans_dir / f"plotter_studio_{lang}.qm"
+        qm_path = trans_dir / f"linto_{lang}.qm"
         if qm_path.is_file():
             loaded = app_translator.load(str(qm_path))
             if loaded:

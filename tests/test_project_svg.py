@@ -1,4 +1,4 @@
-"""Tests for Plotter Studio project SVG export and loading."""
+"""Tests for LINTO project SVG export and loading."""
 
 import math
 import os
@@ -7,18 +7,18 @@ import numpy as np
 import pytest
 from pathlib import Path
 
-from plotter_studio.core.document import Document, Page, LogicalPen, ImportItem, VectorPath
-from plotter_studio.core.geometry import AffineTransform, Point
-from plotter_studio.core.svg_export import export_document_to_svg, load_document_from_svg, is_project_file
-from plotter_studio.core.svg_import import load_svg, _clean_duplicate_attributes
+from linto.core.document import Document, Page, LogicalPen, ImportItem, VectorPath
+from linto.core.geometry import AffineTransform, Point
+from linto.core.svg_export import export_document_to_svg, load_document_from_svg, is_project_file
+from linto.core.svg_import import load_svg, _clean_duplicate_attributes
 
 
 def test_duplicate_attributes_healing():
     """Verify that duplicate attributes (e.g. duplicate xmlns:ps) are healed."""
     raw = (
-        '<svg xmlns:ps="https://plotter-studio.org/schema/v1" '
+        '<svg xmlns:ps="urn:linto:project:v1" '
         'xmlns="http://www.w3.org/2000/svg" '
-        'xmlns:ps="https://plotter-studio.org/schema/v1" width="100mm" height="100mm">'
+        'xmlns:ps="urn:linto:project:v1" width="100mm" height="100mm">'
         '<rect x="10" y="10" width="80" height="80" stroke="#000000"/>'
         '</svg>'
     )
@@ -191,7 +191,7 @@ def test_load_standard_svg_as_project():
 
 def test_project_curve_preservation_roundtrip():
     """Verify that exporting and reloading a project preserves native C and Q Bézier curves."""
-    from plotter_studio.core.geometry import CubicBezierSegment, QuadraticBezierSegment
+    from linto.core.geometry import CubicBezierSegment, QuadraticBezierSegment
 
     svg_curves = """<svg width="100mm" height="100mm" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
       <path d="M 10 50 C 20 10, 80 10, 90 50" stroke="#000000" fill="none"/>
@@ -234,8 +234,8 @@ def test_project_curve_preservation_roundtrip():
 
 def test_project_metadata_persistence_and_plot_job_svg_export(tmp_path):
     """Verify device_profile, feed_edge, item.visible, item.locked persistence and export_plot_job_to_svg."""
-    from plotter_studio.core.svg_export import export_plot_job_to_svg
-    from plotter_studio.pipeline.compiler import compile_document_to_plot_job
+    from linto.core.svg_export import export_plot_job_to_svg
+    from linto.pipeline.compiler import compile_document_to_plot_job
 
     doc = Document()
     doc.page.apply_device_profile("mutoh_xp500", "bottom", "norm")
@@ -285,8 +285,8 @@ def test_project_metadata_persistence_and_plot_job_svg_export(tmp_path):
 
 def test_main_window_dirty_state_and_direct_save(qapp, tmp_path, monkeypatch):
     from PySide6.QtWidgets import QMessageBox
-    from plotter_studio.gui.main_window import MainWindow
-    from plotter_studio.gui.commands import AddItemCommand
+    from linto.gui.main_window import MainWindow
+    from linto.gui.commands import AddItemCommand
 
     doc = Document()
     win = MainWindow(doc)
@@ -320,3 +320,25 @@ def test_main_window_dirty_state_and_direct_save(qapp, tmp_path, monkeypatch):
 
 
 
+
+
+def test_load_legacy_project_namespace(tmp_path: Path):
+    """Project files written before the rename (old ps namespace) still load as projects."""
+    page = Page(preset="A4", orientation="portrait")
+    item = ImportItem(
+        name="LegacyBox",
+        paths=[VectorPath(points=np.array([[0.0, 0.0], [20.0, 0.0], [20.0, 20.0]]), pen_id=2, closed=False)],
+        transform=AffineTransform.translation(5.0, 5.0),
+    )
+    doc = Document(page=page, pens=[LogicalPen(2, "Pen 2", "#ff0000")], items=[item])
+    path = tmp_path / "legacy.svg"
+    export_document_to_svg(doc, str(path))
+
+    from linto.core.svg_export import NS_PS, NS_PS_LEGACY
+    path.write_text(path.read_text(encoding="utf-8").replace(NS_PS, NS_PS_LEGACY), encoding="utf-8")
+
+    assert is_project_file(str(path)) is True
+    loaded = load_document_from_svg(str(path))
+    assert loaded.page.preset == "A4"
+    assert [i.name for i in loaded.items] == ["LegacyBox"]
+    assert loaded.items[0].paths[0].pen_id == 2

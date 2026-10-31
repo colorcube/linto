@@ -29,7 +29,7 @@ Ein Python-Werkzeug (CLI + lokale Weboberfläche), das HP-GL und SVG für **gena
 | ⚠️ Einheit: MutohPlot schreibt mit **0,01 mm/Unit**, bei dir liefert `OF;` aber **40** (= 0,025 mm) | `devices/mutoh_xp500.py` vs. deine Notizen | Der XP-500 hat vermutlich einen umschaltbaren Befehlsmodus/Auflösung (MH-GL vs. HP-GL-Emulation). **Die Einheit muss aus `OF;` gelesen und darf nicht fest codiert werden.** |
 | Geschwindigkeit `VS` noch nicht hardwaregetestet, `ESC.`-Befehle werden nicht verwendet | `docs/configuration.md`, Code | bleibt AP0 |
 
-## 3. Bewertung im Hinblick auf Plotter Studio
+## 3. Bewertung im Hinblick auf LINTO
 
 **Stärken**
 - Hardwaregetestet am XP-500: Achsen, Fenster, Kalibrierung, Übertragung.
@@ -48,16 +48,16 @@ Ein Python-Werkzeug (CLI + lokale Weboberfläche), das HP-GL und SVG für **gena
 
 | Option | Beschreibung | Pro | Contra |
 |---|---|---|---|
-| **A** Als Abhängigkeit nutzen | `pip install mutohplot`, Plotter Studio ruft Konvertierung/Übertragung auf | schneller Start | keine saubere API, Datenmodell passt nicht, Abhängigkeit von fremden Zielen |
+| **A** Als Abhängigkeit nutzen | `pip install mutohplot`, LINTO ruft Konvertierung/Übertragung auf | schneller Start | keine saubere API, Datenmodell passt nicht, Abhängigkeit von fremden Zielen |
 | **B** Forken & ausbauen | MutohPlot um eine Qt-Oberfläche und ein Objektmodell erweitern | alles Vorhandene sofort da | großer Umbau des Kerns nötig, Fork driftet ab |
-| **C** Eigenständig, gezielt übernehmen | Plotter Studio nach konzept.md bauen, einzelne Module/Wissen aus MutohPlot portieren (mit MIT-Hinweis) | sauberes Modell, bewährtes Gerätewissen, unabhängig | etwas mehr Arbeit als A |
-| **D** MutohPlot als Backend | Plotter Studio nur als Layout-Editor, der fertige HPGL an MutohPlots Web-API/Queue übergibt | minimaler Aufwand für M1 | zwei Programme, Doppelarbeit bei Fit/Rotation, Positionierung kollidiert mit „Einpassen“ |
+| **C** Eigenständig, gezielt übernehmen | LINTO nach konzept.md bauen, einzelne Module/Wissen aus MutohPlot portieren (mit MIT-Hinweis) | sauberes Modell, bewährtes Gerätewissen, unabhängig | etwas mehr Arbeit als A |
+| **D** MutohPlot als Backend | LINTO nur als Layout-Editor, der fertige HPGL an MutohPlots Web-API/Queue übergibt | minimaler Aufwand für M1 | zwei Programme, Doppelarbeit bei Fit/Rotation, Positionierung kollidiert mit „Einpassen“ |
 
 ### Empfehlung: **C**, ergänzt um eine Übergangslösung
-1. **Sofort:** MutohPlot lokal installieren und als **Werkzeug zum Plotten verwenden**, solange Plotter Studio entsteht. Es dient außerdem als **Referenz/Testorakel**: Gleiche SVG → HPGL vergleichen.
-2. **In Plotter Studio übernehmen bzw. portieren:**
+1. **Sofort:** MutohPlot lokal installieren und als **Werkzeug zum Plotten verwenden**, solange LINTO entsteht. Es dient außerdem als **Referenz/Testorakel**: Gleiche SVG → HPGL vergleichen.
+2. **In LINTO übernehmen bzw. portieren:**
 
-| MutohPlot | Ziel in Plotter Studio | Anpassung |
+| MutohPlot | Ziel in LINTO | Anpassung |
 |---|---|---|
 | `hpgl/tokenizer.py`, `hpgl/parser.py`, `hpgl/stroke_font.py` | AP4 HPGL-Import | Ausgabe auf numpy-Polylinien umstellen |
 | `hard_clip.py`, `transform/hard_clip.py` (Fenstertabelle, Mittelpunktkorrektur) | AP2 Geräteprofil/Abbildung | in Profil-YAML überführen |

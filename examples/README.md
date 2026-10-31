@@ -1,4 +1,4 @@
-# Plotter Studio – Beispieldateien (`examples/`)
+# LINTO – Beispieldateien (`examples/`)
 
 Dieses Verzeichnis enthält Beispielgrafiken im **SVG**-Format zum Testen des Layouts, der Stiftzuweisung und der Plotterausgabe.
 
@@ -12,7 +12,7 @@ Dieses Verzeichnis enthält Beispielgrafiken im **SVG**-Format zum Testen des La
 
 ---
 
-## 💡 Verwendung in Plotter Studio
+## 💡 Verwendung in LINTO
 
 1. Klicken Sie auf **Datei → Importieren...** (`Strg+I`) oder ziehen Sie eine der Dateien einfach per **Drag & Drop** in das Anwendungsfenster.
 2. Im Dock **Transformation** können Sie die Motive mit `[ Blatt zentrieren ]` oder `[ Einpassen ]` mit einem Klick auf Ihr gewähltes Papierformat (z. B. DIN A4 oder DIN A3) skalieren und ausrichten.

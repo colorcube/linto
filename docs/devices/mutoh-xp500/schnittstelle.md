@@ -5,7 +5,7 @@ Quellen: 📘 Handbuch Kap. 3 (S. 3-1…3-11), Appendix-4; 📏 eigene Messungen
 ## Übersicht
 
 - Zwei Ports. RS-232C ist Standard; RS-422A (DB15), GP-IB und Centronics sind optional.
-- Centronics ist **nur Empfang** (keine Abfragen wie `OH`/`OF` möglich), Kabel max. 2 m. Für Plotter Studio daher **ungeeignet**.
+- Centronics ist **nur Empfang** (keine Abfragen wie `OH`/`OF` möglich), Kabel max. 2 m. Für LINTO daher **ungeeignet**.
 - Der Plotter ist **DTE** (sendet auf Pin 2, empfängt auf Pin 3), d. h. zum PC braucht es ein **Nullmodem**-Kabel.
 - Port-Nummer und **Befehlsmodus** werden pro Port eingestellt (S. 3-11). Details stehen in Kapitel 7, das noch fehlt.
 
@@ -73,7 +73,7 @@ cat datei.hpgl > /dev/ttyUSB0
 ```
 
 - Funktioniert an deinem Gerät (beobachtet mit `/dev/ttyS5` und `/dev/ttyUSB0`).
-- Daten per Pipe an `tio` zu schicken schlägt fehl. Plotter Studio schreibt deshalb direkt auf das TTY (pyserial, `rtscts=True`).
+- Daten per Pipe an `tio` zu schicken schlägt fehl. LINTO schreibt deshalb direkt auf das TTY (pyserial, `rtscts=True`).
 - Für ein stabiles Gerät: udev-Symlink oder `/dev/serial/by-id/…` verwenden (Port noch nachzuliefern, Q-14).
 - 🔧 MutohPlot: PL2303-Adapter mit Kernel-`IXON` können hängen. Bei XON/XOFF daher im Userspace auswerten. Mit RTS/CTS (dein Setup) tritt das nicht auf.
 - ⚠️ USB-Seriell-Adapter puffern selbst (oft 256 B–4 KB FIFO + Kernelpuffer). Der Fortschritt „gesendet“ ist deshalb nicht „beim Plotter angekommen“ und erst recht nicht „gezeichnet“. Für Fortschritt und Abbruch: `ESC.B` abfragen bzw. `tcdrain()`, siehe [escape-sequenzen.md](escape-sequenzen.md).

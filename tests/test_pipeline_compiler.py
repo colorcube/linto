@@ -1,8 +1,8 @@
 import pytest
 import numpy as np
-from plotter_studio.core.document import Document, ImportItem, VectorPath, LogicalPen
-from plotter_studio.core.geometry import AffineTransform
-from plotter_studio.pipeline.compiler import (
+from linto.core.document import Document, ImportItem, VectorPath, LogicalPen
+from linto.core.geometry import AffineTransform
+from linto.pipeline.compiler import (
     PipelineConfig, compile_document_to_plot_job
 )
 
@@ -91,7 +91,7 @@ def test_compile_overhang_warning_and_clipping():
 
 
 def test_compile_dynamic_flatten_tolerance_and_scaling():
-    from plotter_studio.core.svg_import import load_svg
+    from linto.core.svg_import import load_svg
 
     svg_sample = """<svg width="100mm" height="100mm" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
       <path d="M 10 50 C 20 5, 80 5, 90 50" stroke="#000000" fill="none"/>

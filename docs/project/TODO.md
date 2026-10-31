@@ -1,14 +1,14 @@
 
-# Plotter Studio – Todo & Roadmap
+# LINTO – Todo & Roadmap
 
-Zentrale Aufgabenliste für die Weiterentwicklung von Plotter Studio. Detaillierte Spezifikationen und Systemarchitektur finden sich in [konzept.md](konzept.md).
+Zentrale Aufgabenliste für die Weiterentwicklung von LINTO. Detaillierte Spezifikationen und Systemarchitektur finden sich in [konzept.md](konzept.md).
 
 ---
 
 ## 1. Code-Bereinigung, GUI & UX (Ergebnisse aus Projekt-Review)
 
 ### 1.1 Altlasten & Code-Duplikate abbauen
-- [x] **Veraltete Docks löschen:** `src/plotter_studio/gui/paper_dock.py` (wurde durch `PageSetupDialog` ersetzt) und `src/plotter_studio/gui/layout_dock.py` samt Referenzen in `main_window.py` entfernen.
+- [x] **Veraltete Docks löschen:** `src/linto/gui/paper_dock.py` (wurde durch `PageSetupDialog` ersetzt) und `src/linto/gui/layout_dock.py` samt Referenzen in `main_window.py` entfernen.
 - [x] **Single Source of Truth für Randprofile:** Die vierfach duplizierten Mutoh-Randprofile (`resources/devices/mutoh_xp500.yaml`, `core/document.py`, `emulator/virtual_plotter.py`, `gui/plot_dock.py` & `gui/device_dialog.py`) zusammenführen und ausschließlich aus den YAML-Geräteprofilen laden (behebt auch abweichende Zahlenwerte für `NORM`/`TYPE1`/`TYPE3`).
 - [x] **Drag-&-Drop-Handler zusammenführen:** Identische `dragEnterEvent`/`dragMoveEvent`/`dropEvent`-Methoden in `gui/main_window.py` und `gui/canvas.py` konsolidieren und Mehrfach-Datei-Drops (aktuell vorzeitiges `return` nach der ersten Datei) ermöglichen.
 - [x] **Punkt-Strecken-Distanz vereinheitlichen:** Identische Vektor-Projektion in `pipeline/flatten.py` und `pipeline/simplify.py` in eine gemeinsame Hilfsfunktion auslagern.
@@ -33,7 +33,7 @@ Zentrale Aufgabenliste für die Weiterentwicklung von Plotter Studio. Detaillier
 ### 1.3 Architektur, Projekt-Persistenz & Workflow-Sicherheit
 - [x] **Dirty-State & direktes Speichern (`Strg+S`):** Vor `Neu`, `Projekt öffnen` und beim Schließen des Fensters (`closeEvent`) über `undo_stack.isClean()` vor ungespeicherten Änderungen warnen; direktes `Speichern` (`Strg+S`) auf den aktuellen Dateipfad ergänzen.
 - [x] **Projekt-Metadaten in `core/svg_export.py` vervollständigen:** `page.device_profile`, `page.feed_edge`, `item.visible` und `item.locked` im `plotter:`-Namespace mit abspeichern und beim Laden wiederherstellen; fehlenden `Any`-Import in `core/document.py` ergänzen.
-- [x] **`DeviceManager` von Qt entkoppeln:** `PySide6.QtCore.QObject` in `device/manager.py` durch reine Python-Callbacks ersetzen, damit `plotter_studio.device` auch headless ohne installiertes Qt nutzbar ist.
+- [x] **`DeviceManager` von Qt entkoppeln:** `PySide6.QtCore.QObject` in `device/manager.py` durch reine Python-Callbacks ersetzen, damit `linto.device` auch headless ohne installiertes Qt nutzbar ist.
 - [x] **Plot-SVG-Export in `core/svg_export.py` auslagern:** String-Aufbau aus `MainWindow.export_plot_svg_dialog()` in eine testbare Funktion in `core/svg_export.py` verschieben.
 - [x] **Nicht-blockierendes Hardware-Probing in Dialogen:** `probe_plotter()` in `PageSetupDialog` und `DeviceSettingsDialog` wie im `PlotDockWidget` in einen Hintergrund-Thread auslagern.
 - [x] **Manueller Stiftwechsel / Pause bei Stiftwechsel:** Option im `SerialStreamer`, vor `SPn;`-Wechseln automatisch zu pausieren (wichtig für 1-Stift-Plotter und Spezialstifte außerhalb des 8er-Karussells).
@@ -43,12 +43,12 @@ Zentrale Aufgabenliste für die Weiterentwicklung von Plotter Studio. Detaillier
 
 ## 2. Packaging & Distribution (AP8 / M4)
 
-Ziel: Plotter Studio als eigenständiges, klickbares Einzelprogramm (ohne Notwendigkeit einer manuellen Python-Installation) für Linux und Windows bereitstellen.
+Ziel: LINTO als eigenständiges, klickbares Einzelprogramm (ohne Notwendigkeit einer manuellen Python-Installation) für Linux und Windows bereitstellen.
 
-- [ ] **Ressourcenpfad anpassen:** In [src/plotter_studio/device/profile.py](src/plotter_studio/device/profile.py) `sys._MEIPASS` unterstützen, damit `resources/devices/*.yaml` im gepackten Zustand gefunden werden.
-- [ ] **PyInstaller Spezifikation:** `plotter-studio.spec` mit allen notwendigen Qt-Plugins, Binärabhängigkeiten (NumPy) und YAML-Gerätedefinitionen erstellen.
+- [ ] **Ressourcenpfad anpassen:** In [src/linto/device/profile.py](src/linto/device/profile.py) `sys._MEIPASS` unterstützen, damit `resources/devices/*.yaml` im gepackten Zustand gefunden werden.
+- [ ] **PyInstaller Spezifikation:** `linto.spec` mit allen notwendigen Qt-Plugins, Binärabhängigkeiten (NumPy) und YAML-Gerätedefinitionen erstellen.
 - [ ] **Linux AppImage:** Build-Skript für ein Linux-AppImage bereitstellen (umgeht `glibc`-Inkompatibilitäten zwischen verschiedenen Linux-Distributionen).
-- [ ] **Windows Executable:** Build-Test für `plotter-studio.exe`.
+- [ ] **Windows Executable:** Build-Test für `linto.exe`.
 - [ ] **CI/CD Automation:** GitHub Actions Workflow (`.github/workflows/release.yml`) für automatische Multi-Plattform-Builds bei neuen Git-Tags.
 
 ---
@@ -70,7 +70,7 @@ Tests direkt am physischen Mutoh XP-500 Plotter mit [tools/xp500_probe.py](tools
 
 ## 4. Format- und Treiber-Roadmap
 
-- [x] **HP-GL/PLT-Import (optional):** Bestehende `.hpgl`/`.plt`-Dateien als Vektorpfade in den Layout-Canvas einlesen (inkl. `LB`-Text, Kreisen `CI`, Bögen `AA`/`AR`, Rechtecken `EA`/`RA` und Stiftzuweisung `SP1`–`SP8`, übernommen aus `MutohPlot` in `src/plotter_studio/core/hpgl_import.py`).
+- [x] **HP-GL/PLT-Import (optional):** Bestehende `.hpgl`/`.plt`-Dateien als Vektorpfade in den Layout-Canvas einlesen (inkl. `LB`-Text, Kreisen `CI`, Bögen `AA`/`AR`, Rechtecken `EA`/`RA` und Stiftzuweisung `SP1`–`SP8`, übernommen aus `MutohPlot` in `src/linto/core/hpgl_import.py`).
 - [ ] **Schneideplotter-Unterstützung (Vinyl Cutter):** Klingen-Offset-Kompensation (Drag-Knife) implementieren, um Schnittecken bei Schleppmessern sauber auszufahren.
 - [ ] **DXF-Import:** Direkter Import von 2D-CAD-Dateien (unter Nutzung von `ezdxf`).
 - [ ] **G-Code-Treiber:** Emitter für DIY-Stiftplotter und Fräsen/3D-Drucker mit Marlin- oder Grbl-Firmware.
@@ -80,6 +80,6 @@ Tests direkt am physischen Mutoh XP-500 Plotter mit [tools/xp500_probe.py](tools
 ## 5. Erweiterte Gestaltungswerkzeuge
 
 - [ ] **Schraffur (Hatching):** Automatisches Füllen geschlossener Vektorflächen mit Stift-Linienmustern.
-- [x] **SVG-`<text>`-Import mit Hershey-Simplex-Einlinienschrift:** Automatische Umwandlung von SVG-`<text>`- und `<tspan>`-Elementen in durchgehende Einlinien-Vektorpfade (`src/plotter_studio/core/hershey_font.py`, Public-Domain Hershey Roman Simplex inkl. Umlauten/`ß`) mit Diagnose-Hinweis.
+- [x] **SVG-`<text>`-Import mit Hershey-Simplex-Einlinienschrift:** Automatische Umwandlung von SVG-`<text>`- und `<tspan>`-Elementen in durchgehende Einlinien-Vektorpfade (`src/linto/core/hershey_font.py`, Public-Domain Hershey Roman Simplex inkl. Umlauten/`ß`) mit Diagnose-Hinweis.
 - [ ] **Interaktives Text-/Beschriftungs-Werkzeug:** Direktes Erzeugen von technischen Beschriftungen, Passkreuzen und Stiftnotizen auf dem Arbeitsblatt unter Nutzung von `hershey_font.py`.
 

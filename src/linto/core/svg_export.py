@@ -28,10 +28,12 @@ from .svg_import import (
 )
 from .hpgl_import import load_hpgl, is_hpgl_file
 
-logger = logging.getLogger("plotter_studio.core.svg_export")
+logger = logging.getLogger("linto.core.svg_export")
 
 
-NS_PS = "https://plotter-studio.org/schema/v1"
+NS_PS = "urn:linto:project:v1"
+# Namespace used by project files written before the rename to LINTO (read-only support).
+NS_PS_LEGACY = "https://plotter-studio.org/schema/v1"
 NS_SVG = "http://www.w3.org/2000/svg"
 ET.register_namespace("ps", NS_PS)
 
@@ -81,7 +83,7 @@ def export_document_to_svg(doc: Document, output_path: str):
         "version": "1.1",
     })
 
-    # Metadata tag for Plotter Studio settings
+    # Metadata tag for LINTO settings
     metadata = ET.SubElement(root, "metadata")
     ps_project = ET.SubElement(metadata, f"{{{NS_PS}}}project", {"version": "1.0"})
 
@@ -189,13 +191,13 @@ def export_document_to_svg(doc: Document, output_path: str):
 
 
 def is_project_file(filepath_or_data: str) -> bool:
-    """Check if an SVG file or XML string contains Plotter Studio project metadata."""
+    """Check if an SVG file or XML string contains LINTO project metadata."""
     try:
         if os.path.exists(filepath_or_data):
             with open(filepath_or_data, "r", encoding="utf-8", errors="replace") as f:
                 header = f.read(4096)
-            return NS_PS in header or "<ps:project" in header
-        return NS_PS in filepath_or_data or "<ps:project" in filepath_or_data
+            return NS_PS in header or NS_PS_LEGACY in header or "<ps:project" in header
+        return NS_PS in filepath_or_data or NS_PS_LEGACY in filepath_or_data or "<ps:project" in filepath_or_data
     except OSError:
         return False
 
@@ -203,7 +205,7 @@ def is_project_file(filepath_or_data: str) -> bool:
 def load_document_from_svg(filepath_or_data: str) -> Document:
     """Load an SVG file and reconstruct the full Document model.
 
-    Supports both Plotter Studio project SVGs (with embedded page/pen/item metadata)
+    Supports both LINTO project SVGs (with embedded page/pen/item metadata)
     and standard SVGs (which are loaded as an ImportItem on a matching or default page).
     """
     if not is_project_file(filepath_or_data):
@@ -259,6 +261,7 @@ def load_document_from_svg(filepath_or_data: str) -> Document:
     else:
         raw = filepath_or_data
 
+    raw = raw.replace(NS_PS_LEGACY, NS_PS)
     cleaned = _clean_duplicate_attributes(raw)
     root = ET.fromstring(cleaned)
 

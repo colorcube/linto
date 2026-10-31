@@ -1,6 +1,6 @@
 # 2. Layout Mode & Object Management
 
-**Layout Mode** is Plotter Studio's visual workspace. Here you arrange, scale, and rotate vector graphics on your selected sheet, assign pens and colors, and verify margins against your plotter's physical limits.
+**Layout Mode** is LINTO's visual workspace. Here you arrange, scale, and rotate vector graphics on your selected sheet, assign pens and colors, and verify margins against your plotter's physical limits.
 
 ![Layout Mode Overview](images/ui_overview_layout.png)
 
@@ -12,7 +12,7 @@ The interface is structured into clear functional zones:
 
 1. **Main Canvas (Center):**
    * Displays the selected sheet scaled accurately in millimeters.
-   * A **red dashed inner rectangle** marks the physically printable area (the *hard-clip window*). If any vector falls outside this boundary, Plotter Studio warns you about potential clipping.
+   * A **red dashed inner rectangle** marks the physically printable area (the *hard-clip window*). If any vector falls outside this boundary, LINTO warns you about potential clipping.
    * **Rulers (Top & Left):** Show millimeter measurements. The origin (0, 0) is at the top-left corner of the paper sheet.
    * **Mouse Navigation:**
      * **Scroll Wheel:** Smooth zooming in and out (centered on the mouse cursor).
@@ -57,7 +57,7 @@ Before placing artwork, configure your paper size and margin profile. Click **[ 
 
 ## 3. Importing Vector Artwork
 
-Plotter Studio supports two vector formats directly:
+LINTO supports two vector formats directly:
 * **SVG (`.svg`):** The primary recommended format for vector artwork exported from Inkscape, custom scripts (Python, Processing, p5.js), Blender, Illustrator, Affinity Designer, or CAD tools. Smooth curves (Bézier curves, arcs) are preserved losslessly and linearized only during output compilation according to the configured tolerance.
 * **HP-GL (`.hpgl`, `.plt`):** Direct import of existing machine plot files (including pen calls `SP1`–`SP8`, circles `CI`, arcs `AA`/`AR`, rectangles `EA`/`RA`, and `LB` text labels via the built-in 5×7 vector font).
 
@@ -67,8 +67,8 @@ Plotter Studio supports two vector formats directly:
 3. **Import (`Ctrl+I`):** Adds more vector graphics as additional objects to the currently open layout.
 
 ### Automatic Color Clustering (SVG) & Pen Mapping (HP-GL)
-* **SVG:** During import, Plotter Studio analyzes stroke colors (`stroke`) and maps them to the 8 pen channels using a perceptual color distance metric (Delta-E in CIE-Lab color space).
-* **HP-GL / PLT:** `SP1;`–`SP8;` instructions in the file are mapped directly to pens 1–8 in Plotter Studio.
+* **SVG:** During import, LINTO analyzes stroke colors (`stroke`) and maps them to the 8 pen channels using a perceptual color distance metric (Delta-E in CIE-Lab color space).
+* **HP-GL / PLT:** `SP1;`–`SP8;` instructions in the file are mapped directly to pens 1–8 in LINTO.
 
 ---
 

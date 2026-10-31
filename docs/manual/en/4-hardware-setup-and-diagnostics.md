@@ -28,7 +28,7 @@ Reliable communication strictly requires a full-handshake null-modem (crossover)
 > **Important:** A simple 3-wire connection (only TxD, RxD, GND) without RTS/CTS is unreliable on pen plotters because the plotter must be able to pause the computer during complex mechanical movements.
 
 ### Alternative: TCP / Ethernet Device Servers
-Instead of a direct USB cable, you can use serial-to-Ethernet converters (e.g. Moxa NPort, USR-TCP232) or a Raspberry Pi running `socat`. Plotter Studio natively supports TCP network sockets via `tcp://<IP-Address>:<Port>` (e.g. `tcp://192.168.1.150:4001`).
+Instead of a direct USB cable, you can use serial-to-Ethernet converters (e.g. Moxa NPort, USR-TCP232) or a Raspberry Pi running `socat`. LINTO natively supports TCP network sockets via `tcp://<IP-Address>:<Port>` (e.g. `tcp://192.168.1.150:4001`).
 
 ---
 
@@ -47,7 +47,7 @@ Configure the following settings on your plotter's front control panel or DIP sw
 
 ## 3. Device Settings Dialog
 
-Open **Device → Settings...** from the menu or top toolbar to configure your plotter in Plotter Studio:
+Open **Device → Settings...** from the menu or top toolbar to configure your plotter in LINTO:
 
 ![Device Settings Dialog](images/dialog_device_settings.png)
 
@@ -66,7 +66,7 @@ Open **Device → Settings...** from the menu or top toolbar to configure your p
 
 ## 4. Hardware Diagnostics with `tools/xp500_probe.py`
 
-Plotter Studio includes a standalone terminal diagnostic tool to verify the serial lines and inspect raw responses at the byte level:
+LINTO includes a standalone terminal diagnostic tool to verify the serial lines and inspect raw responses at the byte level:
 
 ```bash
 # Probing via USB-Serial:
@@ -82,7 +82,7 @@ python3 tools/xp500_probe.py tcp://127.0.0.1:9999
 ### Typical Output on a Successful Connection:
 ```text
 =================================================================
-  PLOTTER STUDIO – Mutoh XP-500 Hardware-Diagnose (AP0)
+  LINTO – Mutoh XP-500 Hardware-Diagnose (AP0)
 =================================================================
 Ziel:      /dev/ttyS5
 Baudrate:  19200
@@ -201,7 +201,7 @@ When using add-in PCIe RS-232 expansion cards (such as cards based on the common
 * **`ModemManager` probing ports with `AT` commands:** Immediately after plugging in a USB-to-serial adapter, `ModemManager` may probe the port for a few seconds to check if it is a cellular modem. Wait 5–10 seconds after plugging in the USB adapter, or power on the plotter after connecting the adapter so `AT` probe strings do not trigger an HP-GL syntax error on the plotter.
 
 #### 5. Quick Manual Console Test (`stty` & `cat`)
-To test whether the serial port, cable, and plotter communicate at the OS level independently of Python or Plotter Studio, you can configure and send data directly from a terminal (`19200` baud, `8N1`, `crtscts` hardware flow control):
+To test whether the serial port, cable, and plotter communicate at the OS level independently of Python or LINTO, you can configure and send data directly from a terminal (`19200` baud, `8N1`, `crtscts` hardware flow control):
 
 ```bash
 stty -F /dev/ttyS5 19200 -parenb cs8 -cstopb crtscts
@@ -212,7 +212,7 @@ cat Hello-World.hpgl > /dev/ttyS5
 
 ### macOS
 
-* **Device Names:** USB-to-serial adapters appear twice under `/dev/` on macOS—as `/dev/tty.usbserial-*` and `/dev/cu.usbserial-*`. Always prefer the **`/dev/cu.*`** (*Call-Up / Call-Out*) device in Plotter Studio, because `/dev/tty.*` waits for the hardware Data Carrier Detect (DCD) line and may block when opening.
+* **Device Names:** USB-to-serial adapters appear twice under `/dev/` on macOS—as `/dev/tty.usbserial-*` and `/dev/cu.usbserial-*`. Always prefer the **`/dev/cu.*`** (*Call-Up / Call-Out*) device in LINTO, because `/dev/tty.*` waits for the hardware Data Carrier Detect (DCD) line and may block when opening.
 * *(Additional macOS-specific notes will be added in a future update.)*
 
 ---

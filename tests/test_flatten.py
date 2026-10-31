@@ -1,9 +1,9 @@
 import math
-from plotter_studio.pipeline.flatten import (
+from linto.pipeline.flatten import (
     flatten_cubic_bezier, flatten_quadratic_bezier, flatten_arc, point_line_distance
 )
-from plotter_studio.pipeline.simplify import ramer_douglas_peucker
-from plotter_studio.pipeline.merge import merge_polylines
+from linto.pipeline.simplify import ramer_douglas_peucker
+from linto.pipeline.merge import merge_polylines
 import numpy as np
 
 

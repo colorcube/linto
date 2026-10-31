@@ -3,11 +3,11 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "plotter-studio"
+name = "linto"
 version = "0.1.0"
 description = "Modular Slicer and Studio for Pen Plotters under Linux"
 readme = "README.md"
-authors = [{ name = "Plotter Studio Contributors" }]
+authors = [{ name = "LINTO Contributors" }]
 license = { text = "GPL-3.0-or-later" }
 requires-python = ">=3.11"
 dependencies = [
@@ -28,7 +28,7 @@ docs = [
 ]
 
 [project.scripts]
-plotter-studio = "plotter_studio.__main__:main"
+linto = "linto.__main__:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

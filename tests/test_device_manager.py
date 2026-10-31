@@ -2,8 +2,8 @@
 
 import pytest
 from pathlib import Path
-from plotter_studio.device.manager import DeviceManager, ConfiguredDevice
-from plotter_studio.gui.device_dialog import DeviceSettingsDialog
+from linto.device.manager import DeviceManager, ConfiguredDevice
+from linto.gui.device_dialog import DeviceSettingsDialog
 
 
 def test_device_manager_defaults_and_persistence(tmp_path):
@@ -171,8 +171,8 @@ devices:
 
 def test_old_devices_yaml_migrates_to_axis_corrections(tmp_path):
     """Old configs (absolute axis values) must not override the XP-500 profile mapping."""
-    from plotter_studio.core.document import Document
-    from plotter_studio.device import build_emitter
+    from linto.core.document import Document
+    from linto.device import build_emitter
 
     config_file = tmp_path / "devices.yaml"
     config_file.write_text(OLD_DEVICES_YAML, encoding="utf-8")

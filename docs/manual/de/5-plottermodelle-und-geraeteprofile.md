@@ -1,12 +1,12 @@
 # 5. Anbindung weiterer Plottermodelle & Geräteprofile
 
-Plotter Studio beschränkt sich nicht auf den Mutoh XP-500. Jedes unterstützte Plottermodell wird über eine deklarative YAML-Profildatei im Verzeichnis `resources/devices/` beschrieben. Beim Programmstart liest Plotter Studio (`list_available_profiles()` in `src/plotter_studio/device/profile.py`) alle `*.yaml`-Dateien in diesem Ordner automatisch ein und stellt sie im Dialog **[Geräte-Einstellungen](4-hardware-setup-und-test.md#3-dialog-gerate-einstellungen)** zur Auswahl bereit.
+LINTO beschränkt sich nicht auf den Mutoh XP-500. Jedes unterstützte Plottermodell wird über eine deklarative YAML-Profildatei im Verzeichnis `resources/devices/` beschrieben. Beim Programmstart liest LINTO (`list_available_profiles()` in `src/linto/device/profile.py`) alle `*.yaml`-Dateien in diesem Ordner automatisch ein und stellt sie im Dialog **[Geräte-Einstellungen](4-hardware-setup-und-test.md#3-dialog-gerate-einstellungen)** zur Auswahl bereit.
 
 ---
 
 ## 1. Eigene Geräteprofile anlegen (`resources/devices/*.yaml`)
 
-Um ein weiteres Plottermodell einzubinden, legst du einfach eine neue Datei `resources/devices/<name>.yaml` an. Sobald die Datei dort gespeichert ist, steht das Modell sofort in Plotter Studio zur Verfügung.
+Um ein weiteres Plottermodell einzubinden, legst du einfach eine neue Datei `resources/devices/<name>.yaml` an. Sobald die Datei dort gespeichert ist, steht das Modell sofort in LINTO zur Verfügung.
 
 ### Beispiel 1: Flachbettplotter (`roland_dxy.yaml`, Ursprung unten links)
 
@@ -114,7 +114,7 @@ default_margin_profile: "exp"
 
 ### 2.2 Koordinatensystem & intrinsisches Achsen-Mapping
 
-Plotter Studio arbeitet im Layout-Modus mit Blattkoordinaten in Millimetern (Ursprung oben links, `+X` nach rechts, `+Y` nach unten). Der HP-GL-Emitter rechnet diese Koordinaten zunächst in das zentrierte bzw. eckenbasierte kartesische Blattkoordinatensystem (`+X` rechts, `+Y` oben) um und wendet darauf das **intrinsische Hardware-Achsen-Mapping** des Geräteprofils an:
+LINTO arbeitet im Layout-Modus mit Blattkoordinaten in Millimetern (Ursprung oben links, `+X` nach rechts, `+Y` nach unten). Der HP-GL-Emitter rechnet diese Koordinaten zunächst in das zentrierte bzw. eckenbasierte kartesische Blattkoordinatensystem (`+X` rechts, `+Y` oben) um und wendet darauf das **intrinsische Hardware-Achsen-Mapping** des Geräteprofils an:
 
 | Feld | Typ | Standardwert | Beschreibung |
 |---|---|---|---|
@@ -167,7 +167,7 @@ Unter `margins_mm` können ein oder mehrere benannte Randprofile hinterlegt werd
 
 ## 3. Geräte-Import aus Inkcut (`tools/import_inkcut_devices.py`)
 
-Plotter Studio liefert ein Import-Werkzeug mit, mit dem du alle HP-GL-Gerätetreiber aus einer Inkcut-Installation (`manifest.enaml`) direkt in gebrauchsfertige Plotter-Studio-Profile konvertieren kannst:
+LINTO liefert ein Import-Werkzeug mit, mit dem du alle HP-GL-Gerätetreiber aus einer Inkcut-Installation (`manifest.enaml`) direkt in gebrauchsfertige LINTO-Profile konvertieren kannst:
 
 ```bash
 # Geräte aus Inkcut einlesen und auflisten:
@@ -177,7 +177,7 @@ python3 tools/import_inkcut_devices.py --list-only
 python3 tools/import_inkcut_devices.py
 ```
 
-Plotter Studio bringt bereits über 25 vorinstallierte Profile für Modelle von Roland (Stika SV-8/12/15, CAMM-1), Graphtec (CE5000), US Cutter (Refine MH-721/1351), Secabo, Summa, Sekonic und weitere mit.
+LINTO bringt bereits über 25 vorinstallierte Profile für Modelle von Roland (Stika SV-8/12/15, CAMM-1), Graphtec (CE5000), US Cutter (Refine MH-721/1351), Secabo, Summa, Sekonic und weitere mit.
 
 > [!NOTE]
-> **Hinweis zu Schneideplottern (Cutter):** Viele dieser aus Inkcut übernommenen Modelle sind Schneideplotter. Sie funktionieren in Plotter Studio hervorragend mit einem Stifteinsatz als Zeichenplotter. Das Schneiden von Folien mit Messerklingen wird noch nicht unterstützt, da die dafür notwendige Schleppmesser-Offset-Kompensation noch fehlt.
+> **Hinweis zu Schneideplottern (Cutter):** Viele dieser aus Inkcut übernommenen Modelle sind Schneideplotter. Sie funktionieren in LINTO hervorragend mit einem Stifteinsatz als Zeichenplotter. Das Schneiden von Folien mit Messerklingen wird noch nicht unterstützt, da die dafür notwendige Schleppmesser-Offset-Kompensation noch fehlt.

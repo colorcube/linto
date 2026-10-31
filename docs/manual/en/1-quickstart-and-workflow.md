@@ -2,8 +2,8 @@
 
 This guide takes you step by step from an existing vector file (SVG) to a finished pen drawing on paper.
 
-> **Tip: You can try Plotter Studio right away without physical hardware!**  
-> Plotter Studio includes a built-in virtual software plotter (`VirtualPlotter`) that fully emulates the serial interface and firmware commands over your local network.
+> **Tip: You can try LINTO right away without physical hardware!**  
+> LINTO includes a built-in virtual software plotter (`VirtualPlotter`) that fully emulates the serial interface and firmware commands over your local network.
 
 ---
 
@@ -19,9 +19,9 @@ This guide takes you step by step from an existing vector file (SVG) to a finish
 If you do not have hardware set up yet:
 1. Open a terminal and start the built-in emulator (e.g. with realistic drawing-time simulation):
    ```bash
-   python3 -m plotter_studio.emulator --tcp 9999 --realtime
+   python3 -m linto.emulator --tcp 9999 --realtime
    ```
-2. In the top toolbar of Plotter Studio, select **Mutoh XP-500 Simulator (TCP)** as your active device.
+2. In the top toolbar of LINTO, select **Mutoh XP-500 Simulator (TCP)** as your active device.
 3. **Flow Control (Handshake):** Because virtual pseudoterminals (PTY) and TCP sockets lack physical hardware handshake pins (RTS/CTS), the emulator uses **software handshaking (`XON / XOFF`)**. The *Mutoh XP-500 Simulator (TCP)* profile comes preconfigured for this out of the box. If you create a custom profile for the emulator, always set flow control to **Software (XON / XOFF)**.
 
 ---
@@ -40,7 +40,7 @@ Click **[ Page Setup... ]** in the top toolbar:
 
 1. **Select Format:** For example, choose **DIN A3** and **Landscape**.
 2. **Margin Profile:** Keep the default **EXP** (Expanded – maximum printable area).
-3. **Live Query (optional):** If a physical plotter is connected, click **[ Query Plotter ]**. Plotter Studio uses the `OH;` command to query the exact sheet dimensions directly from the machine's optical sensors.
+3. **Live Query (optional):** If a physical plotter is connected, click **[ Query Plotter ]**. LINTO uses the `OH;` command to query the exact sheet dimensions directly from the machine's optical sensors.
 4. Click **OK**. The canvas now displays the sheet with the red dashed *hard-clip boundary*.
 
 *(Details: [Chapter 2: Layout & Object Management](2-layout-and-objects.md#2-sheet-page-setup))*
@@ -50,7 +50,7 @@ Click **[ Page Setup... ]** in the top toolbar:
 ### Step 2: Import & Align Vector Graphics
 
 1. Drag and drop any `.svg` or `.hpgl` file directly from your file manager onto the canvas (or press `Ctrl+O` / `Ctrl+I`).
-2. The artwork is loaded. During import, Plotter Studio analyzes all stroke colors and assigns them automatically to pens 1 through 8.
+2. The artwork is loaded. During import, LINTO analyzes all stroke colors and assigns them automatically to pens 1 through 8.
 3. Open the **Transform** dock on the right:
    * In the *Position* group, click **[ Center ]** (crosshair icon) to center the artwork on the sheet.
    * In the *Scale* group, click **[ Fit to Sheet ]** or **[ Fit to Printable Area ]** to enlarge the artwork to fit the area (you can set the desired margin in millimeters right next to it).

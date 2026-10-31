@@ -18,12 +18,12 @@ Für kreatives Arbeiten, generative Kunst, algorithmisches Design und den prakti
 ## 2. Spezialisierte Vektor-Werkzeuge für Plotter
 
 * **[Inkcut](https://github.com/inkcut/inkcut):**
-  Eine etablierte Open-Source-Alternative zu Plotter Studio zur Ansteuerung von 2D-Plottern und Schneideplottern (Vinyl-Cuttern). Unterstützt insbesondere das Folienschneiden inklusive Schleppmesser-Offset-Kompensation (*Blade Offset* / *Overcut*), Entgitterungslinien (*Weeding*) sowie eine direkte Inkscape-Integration. Viele der Geräteprofile in Plotter Studio stammen ursprünglich aus Inkcut.
+  Eine etablierte Open-Source-Alternative zu LINTO zur Ansteuerung von 2D-Plottern und Schneideplottern (Vinyl-Cuttern). Unterstützt insbesondere das Folienschneiden inklusive Schleppmesser-Offset-Kompensation (*Blade Offset* / *Overcut*), Entgitterungslinien (*Weeding*) sowie eine direkte Inkscape-Integration. Viele der Geräteprofile in LINTO stammen ursprünglich aus Inkcut.
 * **[vpype](https://github.com/abey79/vpype):**
   Das Standard-Kommandozeilenwerkzeug für Vektorkunst auf Stiftplottern. Unterstützt automatisches Erzeugen von Schraffuren (*Hatching*) zur Füllung von Flächen mit Linienmustern, Skalieren, Filtern, Kurvenglättung und Transformationen von SVG-Dateien.
 * **[vsketch](https://github.com/abey79/vsketch):**
   Ein auf *vpype* und Python aufbauendes Entwicklungs-Framework, das speziell für generative Plotter-Kunst geschaffen wurde. Bietet einen interaktiven Viewer, Live-Reload beim Coden und automatischen SVG-Export.
 * **[Turtletoy](https://turtletoy.net/):**
-  Eine faszinierende Online-Plattform für generative Vektorkunst direkt im Browser. Skripte werden mit einer an Python-Turtle angelehnten API geschrieben und können direkt als saubere, optimierte SVG-Dateien für Plotter Studio heruntergeladen werden.
+  Eine faszinierende Online-Plattform für generative Vektorkunst direkt im Browser. Skripte werden mit einer an Python-Turtle angelehnten API geschrieben und können direkt als saubere, optimierte SVG-Dateien für LINTO heruntergeladen werden.
 * **[ln (3D Line Art Engine)](https://github.com/fogleman/ln):**
   Eine blitzschnelle 3D-zu-Vektor-Engine in Go (auch als Python-Bindings verfügbar), die 3D-Modelle (`.obj`, `.stl`) und mathematische Funktionen in 2D-Vektorzeichnungen umrechnet und verdeckte Linien (*Hidden Line Removal*) verlässlich handhabt.

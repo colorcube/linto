@@ -1,4 +1,4 @@
-"""Application entrypoint for launching Plotter Studio GUI."""
+"""Application entrypoint for launching LINTO GUI."""
 
 from __future__ import annotations
 import sys
@@ -8,10 +8,10 @@ from .main_window import MainWindow
 
 
 def run_gui():
-    """Launch the Plotter Studio Qt application."""
+    """Launch the LINTO Qt application."""
     app = QApplication(sys.argv)
-    app.setApplicationName("Plotter Studio")
-    app.setOrganizationName("PlotterStudio")
+    app.setApplicationName("LINTO")
+    app.setOrganizationName("linto")
 
     # Initialize internationalization (detects system locale, defaults/falls back to English)
     translators = setup_i18n(app)

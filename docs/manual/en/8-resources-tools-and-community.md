@@ -18,12 +18,12 @@ For creative workflows, generative art, algorithmic design, and troubleshooting,
 ## 2. Specialized Vector Tools for Plotters
 
 * **[Inkcut](https://github.com/inkcut/inkcut):**
-  An established open-source alternative to Plotter Studio for controlling 2D plotters and vinyl cutters. Specifically supports blade cutting with drag-knife offset compensation (*blade offset* / *overcut*), weeding lines, and direct Inkscape integration. Many of the device profiles bundled with Plotter Studio were adapted from Inkcut.
+  An established open-source alternative to LINTO for controlling 2D plotters and vinyl cutters. Specifically supports blade cutting with drag-knife offset compensation (*blade offset* / *overcut*), weeding lines, and direct Inkscape integration. Many of the device profiles bundled with LINTO were adapted from Inkcut.
 * **[vpype](https://github.com/abey79/vpype):**
   The standard command-line utility for pen plotter vector art. Supports automatic hatching for filling enclosed regions with line patterns, scaling, curve smoothing, and SVG transforms.
 * **[vsketch](https://github.com/abey79/vsketch):**
   A generative plotter art framework built on *vpype* and Python. Includes an interactive viewer, live-reload during coding, and direct SVG export.
 * **[Turtletoy](https://turtletoy.net/):**
-  An online playground for generative vector art directly in the browser. Uses a Python-Turtle-inspired canvas API and exports clean SVG files ready for Plotter Studio.
+  An online playground for generative vector art directly in the browser. Uses a Python-Turtle-inspired canvas API and exports clean SVG files ready for LINTO.
 * **[ln (3D Line Art Engine)](https://github.com/fogleman/ln):**
   A fast 3D-to-vector engine written in Go (with Python bindings) that projects 3D models (`.obj`, `.stl`) and mathematical functions into 2D vector art with robust hidden-line removal.

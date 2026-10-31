@@ -1,8 +1,8 @@
-# Plotter Studio – Documentation
+# LINTO – Documentation
 
 > **Language / Sprache:** [English](README.md) | [Deutsch](README.de.md)
 
-Welcome to the Plotter Studio documentation. The documentation is organized into three main areas:
+Welcome to the LINTO documentation. The documentation is organized into three main areas:
 
 ---
 

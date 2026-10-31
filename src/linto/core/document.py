@@ -1,4 +1,4 @@
-"""Document model for Plotter Studio."""
+"""Document model for LINTO."""
 
 from __future__ import annotations
 import copy
@@ -19,7 +19,7 @@ from .geometry import (
     compute_segments_bounds,
 )
 
-logger = logging.getLogger("plotter_studio.core.document")
+logger = logging.getLogger("linto.core.document")
 
 
 PAPER_PRESETS: Dict[str, Tuple[float, float]] = {
@@ -429,7 +429,7 @@ class ImportItem:
 
 @dataclass
 class Document:
-    """Plotter Studio root document."""
+    """LINTO root document."""
     page: Page = field(default_factory=Page)
     pens: List[LogicalPen] = field(default_factory=lambda: [LogicalPen(**vars(p)) for p in DEFAULT_PENS])
     items: List[ImportItem] = field(default_factory=list)

@@ -1,6 +1,6 @@
 # 7. Hintergrund: Konzepte, Algorithmen & Architektur (Deep-Dive)
 
-Dieses Kapitel bietet einen detaillierten technischen Einblick in die mathematischen und maschinennahen Hintergründe von Plotter Studio: Wie der Slicer intern arbeitet, wie Algorithmen wie 2-Opt TSP und RDP funktionieren, wie Koordinaten mathematisch transformiert werden und wie die Multi-Plotter-Architektur aufgebaut ist.
+Dieses Kapitel bietet einen detaillierten technischen Einblick in die mathematischen und maschinennahen Hintergründe von LINTO: Wie der Slicer intern arbeitet, wie Algorithmen wie 2-Opt TSP und RDP funktionieren, wie Koordinaten mathematisch transformiert werden und wie die Multi-Plotter-Architektur aufgebaut ist.
 
 ---
 
@@ -23,7 +23,7 @@ Daraus ergeben sich fundamentale Herausforderungen, die herkömmliche Drucksyste
 
 ## 2. Der Plotter-Slicer: Funktionsweise der Pipeline
 
-Plotter Studio fungiert für Stiftplotter ähnlich wie ein **Slicer** in der 3D-Druckwelt: Es nimmt eine Vektorgeometrie entgegen und übersetzt sie über eine mehrstufige Pipeline in optimierte Fahrbefehle für die Hardware.
+LINTO fungiert für Stiftplotter ähnlich wie ein **Slicer** in der 3D-Druckwelt: Es nimmt eine Vektorgeometrie entgegen und übersetzt sie über eine mehrstufige Pipeline in optimierte Fahrbefehle für die Hardware.
 
 ```
 [ SVG / Vektordatei ]
@@ -50,7 +50,7 @@ Plotter Studio fungiert für Stiftplotter ähnlich wie ein **Slicer** in der 3D-
 ### Die Optimierungsstufen im Detail:
 
 * **Farb-Clustering:** Grafikelemente mit unterschiedlichen RGB-Farben werden automatisch auf die verfügbaren Stiftkanäle (z.B. Stift 1 bis 8) gruppiert. Innerhalb eines Stifts werden alle Pfade zusammengefasst, um Werkzeugwechsel auf das absolute Minimum zu reduzieren.
-* **Linienzusammenfassung (Merge):** Berühren sich zwei Linienenden innerhalb einer einstellbaren Toleranz (z.B. 0,1 mm), verbindet Plotter Studio diese zu einer zusammenhängenden Polylinie. Der Stift bleibt auf dem Papier, statt angehoben und neu aufgesetzt zu werden.
+* **Linienzusammenfassung (Merge):** Berühren sich zwei Linienenden innerhalb einer einstellbaren Toleranz (z.B. 0,1 mm), verbindet LINTO diese zu einer zusammenhängenden Polylinie. Der Stift bleibt auf dem Papier, statt angehoben und neu aufgesetzt zu werden.
 * **Pfade umkehren (Reversal):** Polylinien können in beiden Richtungen gezeichnet werden. Die Pipeline kehrt Liniensegmente bei Bedarf automatisch um, wenn das Linienende näher am nächsten Pfad liegt.
 * **RDP-Vereinfachung (Ramer-Douglas-Peucker):** CAD-Programme und Freihand-Vektoren erzeugen oft Tausende mikroskopische Stützpunkte auf geraden Linien. Der RDP-Algorithmus filtert redundante Punkte heraus, ohne die visuelle Kontur zu verändern. Das verhindert Stottern der Schrittmotoren.
 * **2-Opt Pfadoptimierung (Traveling Salesperson Problem):** Ein heuristischer Optimierungsalgorithmus ordnet die Reihenfolge aller Vektoren so an, dass die Gesamtstrecke der Eilgang-Leerfahrten (`Pen Up`) drastisch minimiert wird (oft um **40 % bis 70 %**).
@@ -59,12 +59,12 @@ Plotter Studio fungiert für Stiftplotter ähnlich wie ein **Slicer** in der 3D-
 
 ## 3. Koordinatensysteme und Nullpunkte
 
-In Plotter Studio arbeitest du immer mit intuitiven **Blattkoordinaten**:
+In LINTO arbeitest du immer mit intuitiven **Blattkoordinaten**:
 * Einheit: Millimeter (mm).
 * Nullpunkt: Oben links an der Papierkante.
 * X-Achse nach rechts, Y-Achse nach unten.
 
-Für die Ausgabe rechnet Plotter Studio die Geometrie in die nativen Koordinaten des Zielgeräts um:
+Für die Ausgabe rechnet LINTO die Geometrie in die nativen Koordinaten des Zielgeräts um:
 
 ### Center-Origin vs. Bottom-Left
 
@@ -94,7 +94,7 @@ Rollenplotter benötigen an der vorderen Blattkante einen Sicherheitsabstand fü
 | **TYPE1** | 25,0 mm | 5,0 mm | 11,0 mm | 11,0 mm | Rollenpapier mit Seitenrand |
 | **TYPE3** | 25,0 mm | 10,0 mm | 10,0 mm | 10,0 mm | Alternative für Endlospapier |
 
-Plotter Studio visualisiert diese Ränder im Canvas als gepunktete Linie und warnt vor Beschnitt.
+LINTO visualisiert diese Ränder im Canvas als gepunktete Linie und warnt vor Beschnitt.
 
 ---
 
@@ -103,13 +103,13 @@ Plotter Studio visualisiert diese Ränder im Canvas als gepunktete Linie und war
 Die Kommunikation mit physischen Plottern erfolgt über serielle RS-232-Schnittstellen (bzw. USB-Seriell-Adapter) oder TCP-Netzwerk-Sockets.
 
 ### Flusssteuerung (Flow-Control)
-Plotter Studio nutzt striktes **RTS/CTS-Hardware-Handshaking**:
+LINTO nutzt striktes **RTS/CTS-Hardware-Handshaking**:
 * Der Plotter signalisiert über die CTS-Leitung (Clear To Send), ob sein interner Puffer Daten aufnehmen kann.
-* Plotter Studio wartet im `SerialStreamer`-Thread atomar auf CTS, bevor weitere Byte-Chunks gesendet werden. Dadurch sind Pufferüberläufe und Datenverlust ausgeschlossen.
+* LINTO wartet im `SerialStreamer`-Thread atomar auf CTS, bevor weitere Byte-Chunks gesendet werden. Dadurch sind Pufferüberläufe und Datenverlust ausgeschlossen.
 
 ### Notaus- und Schutzmechanismen
 Wird ein Plot über die Benutzeroberfläche abgebrochen:
-1. Sendet Plotter Studio sofort die Abbruchsequenz `\x1b.K` (Clear Device Buffer) an den Plotter.
+1. Sendet LINTO sofort die Abbruchsequenz `\x1b.K` (Clear Device Buffer) an den Plotter.
 2. Der Schreibstift wird unmittelbar angehoben (`PU;`).
 3. Der Stift wird im Parkkarussell abgelegt (`SP0;`), um ein Austrocknen der Spitze oder Beschädigungen des Papiers zu verhindern.
 
@@ -117,7 +117,7 @@ Wird ein Plot über die Benutzeroberfläche abgebrochen:
 
 ## 5. Multi-Plotter-Architektur: Offen für jedes Gerät
 
-Plotter Studio wurde von Grund auf modular entwickelt. Auch wenn der **Mutoh XP-500** als Referenz-Großformatplotter dient, ist die Software **nicht auf ein einziges Fabrikat beschränkt**.
+LINTO wurde von Grund auf modular entwickelt. Auch wenn der **Mutoh XP-500** als Referenz-Großformatplotter dient, ist die Software **nicht auf ein einziges Fabrikat beschränkt**.
 
 ### Deklarative Geräteprofile (`resources/devices/*.yaml`)
 Jedes Gerät wird durch eine einfache, lesbare YAML-Datei definiert:
@@ -153,7 +153,7 @@ margins_mm:
 ```
 
 ### Der `DeviceManager`
-* Verwaltet eine Liste aller konfigurierten Plotter in `~/.config/plotter-studio/devices.yaml`.
+* Verwaltet eine Liste aller konfigurierten Plotter in `~/.config/linto/devices.yaml`.
 * Ermöglicht es, in der Benutzeroberfläche mit einem Klick zwischen verschiedenen Plottern umzuschalten (z.B. vom Mutoh XP-500 Rollenplotter zu einem Roland DXY Flachbettplotter oder einem virtuellen Emulator).
 * Alle Docks, Lineale, Randbereiche und Emitter passen sich sofort dynamisch an das gewählte Gerät an.
 
@@ -161,6 +161,6 @@ margins_mm:
 
 ## 6. Verwandte Projekte, Inspiration & Danksagung
 
-* **InkCut (GPL-3.0-or-later):** Aus InkCut wurden 24 HP-GL-Geräteprofile (u.a. Roland, Graphtec, US Cutter, Summa, Sekonic) übernommen und für Plotter Studio aufbereitet (`tools/import_inkcut_devices.py`). Zudem diente es als Referenz für geräteunabhängige Treiberabstraktion.
+* **InkCut (GPL-3.0-or-later):** Aus InkCut wurden 24 HP-GL-Geräteprofile (u.a. Roland, Graphtec, US Cutter, Summa, Sekonic) übernommen und für LINTO aufbereitet (`tools/import_inkcut_devices.py`). Zudem diente es als Referenz für geräteunabhängige Treiberabstraktion.
 * **vpype (Antoine Beyeler, GPL-3.0-or-later):** Konzeptionelle Inspiration für die modulare Slicer-Pipeline (Linienzusammenfassung, RDP-Glättung und 2-Opt TSP-Pfadoptimierung zur Reduktion von Leerfahrten).
 * **MutohPlot (Oliver F., MIT-Lizenz):** Wertvolle Referenz für die gerätespezifischen Eigenheiten des Mutoh XP-500 (Hard-Clip-Fenster, Randprofile EXP/NORM, Achsen-Mapping).

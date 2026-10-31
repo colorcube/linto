@@ -1,4 +1,4 @@
-# Plotter Studio – Konzept v2.4
+# LINTO – Konzept v2.4
 
 Stand: 2026-10-18 · Status: **Gelebte Architektur & Systementwurf v2.4**
 Gerätedokumentation: [devices/mutoh-xp500/](../devices/mutoh-xp500/README.md).
@@ -19,14 +19,14 @@ Roadmap & Aufgaben: [TODO.md](TODO.md).
 
 ## 1. Vision & Positionierung
 
-**Plotter Studio ist ein modularer „Slicer für Stiftplotter“ unter Linux.**
+**LINTO ist ein modularer „Slicer für Stiftplotter“ unter Linux.**
 Analog zu PrusaSlicer/Cura beim 3D-Druck: Inhalte **importieren → auf beliebigem Medium anordnen → Stifte/Werkzeuge zuordnen → optimieren & prüfen → zuverlässig an das Gerät senden**.
 
 ### Multi-Geräte-Strategie (Geräteunabhängigkeit)
 Obwohl das Projekt primär für den vorhandenen **Mutoh XP-500** entwickelt wird, ist die gesamte Softwarearchitektur **strikt hersteller- und geräteneutral** entworfen:
 - **Geräteunabhängiger Kern:** Dokumentenmodell, Importe, Gruppierung, Pfadtransformationen, Optimierungs-Pipeline (Clipping, Vereinfachung, 2-Opt-Sortierung) und Werkzeugverwaltung arbeiten rein in metrischen Koordinaten (Millimeter).
-- **Geräte-Abstraktion (`plotter_studio.device`):** Trennt *Geräteprofil* (YAML), *Koordinatenabbildung* (Center- vs. Corner-Origin, Ausrichtung), *Protokoll-Treiber* (Emitter für HP-GL, MH-GL, G-Code etc.) und *Fähigkeiten* (Capabilities wie Abfragemöglichkeiten, Puffertiefe, Werkzeugwechsel).
-- **Streaming (`plotter_studio.device.streamer`):** Sendet im Hintergrund-Thread über serielle TTYs, USB-Seriell-Adapter oder TCP-Sockets, mit konfigurierbarer Flusskontrolle (Hardware-Handshake, XON/XOFF im Userspace).
+- **Geräte-Abstraktion (`linto.device`):** Trennt *Geräteprofil* (YAML), *Koordinatenabbildung* (Center- vs. Corner-Origin, Ausrichtung), *Protokoll-Treiber* (Emitter für HP-GL, MH-GL, G-Code etc.) und *Fähigkeiten* (Capabilities wie Abfragemöglichkeiten, Puffertiefe, Werkzeugwechsel).
+- **Streaming (`linto.device.streamer`):** Sendet im Hintergrund-Thread über serielle TTYs, USB-Seriell-Adapter oder TCP-Sockets, mit konfigurierbarer Flusskontrolle (Hardware-Handshake, XON/XOFF im Userspace).
 
 **Referenzgerät Mutoh XP-500:**
 Großformat-Stiftplotter (A4 bis A0 sowie beliebige Zwischengrößen dank verschiebbarer Andruckrollen). Meldet sich als HP-7585B-Emulation (MH-GL / HP-GL), RS-232 mit bis zu 19200 Baud 8N1 und Hardware-Handshake (DTR/CTS) über USB-Seriell-Adapter, 8 Stifte.
@@ -68,11 +68,11 @@ flowchart LR
 
 | Paket | Qt? | Inhalt |
 |---|---|---|
-| `plotter_studio.core` | nein | Dokumentmodell, Geometrie, Import/Export (SVG, HP-GL), Stifte, Persistenz |
-| `plotter_studio.pipeline` | nein | Flatten, Clip, Merge, Simplify, Sort, Compiler → Plot-Job |
-| `plotter_studio.device` | nein | Profile (YAML), Emitter (HP-GL/MH-GL), Koordinatenabbildung (Center/Corner-Origin, Einlage), Geräteabfrage (`probe`), Streamer mit Flusskontrolle, Geräteverwaltung |
-| `plotter_studio.emulator` | nein | Virtueller XP-500 (PTY/TCP) für Tests ohne Hardware |
-| `plotter_studio.gui` | **ja** | Hauptfenster, Canvas, Docks, Dialoge. Hängt nur von den Paketen oben ab. |
+| `linto.core` | nein | Dokumentmodell, Geometrie, Import/Export (SVG, HP-GL), Stifte, Persistenz |
+| `linto.pipeline` | nein | Flatten, Clip, Merge, Simplify, Sort, Compiler → Plot-Job |
+| `linto.device` | nein | Profile (YAML), Emitter (HP-GL/MH-GL), Koordinatenabbildung (Center/Corner-Origin, Einlage), Geräteabfrage (`probe`), Streamer mit Flusskontrolle, Geräteverwaltung |
+| `linto.emulator` | nein | Virtueller XP-500 (PTY/TCP) für Tests ohne Hardware |
+| `linto.gui` | **ja** | Hauptfenster, Canvas, Docks, Dialoge. Hängt nur von den Paketen oben ab. |
 
 Abhängigkeitsregel: `gui → (core, pipeline, device)`, niemals umgekehrt. Alles außer der GUI läuft ohne installierte Qt-Bibliotheken.
 
@@ -153,7 +153,7 @@ Quelldatei (SVG)                     Dokument / Stift-Mapping                Plo
 ```
 
 #### 1. Erkennung beim Import
-Beim Importieren einer SVG-Datei analysiert Plotter Studio Struktur und Stile:
+Beim Importieren einer SVG-Datei analysiert LINTO Struktur und Stile:
 - **Nach Ebenen (Inkscape-Layer):** Inkscape speichert Ebenen als Gruppen `<g inkscape:groupmode="layer" inkscape:label="...">`. Diese Labels und Gruppen können direkt als logische Stift-Layer übernommen werden.
 - **Nach Konturfarben (`stroke`):** Scan aller distinkten Konturfarben im SVG. Füllungen (`fill`) werden ignoriert (mit Warnhinweis im Pre-Flight).
 - **Auto-Farbreduktion (Clustering auf $\le 8$ Farben):** Besitzt ein SVG mehr als 8 Farben (oder viele feine Helligkeitsabstufungen), fasst ein Clustering-Algorithmus (CIELAB $\Delta E$ Farbabstand / k-Means) ähnliche Farben automatisch auf die maximal 8 verfügbaren Stifte zusammen.
@@ -215,7 +215,7 @@ Canvas (Qt px)  ◄─ QTransform ─►  Papier-mm (Model)  ── Geräte-Abbi
 ```
 
 **Grundsatz:** Die interne Dokument- und Pipeline-Geometrie rechnet strikt in Millimetern mit Ursprung oben-links ($x \to$ rechts, $y \downarrow$ unten).
-Die Transformation in den gerätespezifischen Raum erfolgt erst beim Kompilieren des Plot-Jobs im Modul `plotter_studio.device`. Es werden im Stream keine Hardware-Skalierungsbefehle (`IP`/`SC`) gesendet, um Rundungs- und Firmware-Besonderheiten auszuschließen.
+Die Transformation in den gerätespezifischen Raum erfolgt erst beim Kompilieren des Plot-Jobs im Modul `linto.device`. Es werden im Stream keine Hardware-Skalierungsbefehle (`IP`/`SC`) gesendet, um Rundungs- und Firmware-Besonderheiten auszuschließen.
 
 ### 4.2 Geräteabstraktion & Papierhandling
 
@@ -233,7 +233,7 @@ Die Geometrie-Schicht abstrahiert zwischen verschiedenen Gerätetypen und Urspru
 
 ### 4.2 Papiergrößen-Handhabung & Geräteerkennung
 
-Da viele Plotter (z. B. HP 7475A, Roland, AxiDraw, GRBL) über keinerlei Sensorik verfügen, unterstützt Plotter Studio zwei Wege zur Definition des Arbeitsbereichs:
+Da viele Plotter (z. B. HP 7475A, Roland, AxiDraw, GRBL) über keinerlei Sensorik verfügen, unterstützt LINTO zwei Wege zur Definition des Arbeitsbereichs:
 
 1. **Manuelle Formateinstellung (Universal für alle Plotter):**
    - Auswahl gängiger Standardformate (DIN A4 bis DIN A0, ANSI A–E, Letter) sowie **völlig freie benutzerdefinierte Maße** in Millimetern ($W \times H$).
@@ -251,7 +251,7 @@ Da viele Plotter (z. B. HP 7475A, Roland, AxiDraw, GRBL) über keinerlei Sensori
 
 ### 4.2a Gerät als Wahrheitsquelle
 
-Grundidee von Plotter Studio: Der XP-500 kann mit beliebigen Papiergrößen umgehen und meldet, was eingelegt ist. Andere Software zwingt dich zum Messen und Anpassen. Deshalb gilt: **Was der Plotter meldet, hat Vorrang.**
+Grundidee von LINTO: Der XP-500 kann mit beliebigen Papiergrößen umgehen und meldet, was eingelegt ist. Andere Software zwingt dich zum Messen und Anpassen. Deshalb gilt: **Was der Plotter meldet, hat Vorrang.**
 
 | Wert | Quelle (Vorrang) | Fallback |
 |---|---|---|

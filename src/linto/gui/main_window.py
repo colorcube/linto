@@ -1,4 +1,4 @@
-"""Main Application Window for Plotter Studio."""
+"""Main Application Window for LINTO."""
 
 from __future__ import annotations
 import os
@@ -51,7 +51,7 @@ class MainWindow(QMainWindow):
         self.doc = doc or Document()
         self.undo_stack = QUndoStack(self)
         self.device_manager = DeviceManager()
-        self._settings = QSettings("PlotterStudio", "PlotterStudio")
+        self._settings = QSettings("linto", "linto")
         self.current_project_path: Optional[str] = None
         self.undo_stack.cleanChanged.connect(self._update_window_title)
 
@@ -385,7 +385,7 @@ class MainWindow(QMainWindow):
         self.act_user_guide.triggered.connect(self.open_user_guide)
         menu_help.addAction(self.act_user_guide)
         menu_help.addSeparator()
-        act_about = QAction(self.tr("&About Plotter Studio"), self)
+        act_about = QAction(self.tr("&About LINTO"), self)
         act_about.triggered.connect(self.show_about)
         menu_help.addAction(act_about)
 
@@ -797,9 +797,9 @@ class MainWindow(QMainWindow):
                 is_clean = self.undo_stack.isClean()
             dirty_suffix = " *" if not is_clean else ""
             if self.current_project_path:
-                self.setWindowTitle(f"Plotter Studio — {os.path.basename(self.current_project_path)}{dirty_suffix}")
+                self.setWindowTitle(f"LINTO — {os.path.basename(self.current_project_path)}{dirty_suffix}")
             else:
-                self.setWindowTitle(f"Plotter Studio{dirty_suffix}")
+                self.setWindowTitle(f"LINTO{dirty_suffix}")
         except RuntimeError:
             pass
 
@@ -991,7 +991,7 @@ class MainWindow(QMainWindow):
                     self,
                     self.tr("Project File Detected"),
                     self.tr(
-                        "The file '%1' is a complete Plotter Studio project.\n\n"
+                        "The file '%1' is a complete LINTO project.\n\n"
                         "Do you want to open the full project (Yes) or import it as a single object onto the current sheet (No)?"
                     ).replace("%1", os.path.basename(fpath)),
                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel,
@@ -1192,9 +1192,9 @@ class MainWindow(QMainWindow):
     def show_about(self):
         QMessageBox.about(
             self,
-            self.tr("About Plotter Studio"),
+            self.tr("About LINTO"),
             self.tr(
-                "<b>Plotter Studio</b> v0.1.0<br>"
+                "<b>LINTO</b> v0.1.0<br>"
                 "Modular Slicer & Layout Studio for Pen Plotters on Linux.<br><br>"
                 "License: GPLv3"
             ),

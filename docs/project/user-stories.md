@@ -1,4 +1,4 @@
-Hier sind 10 priorisierte User Stories für **Plotter Studio**, formuliert nach dem Standardformat *(Als … möchte ich … damit …)* inklusive konkreter Akzeptanzkriterien.
+Hier sind 10 priorisierte User Stories für **LINTO**, formuliert nach dem Standardformat *(Als … möchte ich … damit …)* inklusive konkreter Akzeptanzkriterien.
 
 ---
 

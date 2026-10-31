@@ -19,7 +19,7 @@ from typing import Optional
 
 from .virtual_plotter import VirtualPlotter
 
-logger = logging.getLogger("plotter_studio.emulator")
+logger = logging.getLogger("linto.emulator")
 
 
 class BytePacer:

@@ -9,7 +9,7 @@ import xml.etree.ElementTree as ET
 
 import pytest
 
-from plotter_studio.emulator import (
+from linto.emulator import (
     VirtualPlotter,
     PtyServer,
     TcpServer,
@@ -320,8 +320,8 @@ def test_flow_control_buffer_watermarks():
 
 def test_tcp_streamer_flow_control():
     """Verify SerialStreamer streaming over TCP respects emulator XON/XOFF flow control."""
-    from plotter_studio.device.emitter import EmittedCommand
-    from plotter_studio.device.streamer import SerialStreamer
+    from linto.device.emitter import EmittedCommand
+    from linto.device.streamer import SerialStreamer
 
     plotter = VirtualPlotter(paper="A3", buffer_size=100, realtime=True, speedup=50.0)
     server = TcpServer(plotter, host="127.0.0.1", port=19878)
@@ -353,8 +353,8 @@ def test_tcp_streamer_flow_control():
 
 def test_tcp_streamer_large_buffer_backpressure():
     """Verify SerialStreamer over TCP triggers genuine XOFF/XON backpressure on a 1000-byte buffer."""
-    from plotter_studio.device.emitter import EmittedCommand
-    from plotter_studio.device.streamer import SerialStreamer, StreamerState
+    from linto.device.emitter import EmittedCommand
+    from linto.device.streamer import SerialStreamer, StreamerState
 
     events: list[tuple[str, dict]] = []
     plotter = VirtualPlotter(

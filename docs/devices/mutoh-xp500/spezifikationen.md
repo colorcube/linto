@@ -4,7 +4,7 @@ Quelle: 📘 Handbuch Appendix-2…4 (`specifications-001…003.png`), sofern ni
 
 ## Mechanik und Zeichnen
 
-| Merkmal | Wert | Bedeutung für Plotter Studio |
+| Merkmal | Wert | Bedeutung für LINTO |
 |---|---|---|
 | Max. Zeichengeschwindigkeit | **1272 mm/s** diagonal, **900 mm/s** entlang einer Achse | Obergrenze für `VS` im Profil. Für Tusche/Bleistift ist praktisch deutlich weniger sinnvoll (Werkzeugbibliothek) |
 | Max. Beschleunigung | **4,2 G** diagonal, **3 G** pro Achse | `AS` (Beschleunigung, pro Stift) existiert, siehe [mhgl-befehle.md](mhgl-befehle.md) |

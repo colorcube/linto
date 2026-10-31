@@ -28,7 +28,7 @@ Für eine zuverlässige Kommunikation ist ein vollbeschaltetes Nullmodem-Kabel (
 > **Wichtig:** Eine einfache 3-Draht-Verbindung (nur TxD, RxD, GND) ohne RTS/CTS funktioniert bei Stiftplottern nicht sicher, da der Plotter bei komplexen Kurvenfahrten den PC anhalten können muss.
 
 ### Alternative: TCP / Ethernet Device Server
-Statt eines USB-Kabels kannst du auch Serial-to-Ethernet-Boxen (z.B. Moxa NPort, USR-TCP232) oder einen Raspberry Pi mit `socat` verwenden. Plotter Studio unterstützt TCP-Sockets nativ über die Portangabe `tcp://<IP-Adresse>:<Port>` (z.B. `tcp://192.168.1.150:4001`).
+Statt eines USB-Kabels kannst du auch Serial-to-Ethernet-Boxen (z.B. Moxa NPort, USR-TCP232) oder einen Raspberry Pi mit `socat` verwenden. LINTO unterstützt TCP-Sockets nativ über die Portangabe `tcp://<IP-Adresse>:<Port>` (z.B. `tcp://192.168.1.150:4001`).
 
 ---
 
@@ -47,7 +47,7 @@ Stelle am Bedienfeld oder den DIP-Schaltern des Plotters folgende Parameter ein:
 
 ## 3. Dialog „Geräte-Einstellungen“
 
-Öffne über die obere Werkzeugleiste oder das Menü **Geräte → Einstellungen...** den Konfigurationsdialog, um deinen Plotter in Plotter Studio einzurichten:
+Öffne über die obere Werkzeugleiste oder das Menü **Geräte → Einstellungen...** den Konfigurationsdialog, um deinen Plotter in LINTO einzurichten:
 
 ![Dialog Geräte-Einstellungen](images/dialog_device_settings.png)
 
@@ -66,7 +66,7 @@ Stelle am Bedienfeld oder den DIP-Schaltern des Plotters folgende Parameter ein:
 
 ## 4. Hardware-Diagnose mit `tools/xp500_probe.py`
 
-Plotter Studio liefert ein eigenständiges Terminal-Diagnosewerkzeug mit, mit dem du die Schnittstelle und alle Rückmeldungen auf Bit- und Byte-Ebene prüfen kannst:
+LINTO liefert ein eigenständiges Terminal-Diagnosewerkzeug mit, mit dem du die Schnittstelle und alle Rückmeldungen auf Bit- und Byte-Ebene prüfen kannst:
 
 ```bash
 # Aufruf über USB-Seriell:
@@ -82,7 +82,7 @@ python3 tools/xp500_probe.py tcp://127.0.0.1:9999
 ### Typische Ausgabe bei fehlerfreier Verbindung:
 ```text
 =================================================================
-  PLOTTER STUDIO – Mutoh XP-500 Hardware-Diagnose (AP0)
+  LINTO – Mutoh XP-500 Hardware-Diagnose (AP0)
 =================================================================
 Ziel:      /dev/ttyS5
 Baudrate:  19200
@@ -201,7 +201,7 @@ Beim Einsatz nachgerüsteter PCIe-RS-232-Karten (z. B. mit dem verbreiteten **AS
 * **`ModemManager` sendet beim Einstecken `AT`-Befehle:** Direkt nach dem Einstecken eines USB-Seriell-Adapters prüft `ModemManager` den Port für einige Sekunden auf ein vermeintliches Mobilfunkmodem. Warte nach dem Einstecken ca. 5–10 Sekunden, oder schalte den Plotter erst ein, nachdem der USB-Adapter verbunden wurde, damit die `AT`-Zeichen keinen HP-GL-Syntaxfehler am Plotter auslösen.
 
 #### 5. Manueller Schnelltest über die Linux-Konsole (`stty` & `cat`)
-Um völlig unabhängig von Python oder Plotter Studio zu testen, ob Schnittstelle, Kabel und Plotter auf Betriebssystemebene kommunizieren, kann der Port auch direkt mit Bordmitteln konfiguriert und beschrieben werden (`19200` Baud, `8N1`, Hardware-Handshake `crtscts`):
+Um völlig unabhängig von Python oder LINTO zu testen, ob Schnittstelle, Kabel und Plotter auf Betriebssystemebene kommunizieren, kann der Port auch direkt mit Bordmitteln konfiguriert und beschrieben werden (`19200` Baud, `8N1`, Hardware-Handshake `crtscts`):
 
 ```bash
 stty -F /dev/ttyS5 19200 -parenb cs8 -cstopb crtscts
@@ -212,7 +212,7 @@ cat Hello-World.hpgl > /dev/ttyS5
 
 ### macOS
 
-* **Gerätenamen:** USB-Seriell-Adapter erscheinen unter macOS im Verzeichnis `/dev/` jeweils doppelt – als `/dev/tty.usbserial-*` und als `/dev/cu.usbserial-*`. Verwende in Plotter Studio vorzugsweise das **`/dev/cu.*`**-Gerät (*Call-Up / Call-Out*), da `/dev/tty.*` auf ein Hardware-Carrier-Detect-Signal (DCD) wartet und sonst beim Öffnen blockieren kann.
+* **Gerätenamen:** USB-Seriell-Adapter erscheinen unter macOS im Verzeichnis `/dev/` jeweils doppelt – als `/dev/tty.usbserial-*` und als `/dev/cu.usbserial-*`. Verwende in LINTO vorzugsweise das **`/dev/cu.*`**-Gerät (*Call-Up / Call-Out*), da `/dev/tty.*` auf ein Hardware-Carrier-Detect-Signal (DCD) wartet und sonst beim Öffnen blockieren kann.
 * *(Weitere macOS-spezifische Hinweise folgen in einer späteren Version.)*
 
 ---

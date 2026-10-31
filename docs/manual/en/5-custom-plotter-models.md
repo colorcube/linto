@@ -1,12 +1,12 @@
 # 5. Adding Plotter Models & Device Profiles
 
-Plotter Studio is not restricted to the Mutoh XP-500. Every supported plotter model is defined by a declarative YAML profile located in `resources/devices/`. At startup, Plotter Studio (`list_available_profiles()` in `src/plotter_studio/device/profile.py`) automatically loads all `*.yaml` files in that directory and makes them available in the **[Device Settings Dialog](4-hardware-setup-and-diagnostics.md#3-device-settings-dialog)**.
+LINTO is not restricted to the Mutoh XP-500. Every supported plotter model is defined by a declarative YAML profile located in `resources/devices/`. At startup, LINTO (`list_available_profiles()` in `src/linto/device/profile.py`) automatically loads all `*.yaml` files in that directory and makes them available in the **[Device Settings Dialog](4-hardware-setup-and-diagnostics.md#3-device-settings-dialog)**.
 
 ---
 
 ## 1. Creating Custom YAML Device Profiles (`resources/devices/*.yaml`)
 
-To add a new plotter model, simply create a new file `resources/devices/<name>.yaml`. As soon as the file is saved, the model becomes available in Plotter Studio.
+To add a new plotter model, simply create a new file `resources/devices/<name>.yaml`. As soon as the file is saved, the model becomes available in LINTO.
 
 ### Example 1: Flatbed Plotter (`roland_dxy.yaml`, Bottom-Left Origin)
 
@@ -114,7 +114,7 @@ default_margin_profile: "exp"
 
 ### 2.2 Coordinate System & Intrinsic Axis Mapping
 
-In Layout Mode, Plotter Studio works with sheet coordinates in millimeters (origin at top-left, `+X` right, `+Y` down). The HP-GL emitter first converts these coordinates into the centered or corner-based Cartesian sheet coordinate system (`+X` right, `+Y` up) and then applies the device profile's **intrinsic hardware axis mapping**:
+In Layout Mode, LINTO works with sheet coordinates in millimeters (origin at top-left, `+X` right, `+Y` down). The HP-GL emitter first converts these coordinates into the centered or corner-based Cartesian sheet coordinate system (`+X` right, `+Y` up) and then applies the device profile's **intrinsic hardware axis mapping**:
 
 | Field | Type | Default | Description |
 |---|---|---|---|
@@ -167,7 +167,7 @@ One or more named margin profiles can be defined under `margins_mm`. Each profil
 
 ## 3. Importing Device Drivers from Inkcut (`tools/import_inkcut_devices.py`)
 
-Plotter Studio includes a converter script to import HP-GL device drivers directly from an Inkcut installation (`manifest.enaml`):
+LINTO includes a converter script to import HP-GL device drivers directly from an Inkcut installation (`manifest.enaml`):
 
 ```bash
 # List devices detected from Inkcut:
@@ -177,7 +177,7 @@ python3 tools/import_inkcut_devices.py --list-only
 python3 tools/import_inkcut_devices.py
 ```
 
-Plotter Studio includes over 25 pre-installed profiles for Roland (Stika SV-8/12/15, CAMM-1), Graphtec (CE5000), US Cutter (Refine MH-721/1351), Secabo, Summa, Sekonic, and others.
+LINTO includes over 25 pre-installed profiles for Roland (Stika SV-8/12/15, CAMM-1), Graphtec (CE5000), US Cutter (Refine MH-721/1351), Secabo, Summa, Sekonic, and others.
 
 > [!NOTE]
-> **Note on Vinyl Cutters:** Many imported models are vinyl cutters. They work well in Plotter Studio when fitted with a pen holder. Blade cutting of adhesive vinyl is not yet supported due to missing drag-knife offset compensation.
+> **Note on Vinyl Cutters:** Many imported models are vinyl cutters. They work well in LINTO when fitted with a pen holder. Blade cutting of adhesive vinyl is not yet supported due to missing drag-knife offset compensation.

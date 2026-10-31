@@ -144,9 +144,9 @@ def get_builtin_presets() -> List[PenPreset]:
 
 def get_user_presets_dir() -> str:
     """Return user presets directory path, creating it if possible."""
-    d = os.environ.get("PLOTTER_STUDIO_CONFIG_DIR")
+    d = os.environ.get("LINTO_CONFIG_DIR")
     if not d:
-        d = os.path.expanduser("~/.config/plotter-studio/pens")
+        d = os.path.expanduser("~/.config/linto/pens")
     try:
         os.makedirs(d, exist_ok=True)
     except OSError:

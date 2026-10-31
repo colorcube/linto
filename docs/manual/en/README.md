@@ -1,19 +1,19 @@
-# Plotter Studio
+# LINTO
 
-Plotter Studio is a specialized **slicer and workspace for vector pen plotters**. It bridges the gap between vector graphics software (such as Inkscape, Illustrator, CAD, or generative art code from Python/Processing) and the physical mechanics of drawing machines.
+LINTO is a specialized **slicer and workspace for vector pen plotters**. It bridges the gap between vector graphics software (such as Inkscape, Illustrator, CAD, or generative art code from Python/Processing) and the physical mechanics of drawing machines.
 
-In other words: Plotter Studio lets you bring your drawings to paper at the exact right size using a pen plotter.
+In other words: LINTO lets you bring your drawings to paper at the exact right size using a pen plotter.
 
-Plotter Studio was developed and tested on **Linux**, but should also run on **macOS** and **Windows** (untested).
+LINTO was developed and tested on **Linux**, but should also run on **macOS** and **Windows** (untested).
 
-![Plotter Studio – User Interface](images/ui_overview_layout.png)
+![LINTO – User Interface](images/ui_overview_layout.png)
 
 > [!NOTE]
 > Currently, only HP-GL plotters are supported. However, support for controlling other plotters can be integrated, as the internal data format is not tied to HP-GL.
 
 ---
 
-## What can Plotter Studio do?
+## What can LINTO do?
 * Load, place, numerically scale (50%, 100%, 200%, aspect ratio lock), rotate (90° steps or free angles), and center SVG and HP-GL/PLT files on the sheet.
 * Support margin profiles for grit-roller and flatbed plotters (e.g., EXP, NORM with asymmetric leading edge) and query paper dimensions via `OH;`.
 * Automatic color clustering onto up to 8 pens (SVG) or direct assignment of pen numbers `SP1`–`SP8` and `LB` text labels (HP-GL).
@@ -33,6 +33,6 @@ Plotter Studio was developed and tested on **Linux**, but should also run on **m
 * **G-Code plotters (Marlin / Grbl):** Supporting G-code-based plotters or 3D printers with pen mounts is on the to-do list; currently, only HP-GL / MH-GL plotters are supported.
 
 ## What is it not?
-* **Not a large-format inkjet printer driver:** Large-format office printers (e.g. HP DesignJet, Epson SureColor, Canon imagePROGRAF) are colloquially called "plotters", but they are raster-based pixel printers. Plotter Studio exclusively controls true **vector pen plotters** that move physical pens across paper.
-* **Not cutting plotter software (vinyl cutters):** Plotter Studio is designed for **pen plotters**. Pure vinyl cutters with drag-knife blades are not yet supported because drag-knife offset compensation is missing (though many vinyl cutters can be used as pen plotters with a pen holder).
-* **Not a vector drawing application:** Plotter Studio does not replace Inkscape or Illustrator. You create your artwork, CAD plans, or algorithms in your preferred tool and export them as standard SVG. Plotter Studio handles sheet layout, scaling, path optimization, and plotting.
+* **Not a large-format inkjet printer driver:** Large-format office printers (e.g. HP DesignJet, Epson SureColor, Canon imagePROGRAF) are colloquially called "plotters", but they are raster-based pixel printers. LINTO exclusively controls true **vector pen plotters** that move physical pens across paper.
+* **Not cutting plotter software (vinyl cutters):** LINTO is designed for **pen plotters**. Pure vinyl cutters with drag-knife blades are not yet supported because drag-knife offset compensation is missing (though many vinyl cutters can be used as pen plotters with a pen holder).
+* **Not a vector drawing application:** LINTO does not replace Inkscape or Illustrator. You create your artwork, CAD plans, or algorithms in your preferred tool and export them as standard SVG. LINTO handles sheet layout, scaling, path optimization, and plotting.

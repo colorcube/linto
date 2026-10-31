@@ -3,11 +3,11 @@ import time
 from pathlib import Path
 import pytest
 from PySide6.QtWidgets import QApplication
-from plotter_studio.core.document import Document
-from plotter_studio.gui.main_window import MainWindow
-from plotter_studio.gui.canvas import CanvasMode
-from plotter_studio.device import ProbeResult
-from plotter_studio.emulator import VirtualPlotter, PtyServer
+from linto.core.document import Document
+from linto.gui.main_window import MainWindow
+from linto.gui.canvas import CanvasMode
+from linto.device import ProbeResult
+from linto.emulator import VirtualPlotter, PtyServer
 
 
 
@@ -382,7 +382,7 @@ def test_toolbar_zoom_actions_and_ordering(qapp):
 
 def test_export_hpgl_uses_active_device_and_options(qapp, tmp_path, monkeypatch):
     """Verify that export_hpgl_dialog respects active device profile and emitter options."""
-    from plotter_studio.device import ConfiguredDevice
+    from linto.device import ConfiguredDevice
 
     doc = Document()
     doc.page.apply_preset("A4", "landscape")

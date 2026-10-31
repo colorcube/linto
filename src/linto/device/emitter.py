@@ -1,4 +1,4 @@
-"""HP-GL Emitter for Plotter Studio.
+"""HP-GL Emitter for LINTO.
 
 Converts a compiled PlotJob into optimized HP-GL command streams, mapping
 sheet coordinates (mm) to plotter units (center-origin or corner-origin).

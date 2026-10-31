@@ -1,6 +1,6 @@
 # 2. Layout-Modus & Objektverwaltung
 
-Der **Layout-Modus** ist die kreative Schaltzentrale von Plotter Studio. Hier arrangierst, skalierst und drehst du deine Vektorgrafiken auf dem gewählten Papierformat, weist Stifte und Farben zu und prüfst die Abstände zu den Randbereichen des Plotters.
+Der **Layout-Modus** ist die kreative Schaltzentrale von LINTO. Hier arrangierst, skalierst und drehst du deine Vektorgrafiken auf dem gewählten Papierformat, weist Stifte und Farben zu und prüfst die Abstände zu den Randbereichen des Plotters.
 
 ![Übersicht des Layout-Modus](images/ui_overview_layout.png)
 
@@ -12,7 +12,7 @@ Die Arbeitsumgebung ist übersichtlich in funktionale Bereiche unterteilt:
 
 1. **Haupt-Canvas (Mitte):**
    * Zeigt das gewählte Papierblatt maßstabsgetreu in Millimetern an.
-   * Ein **roter, gestrichelter Innenrahmen** markiert den physisch plottbaren Bereich (das sogenannte *Hard-Clip-Fenster*). Liegen Vektoren außerhalb dieses Rahmens, warnt Plotter Studio vor möglichem Beschnitt.
+   * Ein **roter, gestrichelter Innenrahmen** markiert den physisch plottbaren Bereich (das sogenannte *Hard-Clip-Fenster*). Liegen Vektoren außerhalb dieses Rahmens, warnt LINTO vor möglichem Beschnitt.
    * **Lineale (oben und links):** Zeigen präzise Millimeterangaben. Der Nullpunkt (0, 0) liegt an der oberen linken Ecke des Papiers.
    * **Maus-Navigation:**
      * **Mausrad:** Zoomt stufenlos hinein und heraus (zentriert auf den Mauszeiger).
@@ -58,18 +58,18 @@ Vor dem Platzieren von Grafiken solltest du das gewünschte Blattformat und Rand
 
 ## 3. Vektorgrafiken importieren
 
-Plotter Studio unterstützt zwei direkt importierbare Vektorformate:
+LINTO unterstützt zwei direkt importierbare Vektorformate:
 * **SVG (`.svg`):** Das empfohlene Hauptformat für Vektorgrafiken aus Inkscape, eigenen Skripten (Python, Processing, p5.js), Blender, Adobe Illustrator, Affinity Designer oder CAD-Exporten. Mathematische Kurven (Bézier-Kurven, Kreisbögen) bleiben beim Import verlustfrei erhalten und werden erst bei der Plot-Aufbereitung nach eingestellter Toleranz linearisiert.
 * **HP-GL (`.hpgl`, `.plt`):** Direkter Import bestehender Plotter-Dateien (inklusive Stiftwahl `SP1`–`SP8`, Kreisen `CI`, Bögen `AA`/`AR`, Rechtecken `EA`/`RA` sowie `LB`-Textbeschriftungen über den integrierten 5×7-Vektorzeichensatz).
 
 ### Import-Möglichkeiten:
 1. **Drag & Drop:** Ziehe eine oder mehrere `.svg`-, `.hpgl`- oder `.plt`-Dateien direkt aus dem Dateimanager in das Canvas-Fenster.
-2. **Datei öffnen (`Strg+O`):** Öffnet ein bestehendes Plotter-Studio-Projekt oder eine Vektordatei direkt als neues Dokument. Entsprechen die Abmessungen einer SVG-Datei keinem Standard-DIN-Format (z. B. 10×10 cm), wird das Blattformat automatisch als passendes benutzerdefiniertes Format eingerichtet.
+2. **Datei öffnen (`Strg+O`):** Öffnet ein bestehendes LINTO-Projekt oder eine Vektordatei direkt als neues Dokument. Entsprechen die Abmessungen einer SVG-Datei keinem Standard-DIN-Format (z. B. 10×10 cm), wird das Blattformat automatisch als passendes benutzerdefiniertes Format eingerichtet.
 3. **Importieren (`Strg+I`):** Lädt weitere Vektorgrafiken als zusätzliche Objekte in das bereits geöffnete Layout hinzu.
 
 ### Automatisches Farb-Clustering (SVG) & Stiftübernahme (HP-GL)
-* **SVG:** Beim Import analysiert Plotter Studio alle Strichfarben (`stroke`) in der Datei und ordnet sie über einen wahrnehmungsgerechten Farbabstands-Algorithmus (Delta-E im CIE-Lab-Farbraum) automatisch den 8 Stiften der Palette zu.
-* **HP-GL / PLT:** Die in der Plotdatei enthaltenen `SP1;`–`SP8;`-Befehle werden direkt den Stiften 1–8 in Plotter Studio zugewiesen.
+* **SVG:** Beim Import analysiert LINTO alle Strichfarben (`stroke`) in der Datei und ordnet sie über einen wahrnehmungsgerechten Farbabstands-Algorithmus (Delta-E im CIE-Lab-Farbraum) automatisch den 8 Stiften der Palette zu.
+* **HP-GL / PLT:** Die in der Plotdatei enthaltenen `SP1;`–`SP8;`-Befehle werden direkt den Stiften 1–8 in LINTO zugewiesen.
 
 ---
 

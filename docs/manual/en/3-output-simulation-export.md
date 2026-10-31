@@ -84,7 +84,7 @@ The **Plotter Connection & Output** section controls physical communication:
 ### Step 1: Connection & Inquiry
 1. Select the target interface (e.g. `/dev/ttyUSB0` on Linux, `COM3` on Windows, or `tcp://...`).
 2. Click **[ Probe Plotter (Inquiry) ]**.
-3. Plotter Studio sends `OI;` (model query) and `OH;` (hard-clip query) to the device.
+3. LINTO sends `OI;` (model query) and `OH;` (hard-clip query) to the device.
 4. On success, the status banner lights up green:  
    `7585B (A3, 40 U/mm) • Hard-Clip: 390x287 mm`.
 

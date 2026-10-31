@@ -1,8 +1,8 @@
-# Plotter Studio
+# LINTO
 
 > **The modular slicer, layout editor, and streaming controller for physical vector pen plotters.**
 
-Plotter Studio prepares vector graphics for real pen plotters: it optimizes pen paths to cut down pen-up travel, simulates the drawing process interactively on screen, and streams commands reliably with hardware flow control directly to your machine.
+LINTO prepares vector graphics for real pen plotters: it optimizes pen paths to cut down pen-up travel, simulates the drawing process interactively on screen, and streams commands reliably with hardware flow control directly to your machine.
 
 > **Project status: early alpha (v0.1.0).** Developed and tested on Linux with a Mutoh XP-500 (HP-GL / HP 7585B emulation). The other device profiles are untested on real hardware — feedback and bug reports are very welcome.
 
@@ -11,26 +11,26 @@ Plotter Studio prepares vector graphics for real pen plotters: it optimizes pen 
 ## Visual Tour
 
 ### Layout Mode: Arrange, scale, and map vector artwork to pens
-![Plotter Studio Layout Mode](docs/manual/en/images/ui_overview_layout.png)
+![LINTO Layout Mode](docs/manual/en/images/ui_overview_layout.png)
 
 ### Output Mode: Path optimization, pen-up travel visualization & simulation
-![Plotter Studio Plot Mode with Simulation](docs/manual/en/images/ui_overview_plot.png)
+![LINTO Plot Mode with Simulation](docs/manual/en/images/ui_overview_plot.png)
 
 ---
 
-## What is Plotter Studio?
+## What is LINTO?
 
-If you draw with a **physical pen plotter** (from vintage workhorses like the Mutoh XP-500, HP 7585B, or Roland DXY to modern DIY drawing robots) and create your artwork in **Inkscape, Illustrator, CAD, or generative Python/Processing scripts**, Plotter Studio is the bridge to your hardware:
+If you draw with a **physical pen plotter** (from vintage workhorses like the Mutoh XP-500, HP 7585B, or Roland DXY to modern DIY drawing robots) and create your artwork in **Inkscape, Illustrator, CAD, or generative Python/Processing scripts**, LINTO is the bridge to your hardware:
 
 * **True Millimeter Layout:** Position artwork on standard paper sizes (DIN A4 to A0) or custom sheets. See real hardware margin constraints (such as asymmetric roller feed margins) or probe physical sheet boundaries directly from plotter optical sensors (`OH;`).
-* **Slicer Pipeline & 2-Opt TSP:** Much like a 3D-printing slicer, Plotter Studio merges collinear line segments, simplifies redundant nodes, and reorders vectors using a **2-Opt Traveling Salesperson Problem (TSP)** heuristic. Depending on the artwork, this can cut pen-up air travel considerably.
+* **Slicer Pipeline & 2-Opt TSP:** Much like a 3D-printing slicer, LINTO merges collinear line segments, simplifies redundant nodes, and reorders vectors using a **2-Opt Traveling Salesperson Problem (TSP)** heuristic. Depending on the artwork, this can cut pen-up air travel considerably.
 * **Interactive Simulation Scrubber:** Before dropping ink on expensive paper, scrub forward and backward through the entire plot timeline. Inspect pen-down strokes, travel paths (`Pen Up`), and touchdown nodes.
 * **Safe Live Streaming:** Streams commands over RS-232 serial or TCP with strict **RTS/CTS hardware flow control** to prevent plotter buffer overflows. Supports pause, resume, and immediate abort (`ESC.K`, `PU;`, `SP0;`) that parks the pen safely in the carousel.
 
-### What Plotter Studio is Not
-* **Not an inkjet printer driver:** Large-format photo printers (e.g. HP DesignJet, Epson SureColor) are raster printers. Plotter Studio exclusively drives mechanical vector machines moving physical pens.
+### What LINTO is Not
+* **Not an inkjet printer driver:** Large-format photo printers (e.g. HP DesignJet, Epson SureColor) are raster printers. LINTO exclusively drives mechanical vector machines moving physical pens.
 * **Not a vinyl cutting suite:** Focused strictly on pen plotting. Drag-knife offset compensation is on the roadmap.
-* **Not an illustration tool:** You continue designing in your favorite software (Inkscape, Blender, code). Plotter Studio handles the preparation, slicing, and machine execution.
+* **Not an illustration tool:** You continue designing in your favorite software (Inkscape, Blender, code). LINTO handles the preparation, slicing, and machine execution.
 
 ---
 
@@ -50,13 +50,13 @@ If you draw with a **physical pen plotter** (from vintage workhorses like the Mu
 **Requirements:** Python 3.11 or newer, Linux (macOS and Windows may work but are untested). For live plotting: a plotter speaking HP-GL connected via RS-232 (USB serial adapter) or TCP.
 
 ```bash
-git clone <repository-url> plotter-studio
-cd plotter-studio
+git clone <repository-url> linto
+cd linto
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e .
 
-plotter-studio          # or: ./run.sh
+linto          # or: ./run.sh
 ```
 
 On Linux, your user needs access to the serial port: membership in the `dialout` group (Debian, Ubuntu, Fedora, openSUSE) or `uucp` (Arch, Manjaro), e.g. `sudo usermod -aG dialout $USER`, then log in again. See the [hardware setup guide](docs/manual/en/4-hardware-setup-and-diagnostics.md) for details.
@@ -65,7 +65,7 @@ On Linux, your user needs access to the serial port: membership in the `dialout`
 
 ## Quickstart: First Plot in 5 Steps
 
-You don't need hardware connected to try Plotter Studio—the built-in emulator lets you explore immediately:
+You don't need hardware connected to try LINTO—the built-in emulator lets you explore immediately:
 
 ```
 [ 1. Connect ] -> [ 2. Page Setup ] -> [ 3. Import Vector ] -> [ 4. Simulate ] -> [ 5. Plot ]
@@ -73,7 +73,7 @@ You don't need hardware connected to try Plotter Studio—the built-in emulator 
 
 1. **Connect plotter or launch emulator:**
    * *With hardware:* Connect your plotter via RS-232 null-modem cable.
-   * *Without hardware:* Launch the emulator in a second terminal with `python3 -m plotter_studio.emulator --tcp 9999` and select `Mutoh XP-500 Simulator (TCP)` in the top toolbar.
+   * *Without hardware:* Launch the emulator in a second terminal with `python3 -m linto.emulator --tcp 9999` and select `Mutoh XP-500 Simulator (TCP)` in the top toolbar.
 2. **Configure sheet and margin profile:**
    * Click **[ Page Setup... ]**, choose your format (e.g. `DIN A3 Landscape`) and margin profile (e.g. `EXP`). Click **[ Query Plotter ]** to read sensor boundaries automatically.
 3. **Import and place vector artwork:**
@@ -95,7 +95,7 @@ You don't need hardware connected to try Plotter Studio—the built-in emulator 
 
 ### Building & Previewing the HTML Manuals (Zensical)
 
-The Markdown sources in `docs/manual/` are built into two standalone, offline-capable HTML manuals (German and English) using **[Zensical](https://zensical.org/)**. Pressing `F1` (or *Help → User Guide*) inside Plotter Studio automatically opens the offline HTML manual matching the active UI language:
+The Markdown sources in `docs/manual/` are built into two standalone, offline-capable HTML manuals (German and English) using **[Zensical](https://zensical.org/)**. Pressing `F1` (or *Help → User Guide*) inside LINTO automatically opens the offline HTML manual matching the active UI language:
 
 ```bash
 # Build both offline HTML manuals (outputs to site/manual/ and site/handbuch/):
@@ -119,8 +119,8 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
 
-# Launch Plotter Studio
-plotter-studio
+# Launch LINTO
+linto
 
 # Run test suite (headless, no display or hardware needed)
 QT_QPA_PLATFORM=offscreen pytest
@@ -130,11 +130,11 @@ QT_QPA_PLATFORM=offscreen pytest
 
 | Path | Contents |
 |---|---|
-| `src/plotter_studio/core/` | Document model, geometry, SVG/HP-GL import, SVG export, fonts |
-| `src/plotter_studio/pipeline/` | Slicer pipeline: clipping, merging, simplification, path sorting, HP-GL compiler |
-| `src/plotter_studio/device/` | Device profiles, serial/TCP transport, streaming with flow control, plotter probing |
-| `src/plotter_studio/emulator/` | Software plotter emulator (PTY or TCP) for testing without hardware |
-| `src/plotter_studio/gui/` | PySide6 user interface |
+| `src/linto/core/` | Document model, geometry, SVG/HP-GL import, SVG export, fonts |
+| `src/linto/pipeline/` | Slicer pipeline: clipping, merging, simplification, path sorting, HP-GL compiler |
+| `src/linto/device/` | Device profiles, serial/TCP transport, streaming with flow control, plotter probing |
+| `src/linto/emulator/` | Software plotter emulator (PTY or TCP) for testing without hardware |
+| `src/linto/gui/` | PySide6 user interface |
 | `resources/` | Device profiles (YAML), translations, calibration plots |
 | `tools/` | Helper scripts (calibration plot generator, InkCut profile importer, XP-500 probe) |
 | `docs/` | User manuals (EN/DE) and device documentation |
@@ -164,7 +164,7 @@ Copyright © 2026 René Fritz.
 
 Licensed under the **GNU General Public License v3.0 or later (GPL-3.0-or-later)**. See [LICENSE](LICENSE).
 
-Portions adapted from MutohPlot are licensed under the MIT License; see the header of `src/plotter_studio/core/hpgl_import.py`.
+Portions adapted from MutohPlot are licensed under the MIT License; see the header of `src/linto/core/hpgl_import.py`.
 
 ---
 

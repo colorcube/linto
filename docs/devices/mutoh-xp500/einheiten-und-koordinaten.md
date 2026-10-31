@@ -18,7 +18,7 @@
 | 0,0125 mm | 80 | ±47 560 |
 | 0,01 mm | 100 | ±59 450 |
 
-**Regeln für Plotter Studio**
+**Regeln für LINTO**
 1. `units_per_mm` wird **beim Verbinden per `OF;` gelesen** und nie fest angenommen. Ein Profilwert dient nur als Vorgabe ohne Rückkanal (z. B. beim Export als Datei).
 2. HP-GL-Dateien, die *exportiert* werden, bekommen die Einheit in den Metadaten bzw. im Dateinamen-Kommentar, damit sie nicht auf einem anders eingestellten Gerät skaliert herauskommen.
 3. Empfehlung: **0,025 mm beibehalten.** Das ist HP-kompatibel (Dateien von Fremdtools passen) und liegt weit unter jeder Strichbreite. 0,1 mm würde ca. 20 % Bandbreite sparen, kann aber bei flachen Kurven mit feinen Stiften sichtbare Treppen erzeugen.
@@ -31,7 +31,7 @@
 - „Die Oberkante des Papiers liegt links“ (Blick von vorn).
 - Der Hard-Clip hängt davon ab, wie das Blatt eingelegt ist (Andruckrollen bestimmen die Breite) → **`OH;` nach jedem Blattwechsel neu abfragen.**
 - 🔧 MP (hardwaregetestet): `X = y_papier − H/2 (+ Fensterkorrektur)`, `Y = x_papier − W/2` → Kandidat für `insert_matrix [[0,1],[1,0]]` im Profil. Vorzeichen per Orientierungsplot bestätigen ([testplan.md](testplan.md)).
-- MH-GL kennt `RO n` (Drehung 0/90/…). In der Handbuchtabelle steht „69°“, ein offensichtlicher Druckfehler für 90°. Plotter Studio dreht selbst und sendet kein `RO`.
+- MH-GL kennt `RO n` (Drehung 0/90/…). In der Handbuchtabelle steht „69°“, ein offensichtlicher Druckfehler für 90°. LINTO dreht selbst und sendet kein `RO`.
 
 ## Hard-Clip-Fenster 📘
 

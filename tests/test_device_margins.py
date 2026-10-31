@@ -1,5 +1,5 @@
 import pytest
-from plotter_studio.core.document import Document, Page, DEVICE_PROFILES
+from linto.core.document import Document, Page, DEVICE_PROFILES
 
 
 def test_device_profile_mutoh_xp500_margins():
@@ -61,8 +61,8 @@ def test_printable_area_respects_margins():
 
 def test_margin_profiles_single_source_of_truth():
     """Verify emulator MARGIN_PROFILES, UI combo items, and Page.apply_device_profile all match mutoh_xp500.yaml."""
-    from plotter_studio.device.profile import get_default_profile, get_margin_profile_items
-    from plotter_studio.emulator.virtual_plotter import MARGIN_PROFILES
+    from linto.device.profile import get_default_profile, get_margin_profile_items
+    from linto.emulator.virtual_plotter import MARGIN_PROFILES
 
     prof = get_default_profile()
     items = dict((k, lbl) for lbl, k in get_margin_profile_items(prof))

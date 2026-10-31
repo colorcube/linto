@@ -1,4 +1,4 @@
-"""Millimeter rulers for Plotter Studio canvas."""
+"""Millimeter rulers for LINTO canvas."""
 
 from __future__ import annotations
 import math

@@ -1,7 +1,7 @@
 # Mutoh XP-500 – Software-Emulator (`virtual_plotter`)
 
 Der Software-Emulator simuliert das Verhalten eines Mutoh XP-500 Plotters (HP-7585B Emulation) unter Linux.
-Er stellt eine virtuelle serielle Schnittstelle (Linux-PTY oder TCP-Socket) bereit, mit der sich Plotter Studio, `pyserial`, aber auch externe Tools (wie MutohPlot oder InkCut) verbinden können – exakt so, als wäre ein physischer USB-Seriell-Adapter angeschlossen.
+Er stellt eine virtuelle serielle Schnittstelle (Linux-PTY oder TCP-Socket) bereit, mit der sich LINTO, `pyserial`, aber auch externe Tools (wie MutohPlot oder InkCut) verbinden können – exakt so, als wäre ein physischer USB-Seriell-Adapter angeschlossen.
 
 ---
 
@@ -9,7 +9,7 @@ Er stellt eine virtuelle serielle Schnittstelle (Linux-PTY oder TCP-Socket) bere
 
 ### Emulator im Terminal starten
 ```bash
-python -m plotter_studio.emulator
+python -m linto.emulator
 ```
 
 Ausgabe:
@@ -21,7 +21,7 @@ Ausgabe:
  Ränder (Profil):  EXP (390.0 x 287.0 mm Hard-Clip)
  Auflösung:        0.025 mm/Unit (40 Units/mm)
  Puffer:           SMALL (1,000 Bytes)
- Verbindung:       /path/to/plotter-studio/virtual_plotter
+ Verbindung:       /path/to/linto/virtual_plotter
  Mechanik:         Sofortige Abarbeitung (Fast-Mode)
 ================================================================
 Warte auf Befehle... (Drücke Strg+C zum Beenden)
@@ -42,10 +42,10 @@ head -n 1 < ./virtual_plotter
 Um serielle Übertragungen historisch authentisch oder für Time-out- und Puffer-Stresstests zu verlangsamen:
 ```bash
 # 300 Baud (~30 Bytes/Sekunde bei 8N1) über TCP
-python -m plotter_studio.emulator --tcp 9999 --baudrate 300 --realtime
+python -m linto.emulator --tcp 9999 --baudrate 300 --realtime
 
 # 1200 Baud über virtuelles PTY
-python -m plotter_studio.emulator --baudrate 1200
+python -m linto.emulator --baudrate 1200
 ```
 
 ---
@@ -80,8 +80,8 @@ Um dennoch das hardwaregetreue Pufferverhalten zu simulieren:
 4. **XON (`0x11`):** Fällt der Pufferstand unter 40 % (*Low-Water Mark*, ca. 400 Bytes), sendet der Emulator `XON` und der Host schickt die nächsten Befehle.
 
 > [!IMPORTANT]
-> **Konfiguration in Plotter Studio:**
-> Wenn Sie Plotter Studio mit dem Emulator verbinden (egal ob über TCP `tcp://127.0.0.1:9999` oder über das PTY `./virtual_plotter`), muss in Plotter Studio unter **Plotter-Geräte konfigurieren** für dieses Gerät die **Flusssteuerung auf `Software (XON / XOFF)`** eingestellt sein!
+> **Konfiguration in LINTO:**
+> Wenn Sie LINTO mit dem Emulator verbinden (egal ob über TCP `tcp://127.0.0.1:9999` oder über das PTY `./virtual_plotter`), muss in LINTO unter **Plotter-Geräte konfigurieren** für dieses Gerät die **Flusssteuerung auf `Software (XON / XOFF)`** eingestellt sein!
 >
 > Steht das Gerät fälschlicherweise auf `Hardware (RTS / CTS)`, ignoriert die Übertragungs-Engine die XOFF-Steuerzeichen und die Übertragung wird nicht mit dem Zeichenfortschritt des Emulators synchronisiert. Das ab Werk hinterlegte Profil *„Mutoh XP-500 Simulator (TCP)“* ist bereits standardmäßig auf `Software (XON / XOFF)` eingestellt.
 
@@ -120,7 +120,7 @@ Um dennoch das hardwaregetreue Pufferverhalten zu simulieren:
 Der Emulator ist modular aufgebaut und kann in Pytest-Fixtures direkt im selben Prozess verwendet werden:
 
 ```python
-from plotter_studio.emulator import VirtualPlotter, PtyServer
+from linto.emulator import VirtualPlotter, PtyServer
 
 plotter = VirtualPlotter(paper="A3", buffer_size=1000)
 server = PtyServer(plotter, symlink_path="/tmp/my_plotter")

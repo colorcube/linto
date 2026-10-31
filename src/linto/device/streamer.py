@@ -18,7 +18,7 @@ import serial
 
 from .emitter import EmittedCommand
 
-logger = logging.getLogger("plotter_studio.device.streamer")
+logger = logging.getLogger("linto.device.streamer")
 
 
 XON = 0x11

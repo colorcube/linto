@@ -6,8 +6,8 @@ from pathlib import Path
 import pytest
 import numpy as np
 
-from plotter_studio.core.document import Document, ImportItem, VectorPath
-from plotter_studio.device import (
+from linto.core.document import Document, ImportItem, VectorPath
+from linto.device import (
     load_profile,
     get_default_profile,
     HPGLEmitter,
@@ -16,8 +16,8 @@ from plotter_studio.device import (
     SerialStreamer,
     StreamerState,
 )
-from plotter_studio.emulator import VirtualPlotter, PtyServer, TcpServer
-from plotter_studio.pipeline.compiler import compile_document_to_plot_job, PipelineConfig
+from linto.emulator import VirtualPlotter, PtyServer, TcpServer
+from linto.pipeline.compiler import compile_document_to_plot_job, PipelineConfig
 
 
 def test_device_profile():
@@ -435,8 +435,8 @@ def test_serial_streamer_write_timeout(monkeypatch):
 def test_streamer_pause_on_pen_change(monkeypatch):
     """Verify automatic pause before SPn; pen change and resume."""
     import serial
-    from plotter_studio.device.emitter import EmittedCommand
-    from plotter_studio.device.streamer import StreamerState
+    from linto.device.emitter import EmittedCommand
+    from linto.device.streamer import StreamerState
 
     written_chunks = []
     flushed = [False]
@@ -530,7 +530,7 @@ def test_xp500_golden_oh_measurements():
 def test_abort_during_xoff_on_last_command(monkeypatch):
     """Verify aborting while XOFF-paused on the final command reports abort (False), never success (0.4)."""
     import serial
-    from plotter_studio.device.emitter import EmittedCommand
+    from linto.device.emitter import EmittedCommand
 
     written = []
     output_flushed = [False]
@@ -597,7 +597,7 @@ def test_abort_during_xoff_on_last_command(monkeypatch):
 def test_cts_stall_and_serial_framing(monkeypatch):
     """Verify CTS stall retries without killing the job (0.2, 0.3) and 7E1 framing is passed (0.9)."""
     import serial
-    from plotter_studio.device.emitter import EmittedCommand
+    from linto.device.emitter import EmittedCommand
 
     recorded_kwargs = {}
     written = []
@@ -674,13 +674,13 @@ def test_cts_stall_and_serial_framing(monkeypatch):
 
 def test_fake_transport_partial_writes_and_build_emitter():
     """Verify pluggable Transport with partial writes, DeviceConnectionConfig sync, and build_emitter priority."""
-    from plotter_studio.device import (
+    from linto.device import (
         Transport,
         build_emitter,
         DeviceConnectionConfig,
         ConfiguredDevice,
     )
-    from plotter_studio.device.emitter import EmittedCommand
+    from linto.device.emitter import EmittedCommand
 
     # 1. DeviceConnectionConfig single source of truth
     cfg_xon = DeviceConnectionConfig(xonxoff=True)
@@ -765,8 +765,8 @@ def test_fake_transport_partial_writes_and_build_emitter():
 
 def test_resume_from_step_and_trace_log_and_emitter_capabilities():
     """Verify SerialStreamer resume from step N, trace log recording, and HPGLEmitter IW/VS/FS capabilities."""
-    from plotter_studio.device import Transport
-    from plotter_studio.device.emitter import EmittedCommand
+    from linto.device import Transport
+    from linto.device.emitter import EmittedCommand
 
     class RecordingTransport(Transport):
         def __init__(self):
@@ -819,7 +819,7 @@ def test_resume_from_step_and_trace_log_and_emitter_capabilities():
 
     # Verify HPGLEmitter decimal VS, hp_level FS, auto_pen_force, handshake init, and IW clip
     import numpy as np
-    from plotter_studio.pipeline.compiler import PlotJob, PlotLayer
+    from linto.pipeline.compiler import PlotJob, PlotLayer
 
     import dataclasses
     # Mutoh XP-500 default has auto_pen_force=True -> omits FS unless send_pen_force=True

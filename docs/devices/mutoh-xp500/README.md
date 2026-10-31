@@ -1,6 +1,6 @@
 # Mutoh XP-500 – Gerätedokumentation
 
-Gesammelte, geprüfte Informationen zum Mutoh XP-500 (DIN-A0-Stiftplotter, MH-GL / HP-GL), aufbereitet für Plotter Studio (Geräteprofil, Emitter, Streamer).
+Gesammelte, geprüfte Informationen zum Mutoh XP-500 (DIN-A0-Stiftplotter, MH-GL / HP-GL), aufbereitet für LINTO (Geräteprofil, Emitter, Streamer).
 
 ## Inhalt
 
@@ -11,7 +11,7 @@ Gesammelte, geprüfte Informationen zum Mutoh XP-500 (DIN-A0-Stiftplotter, MH-GL
 | [spezifikationen.md](spezifikationen.md) | Technische Daten (Geschwindigkeit, Auflösung, Andruck, Stifte, Hard-Clip, Umgebung, Maße) |
 | [schnittstelle.md](schnittstelle.md) | RS-232C: Pinbelegung, Kabel, Parameter, Handshake, Linux-Setup, Durchsatz |
 | [einheiten-und-koordinaten.md](einheiten-und-koordinaten.md) | Zeicheneinheit (konfigurierbar!), Ursprung, Achsen, Hard-Clip-Fenster, Randmessungen |
-| [mhgl-befehle.md](mhgl-befehle.md) | Vollständige MH-GL-Befehlstabelle aus dem Handbuch + Relevanz für Plotter Studio |
+| [mhgl-befehle.md](mhgl-befehle.md) | Vollständige MH-GL-Befehlstabelle aus dem Handbuch + Relevanz für LINTO |
 | [escape-sequenzen.md](escape-sequenzen.md) | Device-Control-Befehle (`ESC.x`) für Puffer, Status, Abbruch, Handshake |
 | [emulator.md](emulator.md) | **Software-Emulator (`virtual_plotter`):** PTY/TCP-Simulation von Firmware, Puffer und HP-7585B-Befehlen |
 | [testplan.md](testplan.md) | Was am Gerät noch geprüft werden muss (Checkliste für AP0) |
@@ -36,7 +36,7 @@ Extrahierte Handbuchseiten:
 | `mhgl-001…006.png` | Appendix-5…10 (MH-GL-Befehlstabelle) |
 | `esc-001…002.png` | Appendix-11…12 (Device-Control-Befehle) |
 
-## Die wichtigsten Erkenntnisse für Plotter Studio
+## Die wichtigsten Erkenntnisse für LINTO
 
 1. **Die Zeicheneinheit ist einstellbar:** 0,1 / 0,05 / 0,025 / 0,0125 / 0,01 mm (📘 „Software Resolution“). Deshalb liefert dein `OF;` den Wert 40, während MutohPlot mit 0,01 mm arbeitet. → **Einheit immer per `OF;` lesen**, nie fest annehmen.
 2. **Die serielle Leitung ist der Flaschenhals:** Bei 19200 Baud kommen maximal ca. 1900 Zeichen/s an. Bei dichten Kurven begrenzt das die Zeichengeschwindigkeit stärker als die Mechanik (900 mm/s). → Kompakte Kodierung (Koordinatenketten, `PR`, ggf. gröbere Einheit), siehe [schnittstelle.md](schnittstelle.md#durchsatz).

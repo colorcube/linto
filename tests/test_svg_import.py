@@ -1,6 +1,6 @@
 import math
-from plotter_studio.core.svg_import import load_svg
-from plotter_studio.core.color_cluster import cluster_colors_to_pens, hex_to_rgb, rgb_to_lab, delta_e
+from linto.core.svg_import import load_svg
+from linto.core.color_cluster import cluster_colors_to_pens, hex_to_rgb, rgb_to_lab, delta_e
 
 
 def test_color_cluster():
@@ -37,7 +37,7 @@ def test_svg_load_shapes():
 
 
 def test_svg_load_quadratic_bezier():
-    from plotter_studio.core.geometry import QuadraticBezierSegment, CubicBezierSegment, ArcSegment
+    from linto.core.geometry import QuadraticBezierSegment, CubicBezierSegment, ArcSegment
 
     svg_sample = """<svg width="100mm" height="100mm" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
       <path d="M 10 10 Q 50 90 90 10" stroke="#000000" fill="none"/>
@@ -62,7 +62,7 @@ def test_svg_load_quadratic_bezier():
 
 
 def test_svg_preserves_cubic_and_arc_segments():
-    from plotter_studio.core.geometry import CubicBezierSegment, ArcSegment
+    from linto.core.geometry import CubicBezierSegment, ArcSegment
 
     svg_sample = """<svg width="100mm" height="100mm" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
       <path d="M 10 50 C 20 10, 80 10, 90 50" stroke="#000000" fill="none"/>

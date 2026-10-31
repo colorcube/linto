@@ -10,7 +10,7 @@ from **MutohPlot** (https://github.com/oliver321/MutohPlot):
   - `src/mutohplot/hpgl/stroke_font.py`
   - `src/mutohplot/hpgl/parser.py`
 
-Adapted for Plotter Studio's `ImportItem` / `VectorPath` document model (millimeter space,
+Adapted for LINTO's `ImportItem` / `VectorPath` document model (millimeter space,
 top-left canvas origin with +Y pointing downwards).
 
 The adapted portions are used under the terms of the MutohPlot license:
@@ -754,7 +754,7 @@ class HPGLParser:
 
 
 # ---------------------------------------------------------------------------
-# 4. Plotter Studio Import Integration
+# 4. LINTO Import Integration
 # ---------------------------------------------------------------------------
 
 
@@ -769,13 +769,13 @@ def load_hpgl(
     name: Optional[str] = None,
     source_unit_mm: float = 0.025,
 ) -> ImportItem:
-    """Load an HP-GL file (.hpgl / .plt) or raw HP-GL string into a Plotter Studio ImportItem.
+    """Load an HP-GL file (.hpgl / .plt) or raw HP-GL string into a LINTO ImportItem.
 
     Coordinate System Conversion:
     - Classic HP-GL uses a mathematical Cartesian coordinate system (+X right, +Y up),
       and plotter files may use either bottom-left (0, 0) or center-origin (negative/positive)
       coordinates.
-    - Plotter Studio's canvas/SVG coordinate system uses top-left (0, 0) with +X right and +Y down.
+    - LINTO's canvas/SVG coordinate system uses top-left (0, 0) with +X right and +Y down.
     - We invert the Y-axis (`y_canvas = -y_hpgl`) so geometry and `LB` text labels appear upright,
       and shift the imported item's minimum bounding corner to (0, 0) in local item space.
     """

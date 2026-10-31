@@ -221,10 +221,10 @@ def main():
     try:
         import sys
         sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
-        from plotter_studio.core.svg_import import load_svg
-        from plotter_studio.core.document import Document
-        from plotter_studio.pipeline.compiler import compile_document_to_plot_job
-        from plotter_studio.device import get_default_profile, HPGLEmitter
+        from linto.core.svg_import import load_svg
+        from linto.core.document import Document
+        from linto.pipeline.compiler import compile_document_to_plot_job
+        from linto.device import get_default_profile, HPGLEmitter
 
         profile = get_default_profile()
         emitter = HPGLEmitter(profile, margin_profile="exp")

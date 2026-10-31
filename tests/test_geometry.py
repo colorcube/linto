@@ -1,6 +1,6 @@
 import math
 import numpy as np
-from plotter_studio.core.geometry import Point, BoundingBox, AffineTransform
+from linto.core.geometry import Point, BoundingBox, AffineTransform
 
 
 def test_point_operations():
@@ -82,12 +82,12 @@ def test_rotation_affine_transform():
 
 def test_analytical_curve_bounds():
     """Verify compute_segments_bounds matches dense numerical evaluation for S-curves."""
-    from plotter_studio.core.geometry import (
+    from linto.core.geometry import (
         CubicBezierSegment,
         QuadraticBezierSegment,
         compute_segments_bounds,
     )
-    from plotter_studio.pipeline.flatten import flatten_segment
+    from linto.pipeline.flatten import flatten_segment
 
     cubic = CubicBezierSegment(
         start=(10.0, 50.0),
@@ -113,8 +113,8 @@ def test_analytical_curve_bounds():
 
 def test_segment_transformations_including_non_uniform_arc():
     """Verify PathSegment.transformed under rotation, reflection, and non-uniform scaling."""
-    from plotter_studio.core.svg_import import load_svg
-    from plotter_studio.pipeline.flatten import flatten_path_segments
+    from linto.core.svg_import import load_svg
+    from linto.pipeline.flatten import flatten_path_segments
 
     svg_circle = """<svg width="100mm" height="100mm" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
       <circle cx="50" cy="50" r="30" stroke="#000000" fill="none"/>
@@ -145,7 +145,7 @@ def test_segment_transformations_including_non_uniform_arc():
 
 def test_tight_rotated_current_bounds_and_margin_profile_preservation():
     """Verify tight current_bounds on rotated diamond and margin_profile preservation on Page.apply_preset."""
-    from plotter_studio.core.document import ImportItem, VectorPath, Page
+    from linto.core.document import ImportItem, VectorPath, Page
 
     # Diamond with vertices at (10,0), (20,10), (10,20), (0,10) -> original_bounds is 20x20
     # When rotated by 45 degrees around center (10,10), it becomes an axis-aligned square of side 10*sqrt(2) (~14.142)
@@ -174,14 +174,14 @@ def test_tight_rotated_current_bounds_and_margin_profile_preservation():
 
 def test_layout_ops_and_page_probe_helpers():
     """Verify pure layout_ops functions and Page.apply_probe_result / is_bounds_outside_plottable."""
-    from plotter_studio.core.document import ImportItem, VectorPath, Page
-    from plotter_studio.core.layout_ops import (
+    from linto.core.document import ImportItem, VectorPath, Page
+    from linto.core.layout_ops import (
         center_item_in_box,
         compute_fit_to_box_transforms,
         compute_align_center_transforms,
         compute_reset_scale_transforms,
     )
-    from plotter_studio.device.probe import ProbeResult
+    from linto.device.probe import ProbeResult
 
     pts = np.array([[0.0, 0.0], [50.0, 0.0], [50.0, 25.0], [0.0, 0.0]])
     item = ImportItem(name="Box", paths=[VectorPath(points=pts, pen_id=1, closed=True)])
@@ -211,7 +211,7 @@ def test_layout_ops_and_page_probe_helpers():
     assert math.isclose(item.current_bounds.center.x, page.sheet_box.center.x, abs_tol=1e-5)
 
     # Multi-item get_combined_bounds
-    from plotter_studio.core.layout_ops import get_combined_bounds
+    from linto.core.layout_ops import get_combined_bounds
     item2 = ImportItem(name="Box2", paths=[VectorPath(points=pts + 100.0, pen_id=1, closed=True)])
     combined = get_combined_bounds([item, item2])
     assert combined is not None
@@ -226,10 +226,10 @@ def test_layout_ops_and_page_probe_helpers():
 
 def test_deduplicate_polylines_pen_luminance_order_and_svg_text_warning():
     """Verify duplicate segment removal (A->B and B->A), luminance pen ordering, and SVG <text> warning."""
-    from plotter_studio.pipeline.merge import deduplicate_polylines
-    from plotter_studio.pipeline.compiler import compile_document_to_plot_job, PipelineConfig
-    from plotter_studio.core.document import Document, ImportItem, VectorPath
-    from plotter_studio.core.svg_import import load_svg
+    from linto.pipeline.merge import deduplicate_polylines
+    from linto.pipeline.compiler import compile_document_to_plot_job, PipelineConfig
+    from linto.core.document import Document, ImportItem, VectorPath
+    from linto.core.svg_import import load_svg
 
     # 1. Duplicate segment removal (including reversed segment)
     l1 = np.array([[0.0, 0.0], [10.0, 0.0], [10.0, 10.0]])
