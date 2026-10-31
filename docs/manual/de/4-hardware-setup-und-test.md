@@ -226,9 +226,9 @@ cat Hello-World.hpgl > /dev/ttyS5
 
 ## 6. Der Kalibrierplot (Genauigkeit, Ränder, Stifte & Backlash)
 
-Im Verzeichnis `resources/` liegen vorbereitete Kalibriermuster für DIN A4 und DIN A3 bereit:
-* `resources/calibration_plot_a3.svg` / `.hpgl`
-* `resources/calibration_plot_a4.svg` / `.hpgl`
+Im Verzeichnis `src/linto/resources/` liegen vorbereitete Kalibriermuster für DIN A4 und DIN A3 bereit:
+* `src/linto/resources/calibration_plot_a3.svg` / `.hpgl`
+* `src/linto/resources/calibration_plot_a4.svg` / `.hpgl`
 
 ![Kalibrierplot Struktur](images/ui_overview_plot.png)
 

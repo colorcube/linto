@@ -40,8 +40,8 @@ If you draw with a **physical pen plotter** (from vintage workhorses like the Mu
 * **Pen Palette & Color Clustering:** Automatically clusters stroke colors to 8 logical pens using perceptual Delta-E in CIE-Lab color space. Configurable pen speed (`VS` in cm/s) and force (`FS` in grams).
 * **Precise Transformation:** Numerical positioning (sheet or plottable area reference), proportional scaling with zoom presets, 1:1 original size, margin-aware fitting, free rotation, and flipping.
 * **Layers & Z-Order:** Reorder drawing sequence via drag & drop, lock layers against accidental edits, or toggle visibility.
-* **Multi-Plotter Support:** Modular YAML profiles (`resources/devices/*.yaml`). Ships with 26 profiles: Mutoh XP-500, Generic Flatbed, and **24 profiles adapted from InkCut** (Roland, Graphtec, Summa, US Cutter, etc.). Only the Mutoh XP-500 has been verified on real hardware so far.
-* **Hardware Diagnostics & Emulator:** Standalone terminal probing tool (`tools/xp500_probe.py`), calibration pattern (`resources/calibration_plot_a3.svg`), and a complete software emulator (`VirtualPlotter`) for instant headless testing without hardware.
+* **Multi-Plotter Support:** Modular YAML profiles (`src/linto/resources/devices/*.yaml`). Ships with 26 profiles: Mutoh XP-500, Generic Flatbed, and **24 profiles adapted from InkCut** (Roland, Graphtec, Summa, US Cutter, etc.). Only the Mutoh XP-500 has been verified on real hardware so far.
+* **Hardware Diagnostics & Emulator:** Standalone terminal probing tool (`tools/xp500_probe.py`), calibration pattern (`src/linto/resources/calibration_plot_a3.svg`), and a complete software emulator (`VirtualPlotter`) for instant headless testing without hardware.
 
 ---
 
@@ -50,13 +50,21 @@ If you draw with a **physical pen plotter** (from vintage workhorses like the Mu
 **Requirements:** Python 3.11 or newer, Linux (macOS and Windows may work but are untested). For live plotting: a plotter speaking HP-GL connected via RS-232 (USB serial adapter) or TCP.
 
 ```bash
+python3 -m venv ~/.venvs/linto
+source ~/.venvs/linto/bin/activate
+pip install git+<repository-url>
+
+linto
+```
+
+Or from a local checkout (see [Developer Setup](#developer-setup) for an editable install):
+
+```bash
 git clone <repository-url> linto
 cd linto
 python3 -m venv .venv
-source .venv/bin/activate
-pip install -e .
-
-linto          # or: ./run.sh
+.venv/bin/pip install .
+.venv/bin/linto
 ```
 
 On Linux, your user needs access to the serial port: membership in the `dialout` group (Debian, Ubuntu, Fedora, openSUSE) or `uucp` (Arch, Manjaro), e.g. `sudo usermod -aG dialout $USER`, then log in again. See the [hardware setup guide](docs/manual/en/4-hardware-setup-and-diagnostics.md) for details.
@@ -135,7 +143,7 @@ QT_QPA_PLATFORM=offscreen pytest
 | `src/linto/device/` | Device profiles, serial/TCP transport, streaming with flow control, plotter probing |
 | `src/linto/emulator/` | Software plotter emulator (PTY or TCP) for testing without hardware |
 | `src/linto/gui/` | PySide6 user interface |
-| `resources/` | Device profiles (YAML), translations, calibration plots |
+| `src/linto/resources/` | Device profiles (YAML), translations, calibration plots |
 | `tools/` | Helper scripts (calibration plot generator, InkCut profile importer, XP-500 probe) |
 | `docs/` | User manuals (EN/DE) and device documentation |
 

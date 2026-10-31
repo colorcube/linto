@@ -25,7 +25,7 @@ LINTO wurde unter **Linux** entwickelt und getestet, sollte aber auch unter **ma
 * Live-Streaming über RS-232 oder TCP mit striktem **RTS/CTS-Hardware-Handshake** (kein Pufferüberlauf) und optionaler automatischer Pause bei Stiftwechseln.
 * Sicherer Notfallabbruch (`ESC.K`, `PU;`, `SP0;`) schützt Papier und Stiftspitze.
 * Offene Multi-Plotter-Architektur (Center-Origin & Bottom-Left) über YAML-Profile mit 26 Profilen: Neben Mutoh XP-500 und Generic Flatbed wurden **24 Geräteprofile direkt aus InkCut übernommen** (Roland, Graphtec, US Cutter, Summa, Sekonic etc.) sowie das Konverter-Tool `tools/import_inkcut_devices.py` bereitgestellt.
-* Hardware-Diagnosetool (`tools/xp500_probe.py`), Kalibriermuster (`resources/calibration_plot_a3.svg`) und integrierter Software-Emulator (`VirtualPlotter`).
+* Hardware-Diagnosetool (`tools/xp500_probe.py`), Kalibriermuster (`src/linto/resources/calibration_plot_a3.svg`) und integrierter Software-Emulator (`VirtualPlotter`).
 
 ## Was kann LINTO (noch) nicht bzw. was ist geplant?
 * **Schneideplotter / Schleppmesser-Kompensation (Drag-Knife Offset):** Das Schneiden von Vinylfolie mit Klingen wird noch nicht unterstützt; der Fokus liegt aktuell auf Stiftplottern.

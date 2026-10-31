@@ -17,7 +17,7 @@ InkCut bringt ein Verzeichnis erprobter Plotter-Modelle mit Bettabmessungen, Pro
 * **US Cutter / Creation / SeikiTech:** Refine MH-721, MH-1351, LaserPoint, PCut CT-630
 * **Mimaki, Secabo, Ioline, Redsail**
 
-> **Nutzen für uns:** Wir können diese Daten direkt in deklarative YAML-Geräteprofile (`resources/devices/*.yaml`) für LINTO übernehmen.
+> **Nutzen für uns:** Wir können diese Daten direkt in deklarative YAML-Geräteprofile (`src/linto/resources/devices/*.yaml`) für LINTO übernehmen.
 
 ---
 

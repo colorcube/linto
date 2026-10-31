@@ -25,7 +25,7 @@ LINTO was developed and tested on **Linux**, but should also run on **macOS** an
 * Live streaming over RS-232 or TCP with strict **RTS/CTS hardware handshaking** (preventing buffer overflows) and optional auto-pause on pen changes.
 * Safe emergency abort (`ESC.K`, `PU;`, `SP0;`) protecting paper and pen tips.
 * Open multi-plotter architecture (Center-Origin & Bottom-Left) via YAML profiles with 26 built-in models: including Mutoh XP-500, Generic Flatbed, and **24 device profiles imported from InkCut** (Roland, Graphtec, US Cutter, Summa, Sekonic, etc.) plus the converter tool `tools/import_inkcut_devices.py`.
-* Hardware diagnostic tool (`tools/xp500_probe.py`), calibration patterns (`resources/calibration_plot_a3.svg`), and built-in software emulator (`VirtualPlotter`).
+* Hardware diagnostic tool (`tools/xp500_probe.py`), calibration patterns (`src/linto/resources/calibration_plot_a3.svg`), and built-in software emulator (`VirtualPlotter`).
 
 ## What is not yet supported or planned?
 * **Vinyl cutter drag-knife offset compensation:** Blade cutting is not yet supported; current focus is on pen plotting.

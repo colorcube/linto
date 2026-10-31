@@ -19,7 +19,9 @@ logger = logging.getLogger(__name__)
 
 def get_translations_dir() -> Path:
     """Return the absolute path to the resources/translations directory."""
-    return Path(__file__).resolve().parent.parent.parent.parent / "resources" / "translations"
+    from .. import RESOURCES_DIR
+
+    return RESOURCES_DIR / "translations"
 
 
 class PlotterTranslator(QTranslator):

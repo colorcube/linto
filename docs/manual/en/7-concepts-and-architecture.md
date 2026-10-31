@@ -119,7 +119,7 @@ When a plot is canceled from the user interface:
 
 LINTO is modular by design. While the **Mutoh XP-500** serves as the reference large-format plotter, the architecture supports any HP-GL machine.
 
-### Declarative Device Profiles (`resources/devices/*.yaml`)
+### Declarative Device Profiles (`src/linto/resources/devices/*.yaml`)
 Every device is defined by a concise YAML specification:
 
 ```yaml

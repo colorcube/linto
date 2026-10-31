@@ -226,9 +226,9 @@ cat Hello-World.hpgl > /dev/ttyS5
 
 ## 6. The Calibration Plot (Accuracy, Margins, Pens & Backlash)
 
-Pre-compiled calibration patterns for DIN A4 and DIN A3 are located in `resources/`:
-* `resources/calibration_plot_a3.svg` / `.hpgl`
-* `resources/calibration_plot_a4.svg` / `.hpgl`
+Pre-compiled calibration patterns for DIN A4 and DIN A3 are located in `src/linto/resources/`:
+* `src/linto/resources/calibration_plot_a3.svg` / `.hpgl`
+* `src/linto/resources/calibration_plot_a4.svg` / `.hpgl`
 
 ![Calibration Plot](images/ui_overview_plot.png)
 

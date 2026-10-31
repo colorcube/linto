@@ -9,7 +9,7 @@ Zentrale Aufgabenliste für die Weiterentwicklung von LINTO. Detaillierte Spezif
 
 ### 1.1 Altlasten & Code-Duplikate abbauen
 - [x] **Veraltete Docks löschen:** `src/linto/gui/paper_dock.py` (wurde durch `PageSetupDialog` ersetzt) und `src/linto/gui/layout_dock.py` samt Referenzen in `main_window.py` entfernen.
-- [x] **Single Source of Truth für Randprofile:** Die vierfach duplizierten Mutoh-Randprofile (`resources/devices/mutoh_xp500.yaml`, `core/document.py`, `emulator/virtual_plotter.py`, `gui/plot_dock.py` & `gui/device_dialog.py`) zusammenführen und ausschließlich aus den YAML-Geräteprofilen laden (behebt auch abweichende Zahlenwerte für `NORM`/`TYPE1`/`TYPE3`).
+- [x] **Single Source of Truth für Randprofile:** Die vierfach duplizierten Mutoh-Randprofile (`src/linto/resources/devices/mutoh_xp500.yaml`, `core/document.py`, `emulator/virtual_plotter.py`, `gui/plot_dock.py` & `gui/device_dialog.py`) zusammenführen und ausschließlich aus den YAML-Geräteprofilen laden (behebt auch abweichende Zahlenwerte für `NORM`/`TYPE1`/`TYPE3`).
 - [x] **Drag-&-Drop-Handler zusammenführen:** Identische `dragEnterEvent`/`dragMoveEvent`/`dropEvent`-Methoden in `gui/main_window.py` und `gui/canvas.py` konsolidieren und Mehrfach-Datei-Drops (aktuell vorzeitiges `return` nach der ersten Datei) ermöglichen.
 - [x] **Punkt-Strecken-Distanz vereinheitlichen:** Identische Vektor-Projektion in `pipeline/flatten.py` und `pipeline/simplify.py` in eine gemeinsame Hilfsfunktion auslagern.
 - [x] **Preset-Logik im Stift-Dock zusammenführen:** Duplizierte Preset-Anwendung in `gui/pen_dock.py` (`_on_apply_preset_clicked` und `_on_load_preset_clicked`) in eine gemeinsame Methode extrahieren.
@@ -45,7 +45,7 @@ Zentrale Aufgabenliste für die Weiterentwicklung von LINTO. Detaillierte Spezif
 
 Ziel: LINTO als eigenständiges, klickbares Einzelprogramm (ohne Notwendigkeit einer manuellen Python-Installation) für Linux und Windows bereitstellen.
 
-- [ ] **Ressourcenpfad anpassen:** In [src/linto/device/profile.py](src/linto/device/profile.py) `sys._MEIPASS` unterstützen, damit `resources/devices/*.yaml` im gepackten Zustand gefunden werden.
+- [ ] **Ressourcenpfad anpassen:** In [src/linto/device/profile.py](src/linto/device/profile.py) `sys._MEIPASS` unterstützen, damit `src/linto/resources/devices/*.yaml` im gepackten Zustand gefunden werden.
 - [ ] **PyInstaller Spezifikation:** `linto.spec` mit allen notwendigen Qt-Plugins, Binärabhängigkeiten (NumPy) und YAML-Gerätedefinitionen erstellen.
 - [ ] **Linux AppImage:** Build-Skript für ein Linux-AppImage bereitstellen (umgeht `glibc`-Inkompatibilitäten zwischen verschiedenen Linux-Distributionen).
 - [ ] **Windows Executable:** Build-Test für `linto.exe`.
@@ -59,9 +59,9 @@ Tests direkt am physischen Mutoh XP-500 Plotter mit [tools/xp500_probe.py](tools
 
 - [ ] **Panel-Einstellungen verifizieren:** Hard-Clip-Fenster (`EXP`), Puffergröße (`Small` = 1000 Zeichen), Handshake (`RTS/CTS`), Schrittauflösung (`0.025 mm`).
 - [ ] **Hardware-Inquiry prüfen:** Rückmeldungen von `OI;`, `OF;` und `OH;` gegen die Software-Parser abgleichen.
-- [ ] **Kalibrierungs-Plot:** [resources/calibration_plot_a3.svg](resources/calibration_plot_a3.svg) auf DIN A3 zeichnen und Randmaße mit dem Stahllineal gegen das Profil abgleichen.
+- [ ] **Kalibrierungs-Plot:** [src/linto/resources/calibration_plot_a3.svg](src/linto/resources/calibration_plot_a3.svg) auf DIN A3 zeichnen und Randmaße mit dem Stahllineal gegen das Profil abgleichen.
 - [ ] **Kalibrierungs-Assistent für reale Blatt- und Rand-Offsets (Workflow aus MutohPlot):**
-  - Geführter Dialog (Wizard) zum Zeichnen des Kalibrierbogens (`resources/calibration_plot_*.svg`) und Eintragen von real mit dem Lineal gemessenen Randabständen (Oben/Unten/Links/Rechts).
+  - Geführter Dialog (Wizard) zum Zeichnen des Kalibrierbogens (`src/linto/resources/calibration_plot_*.svg`) und Eintragen von real mit dem Lineal gemessenen Randabständen (Oben/Unten/Links/Rechts).
   - Automatische Berechnung der Mittenverschiebung (`offset_first_mm`, `offset_second_mm`) und Speicherung im Geräteprofil (`ConfiguredDevice`).
   - Optionale Schrittweiten-Feinjustierung (`units_per_mm`), falls gemessene 100/200/400-mm-Strecken Abweichungen zeigen.
 - [ ] **Puffer- und Abbruchverhalten:** Wirksamkeit von `ESC.K` (Puffer leeren) bei Live-Abbrüchen verifizieren.

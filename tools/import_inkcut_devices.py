@@ -3,7 +3,7 @@
 Import HP-GL device profiles from InkCut's drivers manifest.enaml into LINTO.
 
 Usage:
-    python3 tools/import_inkcut_devices.py --source /path/to/inkcut/inkcut/device/drivers/manifest.enaml [--output resources/devices]
+    python3 tools/import_inkcut_devices.py --source /path/to/inkcut/inkcut/device/drivers/manifest.enaml [--output src/linto/resources/devices]
 """
 
 from __future__ import annotations
@@ -141,7 +141,7 @@ def main():
     parser.add_argument(
         "--output",
         type=Path,
-        default=Path(__file__).resolve().parent.parent / "resources" / "devices",
+        default=Path(__file__).resolve().parent.parent / "src" / "linto" / "resources" / "devices",
         help="Target directory for generated YAML profiles",
     )
     parser.add_argument(

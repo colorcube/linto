@@ -119,7 +119,7 @@ Wird ein Plot über die Benutzeroberfläche abgebrochen:
 
 LINTO wurde von Grund auf modular entwickelt. Auch wenn der **Mutoh XP-500** als Referenz-Großformatplotter dient, ist die Software **nicht auf ein einziges Fabrikat beschränkt**.
 
-### Deklarative Geräteprofile (`resources/devices/*.yaml`)
+### Deklarative Geräteprofile (`src/linto/resources/devices/*.yaml`)
 Jedes Gerät wird durch eine einfache, lesbare YAML-Datei definiert:
 
 ```yaml

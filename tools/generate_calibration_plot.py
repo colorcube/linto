@@ -2,8 +2,8 @@
 """Generates calibration and test plot SVGs for Mutoh XP-500 verification (AP0 / testplan.md).
 
 Outputs:
-- resources/calibration_plot_a4.svg (DIN A4 Quer: 297 x 210 mm)
-- resources/calibration_plot_a3.svg (DIN A3 Quer: 420 x 297 mm)
+- src/linto/resources/calibration_plot_a4.svg (DIN A4 Quer: 297 x 210 mm)
+- src/linto/resources/calibration_plot_a3.svg (DIN A3 Quer: 420 x 297 mm)
 
 Features included (matching testplan.md requirements):
 1. Orientation: Arrows for +X (Feed) and +Y (Carriage), plus TOP/Leading Edge indicator.
@@ -202,7 +202,7 @@ def generate_svg(format_name: str, width_mm: float, height_mm: float) -> str:
 
 
 def main():
-    res_dir = Path(__file__).resolve().parent.parent / "resources"
+    res_dir = Path(__file__).resolve().parent.parent / "src" / "linto" / "resources"
     res_dir.mkdir(exist_ok=True)
 
     # 1. DIN A4 Landscape (297 x 210 mm)

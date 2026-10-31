@@ -114,7 +114,9 @@ class DeviceProfile:
 
 
 def _get_devices_dir() -> Path:
-    return Path(__file__).resolve().parent.parent.parent.parent / "resources" / "devices"
+    from .. import RESOURCES_DIR
+
+    return RESOURCES_DIR / "devices"
 
 
 def load_profile(path_or_id: str | Path) -> DeviceProfile:

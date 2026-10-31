@@ -1,12 +1,12 @@
 # 5. Anbindung weiterer Plottermodelle & Geräteprofile
 
-LINTO beschränkt sich nicht auf den Mutoh XP-500. Jedes unterstützte Plottermodell wird über eine deklarative YAML-Profildatei im Verzeichnis `resources/devices/` beschrieben. Beim Programmstart liest LINTO (`list_available_profiles()` in `src/linto/device/profile.py`) alle `*.yaml`-Dateien in diesem Ordner automatisch ein und stellt sie im Dialog **[Geräte-Einstellungen](4-hardware-setup-und-test.md#3-dialog-gerate-einstellungen)** zur Auswahl bereit.
+LINTO beschränkt sich nicht auf den Mutoh XP-500. Jedes unterstützte Plottermodell wird über eine deklarative YAML-Profildatei im Verzeichnis `src/linto/resources/devices/` beschrieben. Beim Programmstart liest LINTO (`list_available_profiles()` in `src/linto/device/profile.py`) alle `*.yaml`-Dateien in diesem Ordner automatisch ein und stellt sie im Dialog **[Geräte-Einstellungen](4-hardware-setup-und-test.md#3-dialog-gerate-einstellungen)** zur Auswahl bereit.
 
 ---
 
-## 1. Eigene Geräteprofile anlegen (`resources/devices/*.yaml`)
+## 1. Eigene Geräteprofile anlegen (`src/linto/resources/devices/*.yaml`)
 
-Um ein weiteres Plottermodell einzubinden, legst du einfach eine neue Datei `resources/devices/<name>.yaml` an. Sobald die Datei dort gespeichert ist, steht das Modell sofort in LINTO zur Verfügung.
+Um ein weiteres Plottermodell einzubinden, legst du einfach eine neue Datei `src/linto/resources/devices/<name>.yaml` an. Sobald die Datei dort gespeichert ist, steht das Modell sofort in LINTO zur Verfügung.
 
 ### Beispiel 1: Flachbettplotter (`roland_dxy.yaml`, Ursprung unten links)
 
@@ -173,7 +173,7 @@ LINTO liefert ein Import-Werkzeug mit, mit dem du alle HP-GL-Gerätetreiber aus 
 # Geräte aus Inkcut einlesen und auflisten:
 python3 tools/import_inkcut_devices.py --list-only
 
-# Profile nach resources/devices/ konvertieren:
+# Profile nach src/linto/resources/devices/ konvertieren:
 python3 tools/import_inkcut_devices.py
 ```
 
