@@ -10,7 +10,8 @@
 
 LINTO prepares vector graphics for real pen plotters: it optimizes pen paths to cut down pen-up travel, simulates the drawing process interactively on screen, and streams commands reliably with hardware flow control directly to your machine.
 
-> **Project status: early alpha (v0.1.0).** Developed and tested on Linux with a Mutoh XP-500 (HP-GL / HP 7585B emulation). The other device profiles are untested on real hardware — feedback and bug reports are very welcome.
+> [!WARNING]
+> **Project status: alpha (v0.1.0).** Developed and tested on Linux with a Mutoh XP-500 (HP-GL / HP 7585B emulation). The other device profiles are untested on real hardware — feedback and bug reports are very welcome.
 
 ---
 
