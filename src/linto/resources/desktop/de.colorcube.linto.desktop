@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Name=LINTO
+GenericName=Pen Plotter Studio
+GenericName[de]=Stiftplotter-Studio
+Comment=Prepare, simulate and plot vector graphics on pen plotters
+Comment[de]=Vektorgrafiken für Stiftplotter vorbereiten, simulieren und plotten
+Exec=linto %f
+Icon=de.colorcube.linto
+Terminal=false
+Categories=Graphics;2DGraphics;VectorGraphics;Engineering;
+MimeType=image/svg+xml;application/vnd.hp-hpgl;
+Keywords=plotter;pen plotter;HP-GL;HPGL;SVG;
+Keywords[de]=Plotter;Stiftplotter;HP-GL;HPGL;SVG;

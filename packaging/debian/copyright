@@ -1,0 +1,38 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: LINTO
+Upstream-Contact: René Fritz <rf@colorcube.de>
+Source: https://github.com/colorcube/linto
+
+Files: *
+Copyright: 2026 René Fritz <rf@colorcube.de>
+License: GPL-3+
+
+Files: src/linto/core/hpgl_import.py
+Copyright: 2026 René Fritz <rf@colorcube.de>
+           2026 Oliver F. and contributors (MutohPlot)
+License: GPL-3+ and MIT
+Comment: The HP-GL tokenizer, parser and 5x7 stroke font are adapted from
+ MutohPlot (https://github.com/oliver321/MutohPlot), MIT license.
+
+License: GPL-3+
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+ .
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ .
+ On Debian systems, the complete text of the GNU General Public License
+ version 3 can be found in "/usr/share/common-licenses/GPL-3".
+
+License: MIT
+ MIT License
+ .
+ Copyright (c) 2026 Oliver F. and contributors
+ .
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction.

@@ -4,16 +4,27 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "linto"
-version = "0.1.0"
-description = "Modular Slicer and Studio for Pen Plotters under Linux"
+dynamic = ["version"]
+description = "Slicer, layout editor and streaming controller for HP-GL pen plotters"
 readme = "README.md"
-authors = [{ name = "LINTO Contributors" }]
+authors = [{ name = "René Fritz", email = "rf@colorcube.de" }]
 license = { text = "GPL-3.0-or-later" }
 requires-python = ">=3.11"
+keywords = ["pen plotter", "plotter", "hpgl", "hp-gl", "svg", "slicer", "path optimization", "serial"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: X11 Applications :: Qt",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Topic :: Multimedia :: Graphics",
+    "Topic :: Printing",
+]
 dependencies = [
     "PySide6>=6.5.0",
     "numpy>=1.24.0",
-    "svgelements>=1.9.0",
+    "svgelements>=1.7.0",
     "pyserial>=3.5",
     "pyyaml>=6.0",
 ]
@@ -34,6 +45,9 @@ docs = [
 
 [project.scripts]
 linto = "linto.__main__:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "linto.__version__" }
 
 [tool.setuptools.packages.find]
 where = ["src"]

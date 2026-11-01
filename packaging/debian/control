@@ -1,0 +1,44 @@
+Source: linto
+Section: graphics
+Priority: optional
+Maintainer: René Fritz <rf@colorcube.de>
+Build-Depends: debhelper-compat (= 13),
+               dh-python,
+               pybuild-plugin-pyproject,
+               python3-all,
+               python3-setuptools,
+               desktop-file-utils,
+               appstream,
+               python3-pytest,
+               python3-numpy,
+               python3-serial,
+               python3-svgelements,
+               python3-yaml,
+               python3-pyside6.qtcore,
+               python3-pyside6.qtgui,
+               python3-pyside6.qtwidgets,
+               python3-pyside6.qtsvg
+Standards-Version: 4.7.2
+Homepage: https://github.com/colorcube/linto
+Vcs-Browser: https://github.com/colorcube/linto
+Vcs-Git: https://github.com/colorcube/linto.git
+Rules-Requires-Root: no
+
+Package: linto
+Architecture: all
+Depends: ${misc:Depends},
+         ${python3:Depends},
+         python3-numpy,
+         python3-serial,
+         python3-svgelements,
+         python3-yaml,
+         python3-pyside6.qtcore,
+         python3-pyside6.qtgui,
+         python3-pyside6.qtwidgets,
+         python3-pyside6.qtsvg,
+         hicolor-icon-theme
+Description: slicer, layout editor and streaming controller for pen plotters
+ LINTO prepares vector graphics for HP-GL pen plotters: it places SVG and
+ HP-GL artwork on the sheet with the plotter's real margins, optimizes pen
+ paths, simulates the whole plot on screen and streams it to the plotter over
+ RS-232 or TCP with hardware flow control.

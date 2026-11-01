@@ -1,0 +1,73 @@
+name: Packages
+
+# Builds the rpm (Fedora) and deb (Debian) packages; both builds run the full test suite offscreen.
+# A tag vX.Y.Z publishes them as a GitHub release with the notes from CHANGELOG.md.
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rpm:
+    runs-on: ubuntu-latest
+    container: registry.fedoraproject.org/fedora:44
+    steps:
+      - run: dnf -y -q install git-core
+      - uses: actions/checkout@v7
+      - name: Build
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          LINTO_RPM_NATIVE=1 packaging/rpm/build.sh
+      - uses: actions/upload-artifact@v7
+        with:
+          name: rpm
+          path: dist/rpm/*.rpm
+
+  deb:
+    runs-on: ubuntu-latest
+    container: debian:trixie
+    steps:
+      - run: apt-get update -qq && apt-get install -y -qq git ca-certificates
+      - uses: actions/checkout@v7
+      - name: Build
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          LINTO_DEB_NATIVE=1 packaging/debian/build.sh
+      - uses: actions/upload-artifact@v7
+        with:
+          name: deb
+          path: dist/deb/*.deb
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [rpm, deb]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - name: Tag matches the version and the changelog
+        run: |
+          version="$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' src/linto/__init__.py)"
+          test "${GITHUB_REF_NAME}" = "v${version}" || { echo "tag ${GITHUB_REF_NAME} != v${version}"; exit 1; }
+          head_line="$(grep -m1 '^## ' CHANGELOG.md)"
+          case "${head_line}" in
+            "## ${version} "*) ;;
+            *) echo "CHANGELOG.md starts with '${head_line}', expected '## ${version} – <date>'"; exit 1 ;;
+          esac
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          notes="$(awk '/^## /{n++} n==1' CHANGELOG.md | tail -n +2)"
+          gh release create "${GITHUB_REF_NAME}" dist/*.rpm dist/*.deb \
+            --title "LINTO ${GITHUB_REF_NAME#v}" --notes "${notes}" --verify-tag --prerelease

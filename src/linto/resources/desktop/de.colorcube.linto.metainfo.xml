@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>de.colorcube.linto</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>LINTO</name>
+  <summary>Prepare, simulate and plot vector graphics on pen plotters</summary>
+  <summary xml:lang="de">Vektorgrafiken für Stiftplotter vorbereiten, simulieren und plotten</summary>
+  <developer id="de.colorcube">
+    <name>René Fritz</name>
+  </developer>
+  <description>
+    <p>
+      LINTO is a slicer, layout editor and streaming controller for HP-GL pen plotters, from vintage machines
+      like the Mutoh XP-500, HP 7585B or Roland DXY to modern drawing robots that speak HP-GL.
+    </p>
+    <ul>
+      <li>Place SVG and HP-GL artwork on DIN A4 to A0 or custom sheets, with the plotter's real margins</li>
+      <li>Optimize pen paths to cut down pen-up travel</li>
+      <li>Simulate the whole plot on screen before drawing, including pen-up moves and estimated time</li>
+      <li>Map stroke colors automatically to up to 8 pens, with speed and force per pen</li>
+      <li>Stream to the plotter over RS-232 or TCP with hardware flow control, pause, resume and safe abort</li>
+      <li>26 device profiles and a built-in plotter emulator for trying LINTO without hardware</li>
+    </ul>
+  </description>
+  <launchable type="desktop-id">de.colorcube.linto.desktop</launchable>
+  <url type="homepage">https://github.com/colorcube/linto</url>
+  <url type="bugtracker">https://github.com/colorcube/linto/issues</url>
+  <url type="help">https://colorcube.github.io/linto/manual/</url>
+  <url type="vcs-browser">https://github.com/colorcube/linto</url>
+  <screenshots>
+    <screenshot type="default">
+      <caption>Layout mode: arrange, scale and map artwork to pens</caption>
+      <image>https://raw.githubusercontent.com/colorcube/linto/main/docs/manual/en/images/ui_overview_layout.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Output mode: path optimization, simulation and plotter control</caption>
+      <image>https://raw.githubusercontent.com/colorcube/linto/main/docs/manual/en/images/ui_overview_plot.png</image>
+    </screenshot>
+  </screenshots>
+  <categories>
+    <category>Graphics</category>
+    <category>Engineering</category>
+  </categories>
+  <keywords>
+    <keyword>plotter</keyword>
+    <keyword>pen plotter</keyword>
+    <keyword>HP-GL</keyword>
+    <keyword>SVG</keyword>
+    <keyword>plotter art</keyword>
+  </keywords>
+  <provides>
+    <binary>linto</binary>
+  </provides>
+  <requires>
+    <display_length compare="ge">768</display_length>
+  </requires>
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+  </supports>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="0.1.0" date="2026-11-01" type="development">
+      <description>
+        <p>First public alpha.</p>
+      </description>
+    </release>
+  </releases>
+</component>

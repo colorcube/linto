@@ -1,7 +1,8 @@
 """Desktop integration for Linux: menu entry (.desktop file) and application icon.
 
-Installs into the user's XDG data directory (``~/.local/share`` by default), so no
-root privileges are needed. Works for pip, pipx and editable installs alike.
+Used for pip/pipx installs (``linto --install-desktop``); distribution packages install the
+same files system-wide. Installs into the user's XDG data directory (``~/.local/share`` by
+default), so no root privileges are needed.
 """
 
 from __future__ import annotations
@@ -15,24 +16,12 @@ from pathlib import Path
 
 from . import RESOURCES_DIR
 
-APP_ID = "linto"
+APP_ID = "de.colorcube.linto"
+DESKTOP_SOURCE = RESOURCES_DIR / "desktop" / f"{APP_ID}.desktop"
 ICON_SOURCE = RESOURCES_DIR / "icons" / "linto.svg"
 
-DESKTOP_TEMPLATE = """[Desktop Entry]
-Type=Application
-Name=LINTO
-GenericName=Pen Plotter Studio
-GenericName[de]=Stiftplotter-Studio
-Comment=Prepare, simulate and plot vector graphics on pen plotters
-Comment[de]=Vektorgrafiken für Stiftplotter vorbereiten, simulieren und plotten
-Exec={exec} %f
-Icon={icon}
-Terminal=false
-Categories=Graphics;2DGraphics;VectorGraphics;Engineering;
-MimeType=image/svg+xml;application/vnd.hp-hpgl;
-Keywords=plotter;pen plotter;HP-GL;HPGL;SVG;
-StartupWMClass={app_id}
-"""
+# File names used by LINTO before the reverse-DNS application ID; removed on (un)install.
+_LEGACY_NAMES = ("linto.desktop", "linto.svg")
 
 
 def _data_home() -> Path:
@@ -47,12 +36,29 @@ def icon_path() -> Path:
     return _data_home() / "icons" / "hicolor" / "scalable" / "apps" / f"{APP_ID}.svg"
 
 
+def _legacy_paths() -> list[Path]:
+    return [
+        _data_home() / "applications" / _LEGACY_NAMES[0],
+        _data_home() / "icons" / "hicolor" / "scalable" / "apps" / _LEGACY_NAMES[1],
+    ]
+
+
 def _exec_command() -> str:
     """Command line that starts LINTO from the current installation."""
-    launcher = shutil.which(APP_ID)
+    launcher = shutil.which("linto")
     if launcher:
         return shlex.quote(str(Path(launcher).resolve()))
-    return f"{shlex.quote(sys.executable)} -m {APP_ID}"
+    return f"{shlex.quote(sys.executable)} -m linto"
+
+
+def desktop_entry_text() -> str:
+    """The bundled desktop entry, with Exec pointing to this installation."""
+    lines = []
+    for line in DESKTOP_SOURCE.read_text(encoding="utf-8").splitlines():
+        if line.startswith("Exec="):
+            line = f"Exec={_exec_command()} %f"
+        lines.append(line)
+    return "\n".join(lines) + "\n"
 
 
 def _refresh_caches() -> None:
@@ -65,18 +71,25 @@ def _refresh_caches() -> None:
             subprocess.run(cmd, check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
+def _remove_legacy() -> list[Path]:
+    removed = []
+    for path in _legacy_paths():
+        if path.is_file():
+            path.unlink()
+            removed.append(path)
+    return removed
+
+
 def install_desktop_entry() -> list[Path]:
     """Install the .desktop file and icon for the current user. Returns the written paths."""
+    _remove_legacy()
     icon = icon_path()
     icon.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(ICON_SOURCE, icon)
 
     desktop = desktop_file_path()
     desktop.parent.mkdir(parents=True, exist_ok=True)
-    desktop.write_text(
-        DESKTOP_TEMPLATE.format(exec=_exec_command(), icon=APP_ID, app_id=APP_ID),
-        encoding="utf-8",
-    )
+    desktop.write_text(desktop_entry_text(), encoding="utf-8")
     _refresh_caches()
     return [desktop, icon]
 
@@ -88,5 +101,6 @@ def uninstall_desktop_entry() -> list[Path]:
         if path.is_file():
             path.unlink()
             removed.append(path)
+    removed += _remove_legacy()
     _refresh_caches()
     return removed

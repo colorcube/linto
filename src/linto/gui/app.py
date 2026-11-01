@@ -16,7 +16,7 @@ def run_gui(qt_args: list[str] | None = None, open_file: str | None = None):
     app.setApplicationName("LINTO")
     app.setOrganizationName("linto")
     # Matches linto.desktop, so Wayland compositors and task bars show the right icon.
-    app.setDesktopFileName("linto")
+    app.setDesktopFileName("de.colorcube.linto")
     app.setWindowIcon(QIcon(str(RESOURCES_DIR / "icons" / "linto.svg")))
 
     # Initialize internationalization (detects system locale, defaults/falls back to English)
