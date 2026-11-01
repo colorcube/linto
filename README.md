@@ -55,7 +55,14 @@ If you draw with a **physical pen plotter** (from vintage workhorses like the Mu
 
 **Requirements:** Python 3.11 or newer, Linux (macOS and Windows may work but are untested). For live plotting: a plotter speaking HP-GL connected via RS-232 (USB serial adapter) or TCP.
 
-The recommended way is [pipx](https://pipx.pypa.io/), which installs LINTO into its own isolated environment and puts the `linto` command on your `PATH`:
+**Fedora and Debian:** each [release](https://github.com/colorcube/linto/releases) has `.rpm` (Fedora 44) and `.deb` (Debian 13) packages. They install LINTO with an application menu entry and use the distribution's Python libraries:
+
+```bash
+sudo dnf install ./linto-*.noarch.rpm     # Fedora
+sudo apt install ./linto_*_all.deb        # Debian
+```
+
+**Other distributions, or the latest development version:** use [pipx](https://pipx.pypa.io/), which installs LINTO into its own isolated environment and puts the `linto` command on your `PATH`:
 
 ```bash
 pipx install git+https://github.com/colorcube/linto.git
@@ -135,6 +142,14 @@ linto
 # Run test suite (headless, no display or hardware needed)
 QT_QPA_PLATFORM=offscreen pytest
 ```
+
+### Releasing
+
+1. Set the new version in `src/linto/__init__.py`, `packaging/rpm/linto.spec` (`Version` and a `%changelog` entry), `packaging/debian/changelog` and as the first `<release>` in `src/linto/resources/desktop/de.colorcube.linto.metainfo.xml`. The test suite fails if they differ.
+2. Change the top section of `CHANGELOG.md` from `unreleased` to the release date.
+3. Commit, then tag and push: `git tag -a vX.Y.Z -m "LINTO X.Y.Z" && git push origin main vX.Y.Z`.
+
+The *Packages* workflow builds the rpm and deb packages and creates the GitHub release with the notes from `CHANGELOG.md`. Packages can also be built locally with podman or docker: `packaging/rpm/build.sh` and `packaging/debian/build.sh` (results in `dist/`; run them one after the other).
 
 ### Project Layout
 
