@@ -2,6 +2,11 @@
 
 All notable changes to LINTO are listed here. Versions follow [Semantic Versioning](https://semver.org/).
 
+## 0.1.2 – 2026-11-02
+
+- Help → User Guide (`F1`) opens the online manual when no local offline build is present (e.g. in rpm, deb and pipx installs)
+- About dialog shows the current version number dynamically
+
 ## 0.1.1 – 2026-11-02
 
 - rpm (Fedora) and deb (Debian) packages, built and attached to each GitHub release

@@ -1156,7 +1156,7 @@ class MainWindow(QMainWindow):
         self.lbl_info.setText(self.tr("Object(s) assigned to Pen %1").replace("%1", str(pen_id)))
 
     def open_user_guide(self):
-        """Open the offline Zensical HTML user guide matching the active UI language."""
+        """Open the offline Zensical HTML user guide if built locally, otherwise the online manual."""
         app = QApplication.instance()
         lang = "en"
         if app and hasattr(app, "_translators") and app._translators:
@@ -1168,36 +1168,29 @@ class MainWindow(QMainWindow):
 
         base_dir = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent.parent.parent.parent))
         if lang == "de":
-            candidates = [
-                base_dir / "site" / "handbuch" / "index.html",
-                base_dir / "docs" / "manual" / "de" / "README.md",
-            ]
+            local_html = base_dir / "site" / "handbuch" / "index.html"
+            online_url = "https://colorcube.github.io/linto/handbuch/"
         else:
-            candidates = [
-                base_dir / "site" / "manual" / "index.html",
-                base_dir / "docs" / "manual" / "en" / "README.md",
-            ]
+            local_html = base_dir / "site" / "manual" / "index.html"
+            online_url = "https://colorcube.github.io/linto/manual/"
 
-        for target in candidates:
-            if target.is_file():
-                QDesktopServices.openUrl(QUrl.fromLocalFile(str(target)))
-                return
+        if local_html.is_file():
+            QDesktopServices.openUrl(QUrl.fromLocalFile(str(local_html)))
+            return
 
-        QMessageBox.information(
-            self,
-            self.tr("User Guide"),
-            self.tr("Documentation not found. Run 'zensical build' to generate offline HTML help."),
-        )
+        QDesktopServices.openUrl(QUrl(online_url))
 
     def show_about(self):
+        from .. import __version__
+
         QMessageBox.about(
             self,
             self.tr("About LINTO"),
             self.tr(
-                "<b>LINTO</b> v0.1.0<br>"
+                "<b>LINTO</b> v%1<br>"
                 "Modular Slicer & Layout Studio for Pen Plotters on Linux.<br><br>"
                 "License: GPLv3"
-            ),
+            ).replace("%1", __version__),
         )
 
     def showEvent(self, event):

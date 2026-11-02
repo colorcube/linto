@@ -1,5 +1,5 @@
 Name:           linto
-Version:        0.1.1
+Version:        0.1.2
 Release:        1%{?dist}
 Summary:        Slicer, layout editor and streaming controller for HP-GL pen plotters
 
@@ -62,6 +62,10 @@ QT_QPA_PLATFORM=offscreen PYTHONPATH=%{buildroot}%{python3_sitelib} %{python3} -
 %{_datadir}/icons/hicolor/scalable/apps/de.colorcube.linto.svg
 
 %changelog
+* Mon Nov 02 2026 René Fritz <rf@colorcube.de> - 0.1.2-1
+- Help -> User Guide (F1) opens the online manual when no local offline build is present
+- About dialog shows the current version number dynamically
+
 * Mon Nov 02 2026 René Fritz <rf@colorcube.de> - 0.1.1-1
 - rpm (Fedora) and deb (Debian) packages, built and attached to each GitHub release
 - Status messages during plotting are shown in the UI language

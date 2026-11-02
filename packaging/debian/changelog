@@ -1,3 +1,10 @@
+linto (0.1.2-1) unstable; urgency=medium
+
+  * Help -> User Guide (F1) opens the online manual when no local offline build is present.
+  * About dialog shows the current version number dynamically.
+
+ -- René Fritz <rf@colorcube.de>  Mon, 02 Nov 2026 12:07:00 +0100
+
 linto (0.1.1-1) unstable; urgency=medium
 
   * rpm (Fedora) and deb (Debian) packages, built and attached to each GitHub release.

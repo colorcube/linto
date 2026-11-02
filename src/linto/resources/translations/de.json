@@ -384,7 +384,7 @@
   "About LINTO": "Über LINTO",
   "User Guide": "Benutzerhandbuch",
   "Documentation not found. Run 'zensical build' to generate offline HTML help.": "Dokumentation nicht gefunden. Bitte 'zensical build' ausführen, um die Offline-HTML-Hilfe zu erzeugen.",
-  "<b>LINTO</b> v0.1.0<br>Modular Slicer & Layout Studio for Pen Plotters on Linux.<br><br>License: GPLv3": "<b>LINTO</b> v0.1.0<br>Modularer Slicer & Layout-Studio für Stiftplotter unter Linux.<br><br>Lizenz: GPLv3",
+  "<b>LINTO</b> v%1<br>Modular Slicer & Layout Studio for Pen Plotters on Linux.<br><br>License: GPLv3": "<b>LINTO</b> v%1<br>Modularer Slicer & Layout-Studio für Stiftplotter unter Linux.<br><br>Lizenz: GPLv3",
   "Export Not Possible": "Export nicht möglich",
   "No paths available for export.": "Keine Pfade zum Exportieren vorhanden.",
   "Export Plot File": "Plotdatei exportieren",

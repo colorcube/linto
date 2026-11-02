@@ -435,3 +435,44 @@ def test_graphics_item_paints_native_curves_and_duplicates(qapp):
     painter.end()
     win.close()
 
+
+def test_open_user_guide_and_about(qapp, tmp_path, monkeypatch):
+    import sys
+    import linto
+    from PySide6.QtGui import QDesktopServices
+    from PySide6.QtWidgets import QMessageBox
+    from linto.gui.i18n import setup_i18n
+
+    opened_urls = []
+    monkeypatch.setattr(QDesktopServices, "openUrl", lambda url: opened_urls.append(url) or True)
+    monkeypatch.setattr(sys, "_MEIPASS", str(tmp_path), raising=False)
+
+    win = MainWindow(Document())
+
+    # Without local site/, falls back to online manual matching UI language
+    setup_i18n(qapp, language_override="de")
+    win.open_user_guide()
+    assert opened_urls[-1].toString() == "https://colorcube.github.io/linto/handbuch/"
+
+    setup_i18n(qapp, language_override="en")
+    win.open_user_guide()
+    assert opened_urls[-1].toString() == "https://colorcube.github.io/linto/manual/"
+
+    # With local site/, prefers offline HTML
+    local_de = tmp_path / "site" / "handbuch" / "index.html"
+    local_de.parent.mkdir(parents=True)
+    local_de.write_text("<html></html>", encoding="utf-8")
+    setup_i18n(qapp, language_override="de")
+    win.open_user_guide()
+    assert opened_urls[-1].isLocalFile()
+    assert opened_urls[-1].toLocalFile() == str(local_de)
+
+    # About dialog shows current package version
+    about_texts = []
+    monkeypatch.setattr(QMessageBox, "about", lambda parent, title, text: about_texts.append(text))
+    win.show_about()
+    assert f"v{linto.__version__}" in about_texts[-1]
+
+    win.close()
+
+

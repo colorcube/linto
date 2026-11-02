@@ -1,6 +1,6 @@
 """LINTO - Modular Slicer & Studio for Pen Plotters under Linux."""
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 import os
 from pathlib import Path

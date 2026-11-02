@@ -140,12 +140,17 @@ def setup_i18n(
 
     logger.debug("Configuring i18n for language: '%s'", lang)
 
+    for prev in getattr(app, "_translators", ()) or ():
+        if prev is not None:
+            app.removeTranslator(prev)
+
     app_translator = PlotterTranslator(app)
     qt_translator: Optional[QTranslator] = None
 
     # If language is English, source strings are already English -> no translator needed
     if lang == "en":
         logger.debug("Language is English, using native source strings.")
+        app._translators = (app_translator, None)
         return app_translator, None
 
     # 1. Try to load application translations from resources/translations/<lang>.json
@@ -172,4 +177,5 @@ def setup_i18n(
         qt_translator = qt_candidate
         logger.debug("Loaded Qt base translations for '%s' from %s", lang, qt_translations_path)
 
+    app._translators = (app_translator, qt_translator)
     return app_translator, qt_translator
