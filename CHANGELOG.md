@@ -2,7 +2,7 @@
 
 All notable changes to LINTO are listed here. Versions follow [Semantic Versioning](https://semver.org/).
 
-## 0.1.1 – unreleased
+## 0.1.1 – 2026-11-02
 
 - rpm (Fedora) and deb (Debian) packages, built and attached to each GitHub release
 - Status messages during plotting are shown in the UI language (they were always German before)

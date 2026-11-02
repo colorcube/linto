@@ -1,3 +1,13 @@
+linto (0.1.1-1) unstable; urgency=medium
+
+  * rpm (Fedora) and deb (Debian) packages, built and attached to each GitHub release.
+  * Status messages during plotting are shown in the UI language.
+  * Own device profiles in ~/.config/linto/devices/.
+  * Application ID de.colorcube.linto for the menu entry and icon.
+  * Works with svgelements 1.7 (as shipped by Debian 13).
+
+ -- René Fritz <rf@colorcube.de>  Mon, 02 Nov 2026 10:25:00 +0100
+
 linto (0.1.0-1) unstable; urgency=medium
 
   * First release.

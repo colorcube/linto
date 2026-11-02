@@ -61,6 +61,16 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.1.1" date="2026-11-02" type="development">
+      <description>
+        <ul>
+          <li>rpm (Fedora) and deb (Debian) packages</li>
+          <li>Status messages during plotting are shown in the UI language</li>
+          <li>Own device profiles in ~/.config/linto/devices/</li>
+          <li>Works with svgelements 1.7 (as shipped by Debian 13)</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.1.0" date="2026-11-01" type="development">
       <description>
         <p>First public alpha.</p>
