@@ -11,7 +11,7 @@
 LINTO prepares vector graphics for real pen plotters: it optimizes pen paths to cut down pen-up travel, simulates the drawing process interactively on screen, and streams commands reliably with hardware flow control directly to your machine.
 
 > [!WARNING]
-> **Project status: alpha (v0.1.2).** Developed and tested on Linux with a Mutoh XP-500 (HP-GL / HP 7585B emulation). The other device profiles are untested on real hardware — feedback and bug reports are very welcome.
+> **Project status: alpha (v0.1.3).** Developed and tested on Linux with a Mutoh XP-500 (HP-GL / HP 7585B emulation). The other device profiles are untested on real hardware — feedback and bug reports are very welcome.
 
 ---
 
@@ -56,11 +56,11 @@ If you draw with a **physical pen plotter** (from vintage workhorses like the Mu
 
 **Requirements:** Python 3.11 or newer, Linux (macOS and Windows may work but are untested). For live plotting: a plotter speaking HP-GL connected via RS-232 (USB serial adapter) or TCP.
 
-**Fedora and Debian:** each [release](https://github.com/colorcube/linto/releases) has `.rpm` (Fedora 44) and `.deb` (Debian 13) packages. They install LINTO with an application menu entry and use the distribution's Python libraries:
+**Fedora and Debian:** each [release](https://github.com/colorcube/linto/releases) has `.rpm` (Fedora 44 and 45) and `.deb` (Debian 13) packages. They install LINTO with an application menu entry and use the distribution's Python libraries:
 
 ```bash
-sudo dnf install ./linto-*.noarch.rpm     # Fedora
-sudo apt install ./linto_*_all.deb        # Debian
+sudo dnf install ./linto-*.fc45.noarch.rpm     # Fedora 45 (use .fc44 on Fedora 44)
+sudo apt install ./linto_*_all.deb             # Debian
 ```
 
 **Other distributions, or the latest development version:** use [pipx](https://pipx.pypa.io/), which installs LINTO into its own isolated environment and puts the `linto` command on your `PATH`:

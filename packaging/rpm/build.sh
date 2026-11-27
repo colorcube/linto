@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 # Builds the LINTO rpm (and src.rpm) from a git revision.
 #
-#   packaging/rpm/build.sh [REVISION]          # in a Fedora container (podman or docker), default HEAD
-#   LINTO_RPM_NATIVE=1 packaging/rpm/build.sh   # directly, e.g. inside the CI container
+#   packaging/rpm/build.sh [REVISION]               # in a Fedora 45 container (podman or docker), default HEAD
+#   FEDORA_RELEASE=44 packaging/rpm/build.sh        # in a Fedora 44 container
+#   LINTO_RPM_NATIVE=1 packaging/rpm/build.sh       # directly, e.g. inside the CI container
 #
 # Results: dist/rpm/*.rpm
 set -euo pipefail
 ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../.." && pwd)"
 REV="${1:-HEAD}"
-FEDORA="${FEDORA_RELEASE:-44}"
+FEDORA="${FEDORA_RELEASE:-45}"
 VERSION="$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' "${ROOT}/src/linto/__init__.py")"
 OUT="${ROOT}/dist/rpm"
 

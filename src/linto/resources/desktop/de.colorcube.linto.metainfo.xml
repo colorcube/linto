@@ -61,6 +61,13 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.1.3" date="2026-11-27" type="development">
+      <description>
+        <ul>
+          <li>rpm package for Fedora 45 (in addition to Fedora 44)</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.1.2" date="2026-11-02" type="development">
       <description>
         <ul>

@@ -2,6 +2,10 @@
 
 All notable changes to LINTO are listed here. Versions follow [Semantic Versioning](https://semver.org/).
 
+## 0.1.3 – 2026-11-27
+
+- rpm package for Fedora 45 (in addition to Fedora 44)
+
 ## 0.1.2 – 2026-11-02
 
 - Help → User Guide (`F1`) opens the online manual when no local offline build is present (e.g. in rpm, deb and pipx installs)
